@@ -1,12 +1,12 @@
 class Model(object):
     def __init__(self, parameters, hyperparameters):
-        self.set_parameters(parameters)
-        self.set_hyperparameters(hyperparameters)
+        self.set_parameters(**parameters)
+        self.set_hyperparameters(**hyperparameters)
 
-    def set_parameters(self, parameters):
+    def set_parameters(self, **kwargs):
         pass
 
-    def set_hyperparameters(self, hyperparameters):
+    def set_hyperparameters(self, **kwargs):
         pass
 
     def fit(self, data, t_i, parameters=None, hyperparameters=None):
@@ -19,10 +19,10 @@ class Model(object):
         '''
 
         if parameters is not None:
-            self.set_parameters(parameters)
+            self.set_parameters(**parameters)
 
         if hyperparameters is not None:
-            self.set_hyperparameters(hyperparameters)
+            self.set_hyperparameters(**hyperparameters)
 
     def predict(self, x, parameters=None, hyperparameters=None):
         '''
@@ -33,7 +33,7 @@ class Model(object):
         '''
 
         if parameters is not None:
-            self.set_parameters(parameters)
+            self.set_parameters(**parameters)
 
         if hyperparameters is not None:
-            self.set_hyperparameters(hyperparameters)
+            self.set_hyperparameters(**hyperparameters)
