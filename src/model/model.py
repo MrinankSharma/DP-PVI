@@ -1,7 +1,8 @@
+from abc import ABC, abstractmethod
 import ray
 
 @ray.remote
-class Model(object):
+class Model(ABC):
     def __init__(self, parameters, hyperparameters):
         self.set_parameters(parameters)
         self.set_hyperparameters(hyperparameters)

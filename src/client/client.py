@@ -1,3 +1,5 @@
+from abc import ABC, abstractmethod
+
 import ray
 import torch
 
@@ -6,25 +8,36 @@ def zero_init_func(tensor):
 
 
 @ray.remote
-class Client(object):
+class Client(ABC):
     def __init__(self, model_class, data, model_parameters, model_hyperparameters, hyperparameters, metadata):
         self.set_hyperparameters(hyperparameters)
         self.set_metadata(metadata)
 
         self.data = data
         self.model = model_class(model_parameters, model_hyperparameters)
+        self.tracking_data = {}
 
+    @abstractmethod
     def set_hyperparameters(self, **kwargs):
         pass
 
+    @abstractmethod
     def set_metadata(self, **kwargs):
         pass
 
+    @abstractmethod
     def compute_update(self, model_parameters=None, model_hyperparameters=None):
-        pass
+        if model_parameters is not None:
+            self.model.set_parameters(model_parameters)
+        if model_hyperparameters is not None:
+            self.model.set_hyperparameters(model_hyperparameters)
+
+    def get_tracking_data(self):
+        return self.tracking_data
+
 
 @ray.remote
-class BasicClient(Client):
+class DatasetLevelDPClient(Client):
     def __init__(self, lambda_prior, model_class, data, model_parameters, model_hyperparameters, hyperparameters, metadata):
         super().__init__(model_class, data, model_parameters, model_hyperparameters, hyperparameters, metadata)
 
@@ -41,22 +54,29 @@ class BasicClient(Client):
         self.privacy_function = privacy_function
         self.t_i_init_func = t_i_init_func
 
+    def set_metadata(self, **kwargs):
+        pass
+
     def compute_update(self, model_parameters=None, model_hyperparameters=None):
-        super().compute_update()
+        super().compute_update(model_parameters, model_hyperparameters)
 
         t_i_old = self.t_i
         lambda_old = self.model.parameters
 
+        # find the new optimal parameters for this clients data
         lambda_new = self.model.fit(self.data,
                                       t_i_old,
                                       model_parameters,
                                       model_hyperparameters)
 
+        # compute the change in parameters needed
         delta_lambda_i = self.model.subtract_params(lambda_new,
                                                     lambda_old)
 
-        delta_lambda_i_tilde = self.privacy_function(delta_lambda_i)
+        # apply the privacy function, specified by the server
+        delta_lambda_i_tilde, privacy_stats = self.privacy_function(delta_lambda_i)
 
+        # compute the new
         lambda_new = self.model.add_parameters(lambda_old, delta_lambda_i_tilde)
 
         t_i_new = self.model.add_parameters(
