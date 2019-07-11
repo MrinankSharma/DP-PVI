@@ -2,14 +2,27 @@ from abc import ABC, abstractmethod
 
 import ray
 import torch
+import numpy as np
+
+import src.utils.numpy_backend as B
 
 def zero_init_func(tensor):
     return torch.Tensor(tensor).fill_(0)
 
 
-@ray.remote
+# @ray.remote
 class Client(ABC):
-    def __init__(self, model_class, data, model_parameters, model_hyperparameters, hyperparameters, metadata):
+
+    def __init__(self, model_class, data, model_parameters=None, model_hyperparameters=None, hyperparameters=None, metadata=None):
+        if hyperparameters is None:
+            hyperparameters = {}
+
+        if metadata is None:
+            metadata = {}
+
+        self.hyperparameters = self.get_default_hyperparameters()
+        self.metadata = self.get_default_metadata()
+
         self.set_hyperparameters(hyperparameters)
         self.set_metadata(metadata)
 
@@ -17,13 +30,19 @@ class Client(ABC):
         self.model = model_class(model_parameters, model_hyperparameters)
         self.tracking_data = {}
 
-    @abstractmethod
-    def set_hyperparameters(self, **kwargs):
-        pass
+    def set_hyperparameters(self, hyperparameters):
+        self.hyperparameters = {**self.hyperparameters, **hyperparameters}
+
+    def set_metadata(self, metadata):
+        self.metadata = {**self.metadata, **metadata}
 
     @abstractmethod
-    def set_metadata(self, **kwargs):
-        pass
+    def get_default_hyperparameters(self):
+        return {}
+
+    @abstractmethod
+    def get_default_metadata(self):
+        return {}
 
     @abstractmethod
     def compute_update(self, model_parameters=None, model_hyperparameters=None):
@@ -37,25 +56,38 @@ class Client(ABC):
 
 
 @ray.remote
-class DatasetLevelDPClient(Client):
-    def __init__(self, lambda_prior, model_class, data, model_parameters, model_hyperparameters, hyperparameters, metadata):
+class DPClient(Client):
+    def __init__(self, model_class, data, model_parameters=None, model_hyperparameters=None, hyperparameters=None, metadata=None):
         super().__init__(model_class, data, model_parameters, model_hyperparameters, hyperparameters, metadata)
 
         self.t_i = {}
         for key in model_parameters.keys():
             self.t_i[key] = self.t_i_init_func(model_parameters[key])
 
-        self.lambda_i = lambda_prior
+        self.lambda_i = self.model.get_parameters()
 
 
-    def set_hyperparameters(self, privacy_function, t_i_init_func = zero_init_func, **kwargs):
-        super().set_hyperparameters(kwargs)
+    def set_hyperparameters(self, hyperparameters):
+        super().set_hyperparameters(hyperparameters)
 
-        self.privacy_function = privacy_function
-        self.t_i_init_func = t_i_init_func
+        self.privacy_function = hyperparameters['privacy_function']
+        self.t_i_init_func = hyperparameters['t_i_init_function']
 
-    def set_metadata(self, **kwargs):
-        pass
+    def set_metadata(self, metadata):
+        super().set_metadata(metadata)
+
+    def get_default_hyperparameters(self):
+        default_hyperparameters = {
+                                      **super().get_default_hyperparameters(),
+                                      **{
+                                          'privacy_function': lambda x: x,
+                                          't_i_init_function': lambda x: np.zeros(x.shape)
+                                      }
+                                  }
+        return default_hyperparameters
+
+    def get_default_metadata(self):
+        return super().get_default_metadata()
 
     def compute_update(self, model_parameters=None, model_hyperparameters=None):
         super().compute_update(model_parameters, model_hyperparameters)
@@ -70,22 +102,25 @@ class DatasetLevelDPClient(Client):
                                       model_hyperparameters)
 
         # compute the change in parameters needed
-        delta_lambda_i = self.model.subtract_params(lambda_new,
+        delta_lambda_i = B.subtract_params(lambda_new,
                                                     lambda_old)
 
         # apply the privacy function, specified by the server
-        delta_lambda_i_tilde, privacy_stats = self.privacy_function(delta_lambda_i)
+        # delta_lambda_i_tilde, privacy_stats = self.privacy_function(delta_lambda_i)
+        delta_lambda_i_tilde = delta_lambda_i
 
         # compute the new
-        lambda_new = self.model.add_parameters(lambda_old, delta_lambda_i_tilde)
+        lambda_new = B.add_parameters(lambda_old, delta_lambda_i_tilde)
 
-        t_i_new = self.model.add_parameters(
-            self.model.subtract_params(lambda_new,
+        t_i_new = B.add_parameters(
+            B.subtract_params(lambda_new,
                                        lambda_old),
             t_i_old
         )
 
         self.t_i = t_i_new
+
+        # print(t_i_old, t_i_new, lambda_old, lambda_new, delta_lambda_i_tilde)
 
         return delta_lambda_i_tilde
 

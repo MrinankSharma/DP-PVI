@@ -1,14 +1,31 @@
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, abstractstaticmethod
 import ray
 
-@ray.remote
+# @ray.remote
 class Model(ABC):
-    def __init__(self, parameters, hyperparameters):
+    def __init__(self, parameters=None, hyperparameters=None):
+
+        if parameters is None:
+            parameters = {}
+
+        if hyperparameters is None:
+            hyperparameters = {}
+
+        self.parameters = self.get_default_parameters()
+        self.hyperparameters = self.get_default_hyperparameters()
+
         self.set_parameters(parameters)
         self.set_hyperparameters(hyperparameters)
 
     def set_parameters(self, parameters):
-        self.parameters = parameters
+        self.parameters = {**self.parameters, **parameters}
+
+    def get_parameters(self):
+        '''
+        In case you need to repackage parameters somehow from a form other than the dictionary.
+        :return: a dictionary of the parameters
+        '''
+        return self.parameters
 
     @abstractmethod
     def get_default_parameters(self):
@@ -18,8 +35,16 @@ class Model(ABC):
         '''
 
     def set_hyperparameters(self, hyperparameters):
-        self.hyperparameters = hyperparameters
+        self.hyperparameters = {**self.hyperparameters, **hyperparameters}
 
+    def get_default_hyperparameters(self):
+        '''
+        :return: A default set of hyperparameters( for the model. These might be all zero. Mostly used to get the shape that
+        the hyperparameters should be to make parameter server code more general and easier to remeber what could go in here.
+        '''
+        return self.hyperparameters
+
+    @abstractmethod
     def fit(self, data, t_i, parameters=None, hyperparameters=None):
         '''
         :param data: The local data to refine the model with
@@ -30,11 +55,12 @@ class Model(ABC):
         '''
 
         if parameters is not None:
-            self.set_parameters(**parameters)
+            self.set_parameters(parameters)
 
         if hyperparameters is not None:
-            self.set_hyperparameters(**hyperparameters)
+            self.set_hyperparameters(hyperparameters)
 
+    @abstractmethod
     def predict(self, x, parameters=None, hyperparameters=None):
         '''
         :param x: The data to make predictions about
@@ -49,35 +75,12 @@ class Model(ABC):
         if hyperparameters is not None:
             self.set_hyperparameters(**hyperparameters)
 
-    def add_parameters(self, *params):
+    def sample(self, x, parameters=None, hyperparameters=None):
         '''
-        Assuming a list of dicts of parameter tensors, add each corresponding element from each together
-        :param params: list of dicts with the same keys of tensors
-        :return: a dict containing the addition of these parameters
+        Sample from the output of the model. Useful for generating data
+        :param x: The data to make predictions about
+        :param parameters: optinal updated model parameters
+        :param hyperparameters: optional updated hyperparameters
+        :return: the model's predictions of the data
         '''
-        return_dict = {}
-
-        for key in params[0].keys:
-            value = params[0][key]
-            for i in range(len(params) - 1):
-                value = value + params[i+1][key]
-            return_dict[key] = value
-
-        return return_dict
-
-    def subtract_params(self, *params):
-        '''
-        Assuming a list of dicts of parameter tensors, subtract each corresponding element from the first element
-        :param params: list of dicts with the same keys of tensors
-        :return: a dict containing the addition of these parameters
-        '''
-
-        return_dict = {}
-
-        for key in params[0].keys:
-            value = params[0][key]
-            for i in range(len(params) - 1):
-                value = value - params[i + 1][key]
-            return_dict[key] = value
-
-        return return_dict
+        pass
