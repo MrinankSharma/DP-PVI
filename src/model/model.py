@@ -10,6 +10,13 @@ class Model(ABC):
     def set_parameters(self, parameters):
         self.parameters = parameters
 
+    @abstractmethod
+    def get_default_parameters(self):
+        '''
+        :return: A default set of parameters for the model. These might be all zero. Mostly used to get the shape that
+        the parameters should be to make parameter server code more general.
+        '''
+
     def set_hyperparameters(self, hyperparameters):
         self.hyperparameters = hyperparameters
 
