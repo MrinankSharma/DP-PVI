@@ -1,13 +1,9 @@
-import ray
-
 import numpy as np
 import numpy.random as random
-import torch.distributions as dd
 
 from src.model.model import Model
 import src.utils.numpy_backend as B
 
-# @ray.remote
 class LinearRegression1DAnalyticNumpy(Model):
 
     def set_hyperparameters(self, hyperparameters):
