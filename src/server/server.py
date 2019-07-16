@@ -103,8 +103,6 @@ def clip_and_noise(parameters, bound, noise_sigma):
         parameters[name] = B.clip(parameters[name], bound) + B.gaussian_noise(parameters.shape, noise_sigma)
     return parameters
 
-
-
 class SyncronousDPPVIParameterServer(ParameterServer):
 
     def __init__(self, model_class, prior, max_iterations = 100, clients=[]):
