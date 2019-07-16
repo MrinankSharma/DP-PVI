@@ -30,36 +30,41 @@ class MeanFieldMultiDimensionalLogisticRegression(nn.Module, Model):
         super(MeanFieldMultiDimensionalLogisticRegression, self).__init__()
         self.n_in = n_in
         self.prior_mean = hyperparameters["prior_mu"]
-        self.prior_log_var = hyperparameters["prior_log_var"]
+        self.prior_log_var_mat = hyperparameters["prior_log_var_mat"]
 
         # learnable params
         # initalise in random in box
-        self.w_mu = nn.Parameter(torch.Tensor(self.n_in).uniform_(-0.1, 0.1))
-        self.w_log_var = nn.Parameter(torch.Tensor(self.n_in).uniform_(-0.1, 0.1))
+        self.w_mu = nn.Parameter(torch.zeros(self.n_in, dtype=torch.float64).uniform_(-0.1, 0.1))
+        self.w_log_var = nn.Parameter(torch.zeros(self.n_in, dtype=torch.float64).uniform_(-0.1, 0.1))
 
         # single linear layer + sigmoidal function --> logistic regression
         self.act = nn.Sigmoid()
 
         # standard normal
         self.normal_dist = Normal(loc=torch.tensor([0], dtype=torch.float64),
-                                  scale=torch.tensor([1], dtype=torch.float64)
+                                  scale=torch.tensor([1], dtype=torch.float64))
 
     def set_hyperparameters(self, hyperparameters):
-        super().set_hyperparameters(hyperparameters)
-
         if hyperparameters is not None:
             self.prior_mean = hyperparameters["prior_mu"]
             # note that the prior is a full matrix
-            self.prior_log_var_matrix = hyperparameters["prior_log_var"]
+            self.prior_log_var_mat = hyperparameters["prior_log_var_mat"]
 
     def set_parameters(self, parameters):
-        super().set_parameters(parameters)
-
         if parameters is not None:
             self.w_mu = parameters["w_mu"]
             self.w_log_var = parameters["w_log_var"]
 
     def forward(self, X, N_samples, parameters=None, hyperparameters=None):
+        """
+        Apply forward pass, getting sampled activations and probabilities
+
+        :param X: data tensor
+        :param N_samples: number of samples to generate
+        :param parameters: model parameters
+        :param hyperparameters: model hyperparameters
+        :return: Y: probability matrix, activation_mat: matrix of activation values (makes ELBO loss calculation easier)
+        """
         self.set_parameters(parameters)
         self.set_hyperparameters(hyperparameters)
 
@@ -79,21 +84,30 @@ class MeanFieldMultiDimensionalLogisticRegression(nn.Module, Model):
         return Y, activation_mat
 
     def compute_ELBO_loss_per_point(self, activation_mat, Y_true, parameters=None, hyperparameters=None):
+        """
+        Compute the ELBO loss per training datapoint, given the activation matrix produced by the forward pass
+
+        :param activation_mat: Matrix of activation functions. Each row is a data-point, each column is a sample
+        :param Y_true: True labels
+        :param parameters: Model parameters
+        :param hyperparameters: Model hyperparameters
+        :return: ELBO per point
+        """
         self.set_parameters(parameters)
         self.set_hyperparameters(hyperparameters)
 
-        N_data = activation_mat.size[0]
-        N_samples = activation_mat.size[1]
+        N_data = activation_mat.shape[0]
+        N_samples = activation_mat.shape[1]
 
         # compute the KL term
-        KL = 1/N_data * compute_KL_qp(self.w_mu, torch.diag(torch.exp(self.w_log_var)), self.prior_mean,
-                           torch.exp(self.prior_log_var_matrix))
+        KL = compute_KL_qp(self.w_mu, torch.diag(torch.exp(self.w_log_var)), self.prior_mean,
+                           torch.exp(self.prior_log_var_mat))
 
         likelihood = self.act(Y_true.repeat(N_samples, 1).t() * activation_mat)
-        average_log_likelihood = 1/N_samples * torch.einsum('ij->i', torch.log(likelihood)) + KL
 
-        return average_log_likelihood
+        ELBO_per_point = 1 / N_samples * torch.einsum('ij->i', torch.log(likelihood)) + 1 / N_data * KL
 
+        return ELBO_per_point
 
     def sample(self, x, parameters, hyperparameters):
         """
@@ -145,4 +159,13 @@ class MeanFieldMultiDimensionalLogisticRegression(nn.Module, Model):
         return {
             'w_mu': torch.tensor([0]),
             'w_log_var': torch.tensor([0])
+        }
+
+    def fit(self, data, t_i, parameters=None, hyperparameters=None):
+        pass
+
+    def get_parameters(self):
+        return {
+            'w_mu': self.w_mu,
+            'w_log_var': self.w_log_var,
         }
