@@ -113,7 +113,7 @@ class SyncronousDPPVIParameterServer(ParameterServer):
         self.max_iterations = max_iterations
 
         for client in self.clients: client.set_hyperparameters.remote(
-            {'privacy_function': lambda x: clip_and_noise(x, )}
+            {'privacy_function': lambda x: clip_and_noise(x, self.clipping_bound, self.privacy_noise_std)}
         )
 
     def tick(self):
@@ -141,6 +141,11 @@ class SyncronousDPPVIParameterServer(ParameterServer):
         else:
             return False
 
+    def set_hyperparameters(self, hyperparameters):
+        super().set_hyperparameters(hyperparameters)
+
+        self.clipping_bound = self.hyperparameters['clipping_bound']
+        self.privacy_noise_std = self.hyperparameters['privacy_noise_std']
 
     def get_default_hyperparameters(self):
         return {

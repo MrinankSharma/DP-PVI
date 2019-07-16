@@ -48,8 +48,7 @@ if __name__ == '__main__':
         parameters={
             'slope_eta_1': np.array([5]),
             'slope_eta_2': np.array([-0.5])
-        },
-        hyperparameters=LinearRegression1DAnalyticNumpy().get_default_hyperparameters()
+        }
     )
 
     data_shards = []

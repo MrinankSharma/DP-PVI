@@ -1,0 +1,17 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+numpy = "*"
+ray = "*"
+psutil = "*"
+mpmath = "*"
+repoze-lru = "*"
+torch = "==1.1.0"
+
+[requires]
+python_version = "3.6"
