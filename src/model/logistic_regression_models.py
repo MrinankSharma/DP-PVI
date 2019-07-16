@@ -5,8 +5,10 @@ from torch.distributions.bernoulli import Bernoulli
 from torch.distributions.normal import Normal
 import torch.nn.functional as F
 import torch.nn as nn
+import torch.optim as optim
 
 import numpy as np
+
 
 from scipy.integrate import quad
 
@@ -23,6 +25,15 @@ def compute_KL_qp(q_mean, q_var, p_mean, p_var):
         torch.det(p_var)) - torch.log(torch.det(q_var)))
     return KL
 
+def params_to_nat_params(mean, log_var):
+    pres = 1/torch.exp(log_var)
+    nat_mean = mean * pres
+    return nat_mean, pres
+
+def nat_params_to_params(nat_mean, pres):
+    log_var = torch.log(1/pres)
+    mean = nat_mean / pres
+    return mean, log_var
 
 class MeanFieldMultiDimensionalLogisticRegression(nn.Module, Model):
 
@@ -30,7 +41,7 @@ class MeanFieldMultiDimensionalLogisticRegression(nn.Module, Model):
         super(MeanFieldMultiDimensionalLogisticRegression, self).__init__()
         self.n_in = n_in
         self.prior_mean = hyperparameters["prior_mu"]
-        self.prior_log_var_mat = hyperparameters["prior_log_var_mat"]
+        self.prior_log_var = hyperparameters["prior_log_var"]
 
         # learnable params
         # initalise in random in box
@@ -44,11 +55,18 @@ class MeanFieldMultiDimensionalLogisticRegression(nn.Module, Model):
         self.normal_dist = Normal(loc=torch.tensor([0], dtype=torch.float64),
                                   scale=torch.tensor([1], dtype=torch.float64))
 
+        self.learning_rate = 1
+        self.N_samples = 50
+        self.N_steps = 1000
+
     def set_hyperparameters(self, hyperparameters):
         if hyperparameters is not None:
             self.prior_mean = hyperparameters["prior_mu"]
             # note that the prior is a full matrix
-            self.prior_log_var_mat = hyperparameters["prior_log_var_mat"]
+            self.prior_log_var = hyperparameters["prior_log_var"]
+            self.learning_rate = hyperparameters["learning_rate"]
+            self.N_samples = hyperparameters["N_samples"]
+            self.N_steps = hyperparameters["N_steps"]
 
     def set_parameters(self, parameters):
         if parameters is not None:
@@ -101,13 +119,27 @@ class MeanFieldMultiDimensionalLogisticRegression(nn.Module, Model):
 
         # compute the KL term
         KL = compute_KL_qp(self.w_mu, torch.diag(torch.exp(self.w_log_var)), self.prior_mean,
-                           torch.exp(self.prior_log_var_mat))
+                           torch.diag(torch.exp(self.prior_log_var)))
 
         likelihood = self.act(Y_true.repeat(N_samples, 1).t() * activation_mat)
 
-        ELBO_per_point = 1 / N_samples * torch.einsum('ij->i', torch.log(likelihood)) + 1 / N_data * KL
+        ELBO_per_point = 1 / N_samples * torch.einsum('ij->i', torch.log(likelihood)) # + 1/N_data * KL
 
         return ELBO_per_point
+
+    def compute_aggregated_ELBO(self, activation_mat, Y_true, parameters=None, hyperparameters=None):
+        """
+        Compute the ELBO loss, aggregated across all of the datapoints.
+
+        :param activation_mat: Matrix of activation functions. Each row is a data-point, each column is a sample
+        :param Y_true: True labels
+        :param parameters: Model parameters
+        :param hyperparameters: Model hyperparameters
+        :return: ELBO
+        """
+        ELBO_pp = self.compute_ELBO_loss_per_point(activation_mat, Y_true, parameters, hyperparameters)
+        ELBO = torch.sum(ELBO_pp)
+        return ELBO
 
     def sample(self, x, parameters, hyperparameters):
         """
@@ -119,7 +151,7 @@ class MeanFieldMultiDimensionalLogisticRegression(nn.Module, Model):
         :param hyperparameters: model hyperparameters (will also not update)
         :return: y: tensor of parameter labels
         """
-        w_nat_means = parameters["w_nat_means"]
+        w_nat_means = parameters["w_mu"]
 
         z = torch.mv(x, w_nat_means)
         sigmoid = torch.nn.Sigmoid()
@@ -161,8 +193,38 @@ class MeanFieldMultiDimensionalLogisticRegression(nn.Module, Model):
             'w_log_var': torch.tensor([0])
         }
 
+    def update_hyperparameters(self, updated_dict):
+        for key, value in updated_dict.items():
+            self.__dict__[key] = value
+
     def fit(self, data, t_i, parameters=None, hyperparameters=None):
-        pass
+        super().fit(data, t_i, parameters, hyperparameters)
+        X = data["X"]
+        y_true = data["y"]
+
+        # compute the cavity distribution using natural parameters, and then convert back
+        current_nat_mean, current_pres = params_to_nat_params(self.get_parameters()['w_mu'], self.get_parameters()['w_log_var'])
+        t_i_nat_mean, t_i_pres = params_to_nat_params(t_i['w_mu'], t_i['w_log_var'])
+        cav_mean, cav_log_var = nat_params_to_params(t_i_nat_mean + current_nat_mean, t_i_pres + current_pres)
+
+        self.update_hyperparameters({
+            "prior_mu": cav_mean,
+            "prior_log_var": cav_log_var
+        })
+
+        optimizer = optim.SGD(self.parameters(), lr=self.learning_rate)
+
+        # lets just do this for the time being
+        for i in range(self.N_steps):
+            optimizer.zero_grad()  # zero the gradient buffers
+            _, act_mat = self.forward(X, self.N_samples)
+            loss = -self.compute_aggregated_ELBO(act_mat, y_true)
+            # for some reason, it complains when we don't retain the graph. I don't understand why ...
+            print(loss)
+            loss.backward(retain_graph=True)
+            optimizer.step()  # Does the update
+
+        return self.get_parameters()
 
     def get_parameters(self):
         return {
