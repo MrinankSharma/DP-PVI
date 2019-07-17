@@ -10,6 +10,8 @@ numpy = "*"
 torch = "*"
 jupyterlab = "*"
 scipy = "*"
+matplotlib = "*"
+ipympl = "*"
 
 [requires]
 python_version = "3.7"

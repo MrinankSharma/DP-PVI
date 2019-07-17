@@ -123,7 +123,7 @@ class MeanFieldMultiDimensionalLogisticRegression(nn.Module, Model):
 
         likelihood = self.act(Y_true.repeat(N_samples, 1).t() * activation_mat)
 
-        ELBO_per_point = 1 / N_samples * torch.einsum('ij->i', torch.log(likelihood)) # + 1/N_data * KL
+        ELBO_per_point = 1 / N_samples * torch.einsum('ij->i', torch.log(likelihood)) - 1/N_data * KL
 
         return ELBO_per_point
 
@@ -218,9 +218,9 @@ class MeanFieldMultiDimensionalLogisticRegression(nn.Module, Model):
         for i in range(self.N_steps):
             optimizer.zero_grad()  # zero the gradient buffers
             _, act_mat = self.forward(X, self.N_samples)
+            # we maximise the ELBO, so the loss is the negative of the ELBO
             loss = -self.compute_aggregated_ELBO(act_mat, y_true)
             # for some reason, it complains when we don't retain the graph. I don't understand why ...
-            print(loss)
             loss.backward(retain_graph=True)
             optimizer.step()  # Does the update
 
