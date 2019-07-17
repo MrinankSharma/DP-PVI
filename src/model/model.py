@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod, abstractstaticmethod
-import ray
 
 # @ray.remote
 class Model(ABC):
