@@ -2,14 +2,11 @@ from math import ceil
 
 import torch
 
-import torch.optim as optim
-from torch.optim import Adam
-
-from src.privacy_accounting.dp_query import GaussianDPQuery
+import src.utils.torch_nest_utils as nest
 from src.privacy_accounting.analysis import QueryWithLedger
+from src.privacy_accounting.dp_query import GaussianDPQuery
 from . import WrapperOptimiser
 
-import src.utils.torch_nest_utils as nest
 
 class DPOptimiser(WrapperOptimiser):
 
