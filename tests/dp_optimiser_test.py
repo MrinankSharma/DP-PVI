@@ -4,8 +4,8 @@ import torch.utils.data as data
 
 import numpy as np
 
-from src.privacy_accounting.optimizer import DPOptimiser
-from src.privacy_accounting.dp_query import GaussianDPQuery
+from src.privacy_accounting.optimizer import DPGaussianOptimiser
+from src.privacy_accounting.analysis import PrivacyLedger
 
 model = nn.Sequential(nn.Linear(1, 1))
 
@@ -23,19 +23,19 @@ batch_size = 10
 dataloader = data.DataLoader(dataset, batch_size=batch_size)
 
 optimiser = torch.optim.SGD(model.parameters(), lr=0.001)
+ledger = PrivacyLedger(x.shape[0], batch_size/x.shape[0])
 
-query = GaussianDPQuery(5., 1.)
-
-dp_optimiser = DPOptimiser(
+dp_optimiser = DPGaussianOptimiser(
+    l2_norm_clip=5,
+    noise_multiplier=1,
     optimiser=optimiser,
     model=model,
+    ledger=ledger,
     vector_loss=vec_loss,
-    dp_sum_query=query,
-    microbatch_size=1
+    num_microbatches=None
 )
 
 for epoch in range(5):
-    for p in model.parameters():
-        print(p)
     for batch_x, batch_y in dataloader:
         dp_optimiser.fit_batch(batch_x, batch_y)
+        print(dp_optimiser.ledger)

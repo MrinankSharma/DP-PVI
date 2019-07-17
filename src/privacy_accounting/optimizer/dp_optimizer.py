@@ -5,22 +5,26 @@ import torch
 import torch.optim as optim
 from torch.optim import Adam
 
+from src.privacy_accounting.dp_query import GaussianDPQuery
+from src.privacy_accounting.analysis import QueryWithLedger
+from . import WrapperOptimiser
+
 import src.utils.torch_nest_utils as nest
 
-class DPOptimiser(object):
+class DPOptimiser(WrapperOptimiser):
 
     def __init__(self,
                  optimiser,
                  model,
                  vector_loss,
                  dp_sum_query,
-                 microbatch_size=1):
+                 num_microbatches=None):
 
         self.optimiser = optimiser
         self.model = model
         self.vector_loss = vector_loss
         self.dp_sum_query = dp_sum_query
-        self.micobatch_size = microbatch_size
+        self.num_microbatches = num_microbatches
 
         self._global_parameters = self.dp_sum_query.initial_global_state()
 
@@ -35,7 +39,9 @@ class DPOptimiser(object):
         )
         sample_params = self.dp_sum_query.derive_sample_params(self._global_parameters)
 
-        microbatches_losses = loss.split(self.micobatch_size, dim=0)
+        microbatch_size = 1 if self.num_microbatches is None else ceil(loss.shape[0] / self.num_microbatches)
+
+        microbatches_losses = loss.split(microbatch_size, dim=0)
 
         def process_microbatch(losses, sample_state):
             self.optimiser.zero_grad()
@@ -70,3 +76,28 @@ class DPOptimiser(object):
             grads.append(group_grads)
 
         return grads
+
+
+class DPGaussianOptimiser(DPOptimiser):
+    """ Specific Gaussian mechanism optimiser for L2 clipping and noise privacy """
+
+    def __init__(self,
+                 l2_norm_clip,
+                 noise_multiplier,
+                 ledger=None,
+                 *args,
+                 **kwargs):
+        dp_sum_query = GaussianDPQuery(l2_norm_clip, l2_norm_clip * noise_multiplier)
+
+        if ledger:
+            dp_sum_query = QueryWithLedger(dp_sum_query, ledger=ledger)
+
+        super().__init__(
+            dp_sum_query=dp_sum_query,
+            *args,
+            **kwargs
+        )
+
+    @property
+    def ledger(self):
+        return self.dp_sum_query.ledger

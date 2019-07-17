@@ -22,10 +22,10 @@ class GaussianDPQuery(dp_query.SumAggregationDPQuery):
         """
         self._l2_norm_clip = l2_norm_clip
         self._noise_stddev = noise_stddev
-        self.ledger = None
+        self._ledger = None
 
     def set_ledger(self, ledger):
-        self.ledger = ledger
+        self._ledger = ledger
 
     def make_global_state(self, l2_norm_clip, noise_stddev):
         return self._GlobalState(
@@ -54,8 +54,11 @@ class GaussianDPQuery(dp_query.SumAggregationDPQuery):
         else:
             return nest.map_structure(lambda p: torch.div(p, torch.abs(l2_norm/l2_norm_clip)), record)
 
-    def get_noised_result(self, sample_state, global_parameters):
+    def get_noised_result(self, sample_state, global_state):
         def add_noise(p):
-            return p + (torch.randn_like(p) * global_parameters.noise_stddev)
+            return p + (torch.randn_like(p) * global_state.noise_stddev)
 
-        return nest.map_structure(add_noise, sample_state)
+        if self._ledger:
+            self._ledger.record_sum_query(global_state.l2_norm_clip, global_state.noise_stddev)
+
+        return nest.map_structure(add_noise, sample_state), global_state
