@@ -5,6 +5,7 @@ import torch
 import src.utils.torch_nest_utils as nest
 from src.privacy_accounting.dp_query import dp_query
 
+
 class GaussianDPQuery(dp_query.SumAggregationDPQuery):
     """ Implements the DPQuery interface for Gaussian noise sum queries
 
@@ -44,15 +45,15 @@ class GaussianDPQuery(dp_query.SumAggregationDPQuery):
 
     def preprocess_record(self, params, record):
         l2_norm_clip = params
-        l2_norm  = torch.sqrt(nest.reduce_structure(lambda p: torch.norm(torch.flatten(p), p=2) ** 2,
-                                         torch.add,
-                                         record))
+        l2_norm = torch.sqrt(nest.reduce_structure(lambda p: torch.norm(torch.flatten(p), p=2) ** 2,
+                                                   torch.add,
+                                                   record))
 
         if l2_norm < l2_norm_clip:
             return record
 
         else:
-            return nest.map_structure(lambda p: torch.div(p, torch.abs(l2_norm/l2_norm_clip)), record)
+            return nest.map_structure(lambda p: torch.div(p, torch.abs(l2_norm / l2_norm_clip)), record)
 
     def get_noised_result(self, sample_state, global_state):
         def add_noise(p):

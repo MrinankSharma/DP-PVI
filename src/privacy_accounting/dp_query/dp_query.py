@@ -4,8 +4,8 @@ import torch
 
 import src.utils.torch_nest_utils as nest
 
-class DPQuery(object):
 
+class DPQuery(object):
     __metaclass__ = abc.ABCMeta
 
     def set_ledger(self, ledger):

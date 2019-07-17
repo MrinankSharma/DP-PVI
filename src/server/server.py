@@ -4,6 +4,7 @@ import ray
 
 import src.utils.numpy_backend as B
 
+
 class ParameterServer(ABC):
     def __init__(self, model_class, prior, clients=[], hyperparameters=None, metadata=None):
 
@@ -61,7 +62,7 @@ class ParameterServer(ABC):
 
 class SyncronousPVIParameterServer(ParameterServer):
 
-    def __init__(self, model_class, prior, max_iterations = 100, clients=[], hyperparameters=None, metadata=None):
+    def __init__(self, model_class, prior, max_iterations=100, clients=[], hyperparameters=None, metadata=None):
         super().__init__(model_class, prior, clients=clients, hyperparameters=hyperparameters, metadata=metadata)
         self.iterations = 0
         self.max_iterations = max_iterations
@@ -104,10 +105,9 @@ def clip_and_noise(parameters, bound, noise_sigma):
     return parameters
 
 
-
 class SyncronousDPPVIParameterServer(ParameterServer):
 
-    def __init__(self, model_class, prior, max_iterations = 100, clients=[]):
+    def __init__(self, model_class, prior, max_iterations=100, clients=[]):
         super().__init__(model_class, prior, clients=clients)
         self.iterations = 0
         self.max_iterations = max_iterations

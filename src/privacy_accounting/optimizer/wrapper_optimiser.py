@@ -1,6 +1,7 @@
 import abc
 
+
 class WrapperOptimiser(object):
     @abc.abstractmethod
-    def fit_batch(self,x, y):
+    def fit_batch(self, x, y):
         pass

@@ -1,12 +1,9 @@
 import collections
-
 from math import ceil
 
-import numpy as np
 import torch
 
 import src.utils.torch_nest_utils as nest
-
 from src.privacy_accounting.dp_query import dp_query
 from src.utils.torch_tensor_buffer import TensorBuffer
 
@@ -18,21 +15,21 @@ GaussianSumQueryEntry = collections.namedtuple(  # pylint: disable=invalid-name
 
 
 def format_ledger(sample_array, query_array):
-  """Converts array representation into a list of SampleEntries."""
-  samples = []
-  query_pos = 0
-  sample_pos = 0
-  for sample in sample_array:
-    population_size, selection_probability, num_queries = sample
+    """Converts array representation into a list of SampleEntries."""
+    samples = []
+    query_pos = 0
+    sample_pos = 0
+    for sample in sample_array:
+        population_size, selection_probability, num_queries = sample
     queries = []
     for _ in range(int(num_queries)):
-      query = query_array[query_pos]
-      assert int(query[0]) == sample_pos
-      queries.append(GaussianSumQueryEntry(*query[1:]))
-      query_pos += 1
+        query = query_array[query_pos]
+        assert int(query[0]) == sample_pos
+        queries.append(GaussianSumQueryEntry(*query[1:]))
+        query_pos += 1
     samples.append(SampleEntry(population_size, selection_probability, queries))
     sample_pos += 1
-  return samples
+    return samples
 
 
 class PrivacyLedger(object):
@@ -53,14 +50,13 @@ class PrivacyLedger(object):
         self._population_size = population_size
         self._selection_probability = selection_probability
 
-        init_capacity = ceil(1/self._selection_probability)
+        init_capacity = ceil(1 / self._selection_probability)
 
         self._query_buffer = TensorBuffer(init_capacity, [3])
         self._sample_buffer = TensorBuffer(init_capacity, [2])
 
         self._sample_count = 0
         self._query_count = 0
-
 
     def record_sum_query(self, l2_clipping_bound, noise_stddev):
         """ Record a query that was issued in the ledger.
@@ -71,14 +67,12 @@ class PrivacyLedger(object):
         self._query_count = self._query_count + 1
         self._query_buffer.append(torch.Tensor([self._sample_count, l2_clipping_bound, noise_stddev]))
 
-
     def finalise_samples(self):
         """ Finalises sample and records sample ledger entry"""
         sample_var = torch.Tensor([self._population_size, self._selection_probability, self._query_count])
         self._sample_buffer.append(sample_var)
         self._sample_count = self._sample_count + 1
         self._query_count = 0
-
 
     def get_formatted_ledger(self):
         """ Returns a formatted version of the ledger for use in privacy accounting """

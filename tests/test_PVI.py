@@ -1,9 +1,10 @@
-import ray
 import numpy as np
+import ray
 
-from src.server.server import SyncronousPVIParameterServer
 from src.client.client import DPClient
 from src.model.linear_regression_models import LinearRegression1DAnalyticNumpy
+from src.server.server import SyncronousPVIParameterServer
+
 
 def whiten_data(data_shards):
     x_mu = 0
@@ -32,8 +33,10 @@ def whiten_data(data_shards):
 
     return data_shards, [x_mu, y_mu, x_sigma, y_sigma]
 
+
 def zero_init_function(parameter):
     return np.zeros(parameter.shape)
+
 
 def no_privacy_function(update):
     return update, []
@@ -64,8 +67,8 @@ if __name__ == '__main__':
     all_y = np.concatenate([data['y'] for data in data_shards], axis=0)
 
     exact_inference_parameters = {
-        'slope_eta_1': (all_x.T @ all_x) / (1/stats[3]),
-        'slope_eta_2': (all_x.T @ all_y) / (1/stats[3])
+        'slope_eta_1': (all_x.T @ all_x) / (1 / stats[3]),
+        'slope_eta_2': (all_x.T @ all_y) / (1 / stats[3])
     }
 
     prior = {
@@ -79,7 +82,7 @@ if __name__ == '__main__':
             data=data_shards[i],
             model_parameters=prior,
             model_hyperparameters={
-                'model_noise': 1/stats[3]
+                'model_noise': 1 / stats[3]
             },
             hyperparameters={
                 't_i_init_function': zero_init_function,

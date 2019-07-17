@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
 
+import numpy as np
 import ray
 import torch
-import numpy as np
 
 import src.utils.numpy_backend as B
+
 
 def zero_init_func(tensor):
     return torch.Tensor(tensor).fill_(0)
@@ -13,7 +14,8 @@ def zero_init_func(tensor):
 # @ray.remote
 class Client(ABC):
 
-    def __init__(self, model_class, data, model_parameters=None, model_hyperparameters=None, hyperparameters=None, metadata=None):
+    def __init__(self, model_class, data, model_parameters=None, model_hyperparameters=None, hyperparameters=None,
+                 metadata=None):
         if hyperparameters is None:
             hyperparameters = {}
 
@@ -57,7 +59,8 @@ class Client(ABC):
 
 @ray.remote
 class DPClient(Client):
-    def __init__(self, model_class, data, model_parameters=None, model_hyperparameters=None, hyperparameters=None, metadata=None):
+    def __init__(self, model_class, data, model_parameters=None, model_hyperparameters=None, hyperparameters=None,
+                 metadata=None):
         super().__init__(model_class, data, model_parameters, model_hyperparameters, hyperparameters, metadata)
 
         self.t_i = {}
@@ -65,7 +68,6 @@ class DPClient(Client):
             self.t_i[key] = self.t_i_init_func(model_parameters[key])
 
         self.lambda_i = self.model.get_parameters()
-
 
     def set_hyperparameters(self, hyperparameters):
         super().set_hyperparameters(hyperparameters)
@@ -78,12 +80,12 @@ class DPClient(Client):
 
     def get_default_hyperparameters(self):
         default_hyperparameters = {
-                                      **super().get_default_hyperparameters(),
-                                      **{
-                                          'privacy_function': lambda x: x,
-                                          't_i_init_function': lambda x: np.zeros(x.shape)
-                                      }
-                                  }
+            **super().get_default_hyperparameters(),
+            **{
+                'privacy_function': lambda x: x,
+                't_i_init_function': lambda x: np.zeros(x.shape)
+            }
+        }
         return default_hyperparameters
 
     def get_default_metadata(self):
@@ -97,13 +99,13 @@ class DPClient(Client):
 
         # find the new optimal parameters for this clients data
         lambda_new = self.model.fit(self.data,
-                                      t_i_old,
-                                      model_parameters,
-                                      model_hyperparameters)
+                                    t_i_old,
+                                    model_parameters,
+                                    model_hyperparameters)
 
         # compute the change in parameters needed
         delta_lambda_i = B.subtract_params(lambda_new,
-                                                    lambda_old)
+                                           lambda_old)
 
         # apply the privacy function, specified by the server
         # delta_lambda_i_tilde, privacy_stats = self.privacy_function(delta_lambda_i)
@@ -114,7 +116,7 @@ class DPClient(Client):
 
         t_i_new = B.add_parameters(
             B.subtract_params(lambda_new,
-                                       lambda_old),
+                              lambda_old),
             t_i_old
         )
 
@@ -123,4 +125,3 @@ class DPClient(Client):
         # print(t_i_old, t_i_new, lambda_old, lambda_new, delta_lambda_i_tilde)
 
         return delta_lambda_i_tilde
-
