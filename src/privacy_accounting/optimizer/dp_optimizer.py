@@ -13,13 +13,13 @@ class DPOptimiser(WrapperOptimiser):
     def __init__(self,
                  optimiser,
                  model,
-                 vector_loss,
+                 loss_per_example,
                  dp_sum_query,
                  num_microbatches=None):
 
         self.optimiser = optimiser
         self.model = model
-        self.vector_loss = vector_loss
+        self.loss_per_example = loss_per_example
         self.dp_sum_query = dp_sum_query
         self.num_microbatches = num_microbatches
 
@@ -27,7 +27,7 @@ class DPOptimiser(WrapperOptimiser):
 
     def fit_batch(self, x: torch.Tensor, y: torch.Tensor):
 
-        loss = self.vector_loss(self.model(x), y)
+        loss = self.loss_per_example(self.model(x), y)
 
         param_groups = self.optimiser.param_groups
 
@@ -49,7 +49,7 @@ class DPOptimiser(WrapperOptimiser):
             return sample_state
 
         for losses in microbatches_losses:
-            sample_state = process_microbatch(losses, sample_state)
+            sample_state = process_microbatch(losses, sample_state)  # accumulate up the clipped microbatch gradients
 
         final_grads = self.dp_sum_query.get_noised_result(sample_state, self._global_parameters)
 

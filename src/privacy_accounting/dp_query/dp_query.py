@@ -5,8 +5,7 @@ import torch
 import src.utils.torch_nest_utils as nest
 
 
-class DPQuery(object):
-    __metaclass__ = abc.ABCMeta
+class DPQuery(abc.ABCMeta):
 
     def set_ledger(self, ledger):
         """ Sets the ledger for this query to record privacy events in.
@@ -105,6 +104,7 @@ class DPQuery(object):
 class SumAggregationDPQuery(DPQuery):
 
     def initial_sample_state(self, param_groups):
+        """ Return state of zeros the same shape as the parameter groups."""
         return nest.map_structure(torch.zeros_like, param_groups)
 
     def accumulate_preprocesses_record(self, sample_state, record):

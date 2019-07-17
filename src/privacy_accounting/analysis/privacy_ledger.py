@@ -15,20 +15,27 @@ GaussianSumQueryEntry = collections.namedtuple(  # pylint: disable=invalid-name
 
 
 def format_ledger(sample_array, query_array):
-    """Converts array representation into a list of SampleEntries."""
+    """ Converts array representation into a list of SampleEntries.
+
+    :param sample_array: samples are whole mechanisms applied to the data, i.e. minbatch -> grads -> clip -> sum -> noise
+    :param query_array: queries are the individual microbatch -> grads -> clip operations.
+    Composing these together is just a way of keeping a detailed record of what was done. Could be done in a flatter way
+    I think if you were worried about simplicity.
+    :return: A numpy + named tuple version of the TensorBuffer stored operations that have been applied to the data
+    """
     samples = []
     query_pos = 0
     sample_pos = 0
     for sample in sample_array:
         population_size, selection_probability, num_queries = sample
-    queries = []
-    for _ in range(int(num_queries)):
-        query = query_array[query_pos]
-        assert int(query[0]) == sample_pos
-        queries.append(GaussianSumQueryEntry(*query[1:]))
-        query_pos += 1
-    samples.append(SampleEntry(population_size, selection_probability, queries))
-    sample_pos += 1
+        queries = []
+        for _ in range(int(num_queries)):
+            query = query_array[query_pos]
+            assert int(query[0]) == sample_pos
+            queries.append(GaussianSumQueryEntry(*query[1:]))
+            query_pos += 1
+        samples.append(SampleEntry(population_size, selection_probability, queries))
+        sample_pos += 1
     return samples
 
 
