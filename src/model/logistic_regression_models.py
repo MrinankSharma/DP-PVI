@@ -9,7 +9,6 @@ import torch.optim as optim
 
 import numpy as np
 
-
 from scipy.integrate import quad
 
 
@@ -25,15 +24,18 @@ def compute_KL_qp(q_mean, q_var, p_mean, p_var):
         torch.det(p_var)) - torch.log(torch.det(q_var)))
     return KL
 
+
 def params_to_nat_params(mean, log_var):
-    pres = 1/torch.exp(log_var)
+    pres = 1 / torch.exp(log_var)
     nat_mean = mean * pres
     return nat_mean, pres
 
+
 def nat_params_to_params(nat_mean, pres):
-    log_var = torch.log(1/pres)
+    log_var = torch.log(1 / pres)
     mean = nat_mean / pres
     return mean, log_var
+
 
 class MeanFieldMultiDimensionalLogisticRegression(nn.Module, Model):
 
@@ -123,7 +125,7 @@ class MeanFieldMultiDimensionalLogisticRegression(nn.Module, Model):
 
         likelihood = self.act(Y_true.repeat(N_samples, 1).t() * activation_mat)
 
-        ELBO_per_point = 1 / N_samples * torch.einsum('ij->i', torch.log(likelihood)) - 1/N_data * KL
+        ELBO_per_point = 1 / N_samples * torch.einsum('ij->i', torch.log(likelihood)) - 1 / N_data * KL
 
         return ELBO_per_point
 
@@ -203,7 +205,8 @@ class MeanFieldMultiDimensionalLogisticRegression(nn.Module, Model):
         y_true = data["y"]
 
         # compute the cavity distribution using natural parameters, and then convert back
-        current_nat_mean, current_pres = params_to_nat_params(self.get_parameters()['w_mu'], self.get_parameters()['w_log_var'])
+        current_nat_mean, current_pres = params_to_nat_params(self.get_parameters()['w_mu'],
+                                                              self.get_parameters()['w_log_var'])
         t_i_nat_mean, t_i_pres = params_to_nat_params(t_i['w_mu'], t_i['w_log_var'])
         cav_mean, cav_log_var = nat_params_to_params(t_i_nat_mean + current_nat_mean, t_i_pres + current_pres)
 
