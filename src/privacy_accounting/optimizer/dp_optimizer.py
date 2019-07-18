@@ -5,19 +5,19 @@ import torch
 import src.utils.torch_nest_utils as nest
 from src.privacy_accounting.analysis import QueryWithLedger
 from src.privacy_accounting.dp_query import GaussianDPQuery
-from . import WrapperOptimiser
+from . import WrapperOptimizer
 
 
-class DPOptimiser(WrapperOptimiser):
+class DPOptimizer(WrapperOptimizer):
 
     def __init__(self,
-                 optimiser,
+                 optimizer,
                  model,
                  loss_per_example,
                  dp_sum_query,
                  num_microbatches=None):
 
-        self.optimiser = optimiser
+        self.optimizer = optimizer
         self.model = model
         self.loss_per_example = loss_per_example
         self.dp_sum_query = dp_sum_query
@@ -29,7 +29,7 @@ class DPOptimiser(WrapperOptimiser):
 
         loss = self.loss_per_example(self.model(x), y)
 
-        param_groups = self.optimiser.param_groups
+        param_groups = self.optimizer.param_groups
 
         # Get the correct shape gradient tensors to then set to the intial
         # state of the sample. Often all zero for zero gradients.
@@ -43,7 +43,7 @@ class DPOptimiser(WrapperOptimiser):
         microbatches_losses = loss.split(microbatch_size, dim=0)
 
         def process_microbatch(losses, sample_state):
-            self.optimiser.zero_grad()
+            self.optimizer.zero_grad()
             microbatch_loss = losses.mean(dim=0)
             microbatch_loss.backward(retain_graph=True)
             record = self.get_grads(param_groups)
@@ -57,8 +57,8 @@ class DPOptimiser(WrapperOptimiser):
 
         self.apply_grads(param_groups, grads=final_grads)
 
-        self.optimiser.step()
-        self.optimiser.zero_grad()
+        self.optimizer.step()
+        self.optimizer.zero_grad()
 
     def apply_grads(self, param_groups, grads):
         for param_group, grad_group in zip(param_groups, grads):
@@ -77,8 +77,8 @@ class DPOptimiser(WrapperOptimiser):
         return grads
 
 
-class DPGaussianOptimiser(DPOptimiser):
-    """ Specific Gaussian mechanism optimiser for L2 clipping and noise privacy """
+class DPGaussianoptimizer(DPOptimizer):
+    """ Specific Gaussian mechanism optimizer for L2 clipping and noise privacy """
 
     def __init__(self,
                  l2_norm_clip,

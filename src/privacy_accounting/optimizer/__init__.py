@@ -1,2 +1,2 @@
-from .wrapper_optimiser import *
+from .wrapper_optimizer import *
 from .dp_optimizer import *
