@@ -31,6 +31,8 @@ class DPOptimiser(WrapperOptimiser):
 
         param_groups = self.optimiser.param_groups
 
+        # Get the correct shape gradient tensors to then set to the intial
+        # state of the sample. Often all zero for zero gradients.
         sample_state = self.dp_sum_query.initial_sample_state(
             nest.parameters_to_tensor_groups(param_groups, 'data')
         )
