@@ -57,6 +57,7 @@ class PrivacyLedger(object):
         self._population_size = population_size
         self._selection_probability = selection_probability
 
+        # Initial capacity such that we can hold one full epoch of updates
         init_capacity = ceil(1 / self._selection_probability)
 
         self._query_buffer = TensorBuffer(init_capacity, [3])

@@ -5,7 +5,10 @@ import torch
 import src.utils.torch_nest_utils as nest
 
 
-class DPQuery(abc.ABCMeta):
+class DPQuery(abc.ABC):
+    """ General class for a query applied to data in a DP fashion.
+    Terminology derived from definitions in https://arxiv.org/abs/1812.06210
+    """
 
     def set_ledger(self, ledger):
         """ Sets the ledger for this query to record privacy events in.
@@ -55,7 +58,7 @@ class DPQuery(abc.ABCMeta):
         return record
 
     @abc.abstractmethod
-    def accumulate_preprocesses_record(self, sample_state, record):
+    def accumulate_preprocessed_record(self, sample_state, record):
         """ Accumulate a single record into the current sample state.
 
         Does simple aggregation of the recodrs, usually just summing.
@@ -79,7 +82,7 @@ class DPQuery(abc.ABCMeta):
         :return: The updated sample state.
         """
         preprocessed_record = self.preprocess_record(params, record)
-        return self.accumulate_preprocesses_record(sample_state, preprocessed_record)
+        return self.accumulate_preprocessed_record(sample_state, preprocessed_record)
 
     @abc.abstractmethod
     def merge_sample_states(self, sample_state_1, sample_state_2):
@@ -102,12 +105,13 @@ class DPQuery(abc.ABCMeta):
 
 
 class SumAggregationDPQuery(DPQuery):
+    """ Base class for when a DPQuery aggregates via summation """
 
     def initial_sample_state(self, param_groups):
         """ Return state of zeros the same shape as the parameter groups."""
         return nest.map_structure(torch.zeros_like, param_groups)
 
-    def accumulate_preprocesses_record(self, sample_state, record):
+    def accumulate_preprocessed_record(self, sample_state, record):
         return nest.map_structure(torch.add, sample_state, record)
 
     def merge_sample_states(self, sample_state_1, sample_state_2):
