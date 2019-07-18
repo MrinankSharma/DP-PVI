@@ -1,6 +1,6 @@
-from abc import ABC, abstractmethod, abstractstaticmethod
+from abc import ABC, abstractmethod
 
-# @ray.remote
+
 class Model(ABC):
     def __init__(self, parameters=None, hyperparameters=None):
 

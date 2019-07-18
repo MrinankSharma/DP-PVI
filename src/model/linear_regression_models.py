@@ -1,11 +1,9 @@
-import ray
-
 import numpy as np
 import numpy.random as random
-import torch.distributions as dd
 
-from src.model.model import Model
 import src.utils.numpy_backend as B
+from src.model.model import Model
+
 
 # @ray.remote
 class LinearRegression1DAnalyticNumpy(Model):
