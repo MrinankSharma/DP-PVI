@@ -7,11 +7,12 @@ verify_ssl = true
 
 [packages]
 numpy = "*"
-ray = "*"
-psutil = "*"
-mpmath = "*"
-repoze-lru = "*"
 torch = "==1.1.0"
+jupyterlab = "*"
+scipy = "*"
+matplotlib = "*"
+ipympl = "*"
+ray = "*"
 
 [requires]
-python_version = "3.6"
+python_version = "3.7"
