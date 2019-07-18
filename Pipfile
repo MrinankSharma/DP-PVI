@@ -7,6 +7,11 @@ verify_ssl = true
 
 [packages]
 numpy = "*"
+ray = "*"
+psutil = "*"
+mpmath = "*"
+repoze-lru = "*"
+torch = "==1.1.0"
 torch = "*"
 jupyterlab = "*"
 scipy = "*"

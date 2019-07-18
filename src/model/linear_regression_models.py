@@ -1,8 +1,9 @@
 import numpy as np
 import numpy.random as random
 
-from src.model.model import Model
 import src.utils.numpy_backend as B
+from src.model.model import Model
+
 
 class LinearRegression1DAnalyticNumpy(Model):
 
