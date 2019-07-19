@@ -23,7 +23,7 @@ class DPOptimiser(WrapperOptimiser):
         self.dp_sum_query = dp_sum_query
         self.num_microbatches = num_microbatches
 
-        self._global_parameters = self.dp_sum_query.initial_global_state()
+        self._global_state = self.dp_sum_query.initial_global_state()
 
     def fit_batch(self, x: torch.Tensor, y: torch.Tensor):
 
@@ -36,7 +36,7 @@ class DPOptimiser(WrapperOptimiser):
         sample_state = self.dp_sum_query.initial_sample_state(
             nest.parameters_to_tensor_groups(param_groups, 'data')
         )
-        sample_params = self.dp_sum_query.derive_sample_params(self._global_parameters)
+        sample_params = self.dp_sum_query.derive_sample_params(self._global_state)
 
         microbatch_size = 1 if self.num_microbatches is None else ceil(loss.shape[0] / self.num_microbatches)
 
@@ -53,7 +53,8 @@ class DPOptimiser(WrapperOptimiser):
         for losses in microbatches_losses:
             sample_state = process_microbatch(losses, sample_state)  # accumulate up the clipped microbatch gradients
 
-        final_grads = self.dp_sum_query.get_noised_result(sample_state, self._global_parameters)
+        final_grads, new_global_state = self.dp_sum_query.get_noised_result(sample_state, self._global_state)
+        self._global_state = new_global_state
 
         self.apply_grads(param_groups, grads=final_grads)
 

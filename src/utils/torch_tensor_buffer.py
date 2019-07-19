@@ -23,8 +23,8 @@ class TensorBuffer(object):
         shape = [capacity] + shape
 
         self._buffer = torch.zeros(shape, dtype=self._dtype)
-        self._current_size = torch.Tensor([0])
-        self._capacity = torch.Tensor([capacity])
+        self._current_size = torch.LongTensor([0])
+        self._capacity = torch.LongTensor([capacity])
 
     def append(self, value):
         """ Appends a new tensor to the end of the buffer.
@@ -34,7 +34,7 @@ class TensorBuffer(object):
 
         def _double_capacity():
             """ Doubles the capacity of the buffer """
-            padding = torch.zeros(self._buffer)
+            padding = torch.zeros_like(self._buffer)
             self._buffer = torch.cat([self._buffer, padding], dim=0)
             self._capacity = self._capacity *2
 
@@ -45,7 +45,7 @@ class TensorBuffer(object):
         assert value.shape == self._entry_shape
 
         self._buffer[self._current_size, :] = value
-        self._capacity = self._capacity + 1
+        self._current_size = self._current_size + 1
 
     @property
     def values(self):
