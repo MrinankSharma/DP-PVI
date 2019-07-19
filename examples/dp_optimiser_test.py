@@ -8,7 +8,7 @@ import torch.utils.data as data
 from src.privacy_accounting.analysis import PrivacyLedger
 from src.privacy_accounting.analysis.moment_accountant import compute_log_moments_from_ledger, get_privacy_spent
 from src.privacy_accounting.analysis.pld_accountant import pld_accountant as pld
-from src.privacy_accounting.optimizer import DPGaussianOptimiser
+from src.privacy_accounting.optimizer import DPGaussianOptimizer
 
 model = nn.Sequential(nn.Linear(1, 1))
 
@@ -30,7 +30,7 @@ dataloader = data.DataLoader(dataset, batch_size=batch_size)
 optimiser = torch.optim.SGD(model.parameters(), lr=0.001)
 ledger = PrivacyLedger(x.shape[0], batch_size / x.shape[0])
 
-dp_optimiser = DPGaussianOptimiser(
+dp_optimiser = DPGaussianOptimizer(
     l2_norm_clip=5,
     noise_multiplier=4,
     optimiser=optimiser,
@@ -52,6 +52,6 @@ t_ma = time.time() - t0
 print(f'Moment accountant privacy: {ma_privacy} : {t_ma}')
 
 t0 = time.time()
-pld_privacy = pld.compute_prvacy_loss_from_ledger(ledger.get_formatted_ledger(), target_delta=0.00001)
+pld_privacy = pld.compute_privacy_loss_from_ledger(ledger.get_formatted_ledger(), target_delta=0.00001)
 t_pld = time.time() - t0
 print(f'PLD accountant privacy: {pld_privacy} : {t_pld}')

@@ -83,7 +83,7 @@ def compute_log_moments_from_ledger(ledger, max_lambda=32):
     return total_log_moments
 
 
-def compute_privacy_loss_from_ledger(ledger, max_lambda, target_eps=None, target_delta=None):
+def compute_privacy_loss_from_ledger(ledger, target_delta=None, target_eps=None, max_lambda=32):
     """ Compute the privacy loss of the queries entered into a ledger
     using the Gaussian Mechanism utilising the Moments Accountant with
     one of epsilon or delta fixed.
