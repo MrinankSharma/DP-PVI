@@ -47,7 +47,7 @@ def get_privacy_spent(max_lambda, total_log_moments, target_eps, target_delta):
     :param total_log_moments: The total moments, up to the maximum moment
     :param target_eps: A target epsilon to aim for.
     :param target_delta: A target delta to aim for.
-    :return: epsilon, delta, moment_order
+    :return: epsilon, delta
     """
     if target_delta is None and target_eps is None:
         raise ValueError(
@@ -59,15 +59,15 @@ def get_privacy_spent(max_lambda, total_log_moments, target_eps, target_delta):
 
     if target_eps is not None:
         epsilon, delta, lambda_i = _compute_delta(max_lambda, total_log_moments, target_eps)
-        return epsilon, delta, lambda_i
+        return epsilon, delta
     else:
         epsilon, delta, lambda_i = _compute_eps(max_lambda, total_log_moments, target_delta)
-        return epsilon, delta, lambda_i
+        return epsilon, delta
 
 
 def compute_log_moments_from_ledger(ledger, max_lambda=32):
     """ Compute the moments of the queries entered into a ledger
-    using the Gaussian Mechanism utilising the Moments Accountnt
+    using the Gaussian Mechanism utilising the Moments Accountant.
 
     :param ledger: The ledger of queries to compute for
     :param max_lambda: The maximum moment to compute
@@ -82,15 +82,18 @@ def compute_log_moments_from_ledger(ledger, max_lambda=32):
 
     return total_log_moments
 
-def compute_eps_from_ledger(ledger, delta, max_lambda=32):
-    """
-    Get epsilon for a given privacy ledger, given a target value of delta.
+
+def compute_privacy_loss_from_ledger(ledger, max_lambda, target_eps=None, target_delta=None):
+    """ Compute the privacy loss of the queries entered into a ledger
+    using the Gaussian Mechanism utilising the Moments Accountant with
+    one of epsilon or delta fixed.
 
     :param ledger: The ledger of queries to compute for
     :param max_lambda: The maximum moment to compute
-    :param delta: value of delta to target
-    :return: best value of epsilon
+    :param target_eps: A target epsilon to aim for.
+    :param target_delta: A target delta to aim for.
+    :return: epsilon, delta
     """
-    log_moments = compute_log_moments_from_ledger(ledger.get_formatted_ledger(), max_lambda)
-    eps, delta, lambda_i = _compute_eps(max_lambda, log_moments, delta)
-    return eps
+
+    total_log_moments = compute_log_moments_from_ledger(ledger, max_lambda)
+    return get_privacy_spent(max_lambda, total_log_moments, target_eps, target_delta)
