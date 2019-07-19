@@ -53,12 +53,17 @@ class DPOptimizer(WrapperOptimizer):
         for losses in microbatches_losses:
             sample_state = process_microbatch(losses, sample_state)  # accumulate up the clipped microbatch gradients
 
-        final_grads = self.dp_sum_query.get_noised_result(sample_state, self._global_parameters)
+        final_grads, _ = self.dp_sum_query.get_noised_result(sample_state, self._global_parameters)
 
         self.apply_grads(param_groups, grads=final_grads)
 
         self.optimizer.step()
         self.optimizer.zero_grad()
+
+        # compute the new loss
+        current_loss = torch.sum(self.loss_per_example(self.model(x), y))
+
+        return current_loss.detach().numpy()
 
     def apply_grads(self, param_groups, grads):
         for param_group, grad_group in zip(param_groups, grads):
@@ -77,7 +82,7 @@ class DPOptimizer(WrapperOptimizer):
         return grads
 
 
-class DPGaussianoptimizer(DPOptimizer):
+class DPGaussianOptimizer(DPOptimizer):
     """ Specific Gaussian mechanism optimizer for L2 clipping and noise privacy """
 
     def __init__(self,
