@@ -81,3 +81,16 @@ def compute_log_moments_from_ledger(ledger, max_lambda=32):
         total_log_moments += generate_log_moments(sample.selection_probability, effective_z, max_lambda)
 
     return total_log_moments
+
+def compute_eps_from_ledger(ledger, delta, max_lambda=32):
+    """
+    Get epsilon for a given privacy ledger, given a target value of delta.
+
+    :param ledger: The ledger of queries to compute for
+    :param max_lambda: The maximum moment to compute
+    :param delta: value of delta to target
+    :return: best value of epsilon
+    """
+    log_moments = compute_log_moments_from_ledger(ledger.get_formatted_ledger(), max_lambda)
+    eps, delta, lambda_i = _compute_eps(max_lambda, log_moments, delta)
+    return eps
