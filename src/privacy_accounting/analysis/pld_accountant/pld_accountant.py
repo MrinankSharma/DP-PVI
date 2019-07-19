@@ -6,6 +6,75 @@ import numpy as np
 from repoze.lru import lru_cache
 
 
+@lru_cache(maxsize=100)
+def get_FF1_add_remove(sigma, q, nx, L):
+    # first ii for which x(ii)>log(1-q),
+    # i.e. start of the integral domain
+
+    half = int(nx / 2)
+
+    dx = 2.0 * L / nx  # discretisation interval \Delta x
+    x = np.linspace(-L, L - dx, nx, dtype=np.complex128)  # grid for the numerical integration
+
+    ii = int(np.floor(float(nx * (L + np.log(1 - q)) / (2 * L))))
+
+    # Evaluate the PLD distribution,
+    # The case of remove/add relation (Subsection 5.1)
+    Linvx = (sigma ** 2) * np.log((np.exp(x[ii + 1:]) - (1 - q)) / q) + 0.5
+    ALinvx = (1 / np.sqrt(2 * np.pi * sigma ** 2)) * ((1 - q) * np.exp(-Linvx * Linvx / (2 * sigma ** 2)) +
+                                                      q * np.exp(-(Linvx - 1) * (Linvx - 1) / (2 * sigma ** 2)))
+    dLinvx = (sigma ** 2 * np.exp(x[ii + 1:])) / (np.exp(x[ii + 1:]) - (1 - q))
+
+    fx = np.zeros(nx)
+    fx[ii + 1:] = np.real(ALinvx * dLinvx)
+
+    # Flip fx, i.e. fx <- D(fx), the matrix D = [0 I;I 0]
+    temp = np.copy(fx[half:])
+    fx[half:] = np.copy(fx[:half])
+    fx[:half] = temp
+
+    FF1 = np.fft.fft(fx * dx)
+    print(sigma, q, FF1)
+
+    return FF1
+
+
+@lru_cache(maxsize=100)
+def get_FF1_substitution(sigma, q, nx, L):
+    # Evaluate the PLD distribution,
+    # This is the case of substitution relation (subsection 5.2)
+
+    half = int(nx / 2)
+
+    dx = 2.0 * L / nx  # discretisation interval \Delta x
+    x = np.linspace(-L, L - dx, nx, dtype=np.complex128)  # grid for the numerical integration
+
+    c = q * np.exp(-1 / (2 * sigma ** 2))
+    ey = np.exp(x)
+    term1 = (-(1 - q) * (1 - ey) + np.sqrt((1 - q) ** 2 * (1 - ey) ** 2 + 4 * c ** 2 * ey)) / (2 * c)
+    term1 = np.maximum(term1, 1e-16)
+    Linvx = (sigma ** 2) * np.log(term1)
+
+    sq = np.sqrt((1 - q) ** 2 * (1 - ey) ** 2 + 4 * c ** 2 * ey)
+    nom1 = 4 * c ** 2 * ey - 2 * (1 - q) ** 2 * ey * (1 - ey)
+    term1 = nom1 / (2 * sq)
+    nom2 = term1 + (1 - q) * ey
+    nom2 = nom2 * (sq + (1 - q) * (1 - ey))
+    dLinvx = sigma ** 2 * nom2 / (4 * c ** 2 * ey)
+
+    ALinvx = (1 / np.sqrt(2 * np.pi * sigma ** 2)) * ((1 - q) * np.exp(-Linvx * Linvx / (2 * sigma ** 2)) +
+                                                      q * np.exp(-(Linvx - 1) * (Linvx - 1) / (2 * sigma ** 2)))
+
+    fx = np.real(ALinvx * dLinvx)
+
+    # Flip fx, i.e. fx <- D(fx), the matrix D = [0 I;I 0]
+    temp = np.copy(fx[half:])
+    fx[half:] = np.copy(fx[:half])
+    fx[:half] = temp
+
+    return fx
+
+
 def get_delta_add_remove(effective_z_t, q_t, target_eps=1.0, nx=1E6, L=20.0):
     """ Computes the approximation of the exact privacy as per https://arxiv.org/abs/1906.03049
     for a fixed epsilon, for a list of given mechanisms applied. Considers neighbouring sets
@@ -38,36 +107,13 @@ def get_delta_add_remove(effective_z_t, q_t, target_eps=1.0, nx=1E6, L=20.0):
 
     for ij in range(ncomp):
         # Change from original: cache results for speedup on similar requests
-        @lru_cache(maxsize=100)
-        def get_fx(sigma, q):
-            # first ii for which x(ii)>log(1-q),
-            # i.e. start of the integral domain
-            ii = int(np.floor(float(nx * (L + np.log(1 - q)) / (2 * L))))
 
-            # Evaluate the PLD distribution,
-            # The case of remove/add relation (Subsection 5.1)
-            Linvx = (sigma ** 2) * np.log((np.exp(x[ii + 1:]) - (1 - q)) / q) + 0.5
-            ALinvx = (1 / np.sqrt(2 * np.pi * sigma ** 2)) * ((1 - q) * np.exp(-Linvx * Linvx / (2 * sigma ** 2)) +
-                                                              q * np.exp(-(Linvx - 1) * (Linvx - 1) / (2 * sigma ** 2)))
-            dLinvx = (sigma ** 2 * np.exp(x[ii + 1:])) / (np.exp(x[ii + 1:]) - (1 - q))
+        sigma = float(effective_z_t[ij])
+        q = float(q_t[ij])
 
-            fx = np.zeros(nx)
-            fx[ii + 1:] = np.real(ALinvx * dLinvx)
-
-            # Flip fx, i.e. fx <- D(fx), the matrix D = [0 I;I 0]
-            temp = np.copy(fx[half:])
-            fx[half:] = np.copy(fx[:half])
-            fx[:half] = temp
-
-            return fx
-
-        sigma = effective_z_t[ij]
-        q = q_t[ij]
-
-        fx = get_fx(sigma, q)
+        FF1 = get_FF1_add_remove(sigma, q, nx, L)
 
         # Compute the DFT
-        FF1 = np.fft.fft(fx * dx)
         F_prod = F_prod * FF1
 
     # first jj for which 1-exp(target_eps-x)>0,
@@ -127,41 +173,11 @@ def get_delta_substitution(effective_z_t, q_t, target_eps=1.0, nx=1E6, L=20.0):
 
     for ij in range(ncomp):
         # Change from original: cache results for speedup on similar requests
-        @lru_cache(maxsize=100)
-        def get_fx(sigma, q):
-            # Evaluate the PLD distribution,
-            # This is the case of substitution relation (subsection 5.2)
-            c = q * np.exp(-1 / (2 * sigma ** 2))
-            ey = np.exp(x)
-            term1 = (-(1 - q) * (1 - ey) + np.sqrt((1 - q) ** 2 * (1 - ey) ** 2 + 4 * c ** 2 * ey)) / (2 * c)
-            term1 = np.maximum(term1, 1e-16)
-            Linvx = (sigma ** 2) * np.log(term1)
-
-            sq = np.sqrt((1 - q) ** 2 * (1 - ey) ** 2 + 4 * c ** 2 * ey)
-            nom1 = 4 * c ** 2 * ey - 2 * (1 - q) ** 2 * ey * (1 - ey)
-            term1 = nom1 / (2 * sq)
-            nom2 = term1 + (1 - q) * ey
-            nom2 = nom2 * (sq + (1 - q) * (1 - ey))
-            dLinvx = sigma ** 2 * nom2 / (4 * c ** 2 * ey)
-
-            ALinvx = (1 / np.sqrt(2 * np.pi * sigma ** 2)) * ((1 - q) * np.exp(-Linvx * Linvx / (2 * sigma ** 2)) +
-                                                              q * np.exp(-(Linvx - 1) * (Linvx - 1) / (2 * sigma ** 2)))
-
-            fx = np.real(ALinvx * dLinvx)
-
-            # Flip fx, i.e. fx <- D(fx), the matrix D = [0 I;I 0]
-            temp = np.copy(fx[half:])
-            fx[half:] = np.copy(fx[:half])
-            fx[:half] = temp
-
-            return fx
 
         sigma = effective_z_t[ij]
         q = q_t[ij]
 
-        fx = get_fx(sigma, q)
-
-        FF1 = np.fft.fft(fx * dx)  # Compute the DFFT
+        FF1 = get_FF1_substitution(sigma, q, nx, L)
         F_prod = F_prod * FF1
 
     # first jj for which 1-exp(target_eps-x)>0,
@@ -219,38 +235,12 @@ def get_eps_add_remove(effective_z_t, q_t, target_delta=1e-6, nx=1E6, L=20.0):
 
     for ij in range(ncomp):
         # Change from original: cache results for speedup on similar requests
-        @lru_cache(maxsize=100)
-        def get_fx(sigma, q):
-            # first ii for which x(ii)>log(1-q),
-            # i.e. start of the integral domain
-            ii = int(np.floor(float(nx * (L + np.log(1 - q)) / (2 * L))))
+        sigma = float(effective_z_t[ij])
+        q = float(q_t[ij])
 
-            # Evaluate the PLD distribution,
-            # The case of remove/add relation (Subsection 5.1)
-            Linvx = (sigma ** 2) * np.log((np.exp(x[ii + 1:]) - (1 - q)) / q) + 0.5
-            ALinvx = (1 / np.sqrt(2 * np.pi * sigma ** 2)) * ((1 - q) * np.exp(-Linvx * Linvx / (2 * sigma ** 2)) +
-                                                              q * np.exp(
-                        -(Linvx - 1) * (Linvx - 1) / (2 * sigma ** 2)))
-            ey = np.exp(x[ii + 1:])
-            dLinvx = (sigma ** 2) / (1 - (1 - q) / ey)
-
-            fx = np.zeros(nx)
-            fx[ii + 1:] = np.real(ALinvx * dLinvx)
-
-            # Flip fx, i.e. fx <- D(fx), the matrix D = [0 I;I 0]
-            temp = np.copy(fx[half:])
-            fx[half:] = np.copy(fx[:half])
-            fx[:half] = temp
-
-            return fx
-
-        sigma = effective_z_t[ij]
-        q = q_t[ij]
-
-        fx = get_fx(sigma, q)
+        FF1 = get_FF1_add_remove(sigma, q, nx, L)
 
         # Compute the DFT
-        FF1 = np.fft.fft(fx * dx)
         F_prod = F_prod * FF1
 
     # Initial value \epsilon_0
@@ -340,41 +330,10 @@ def get_eps_substitution(effective_z_t, q_t, target_delta=1e-6, nx=1E6, L=20.0):
         return float('inf')
 
     for ij in range(ncomp):
-        # Change from original: cache results for speedup on similar requests
-        @lru_cache(maxsize=100)
-        def get_fx(sigma, q):
-            # Evaluate the PLD distribution,
-            # This is the case of substitution relation (subsection 5.2)
-            ey = np.exp(x)
-            c = q * np.exp(-1 / (2 * sigma ** 2))
-            term1 = (-(1 - q) * (1 - ey) + np.sqrt((1 - q) ** 2 * (1 - ey) ** 2 + 4 * c ** 2 * ey)) / (2 * c)
-            term1 = np.maximum(term1, 1e-16)
-            Linvx = (sigma ** 2) * np.log(term1)
-
-            sq = np.sqrt((1 - q) ** 2 * (1 - ey) ** 2 + 4 * c ** 2 * ey)
-            nom1 = 4 * c ** 2 * ey - 2 * (1 - q) ** 2 * ey * (1 - ey)
-            term1 = nom1 / (2 * sq)
-            nom2 = term1 + (1 - q) * ey
-            nom2 = nom2 * (sq + (1 - q) * (1 - ey))
-            dLinvx = sigma ** 2 * nom2 / (4 * c ** 2 * ey)
-
-            ALinvx = (1 / np.sqrt(2 * np.pi * sigma ** 2)) * ((1 - q) * np.exp(-Linvx * Linvx / (2 * sigma ** 2))
-                                                              + q * np.exp(
-                        -(Linvx - 1) * (Linvx - 1) / (2 * sigma ** 2)))
-
-            fx = np.real(ALinvx * dLinvx)
-
-            # Flip fx, i.e. fx <- D(fx), the matrix D = [0 I;I 0]
-            temp = np.copy(fx[half:])
-            fx[half:] = np.copy(fx[:half])
-            fx[:half] = temp
-
         sigma = effective_z_t[ij]
         q = q_t[ij]
 
-        fx = get_fx(sigma, q)
-
-        FF1 = np.fft.fft(fx * dx)  # Compute the DFFT
+        FF1 = get_FF1_substitution(sigma, q, nx, L)
         F_prod = F_prod * FF1
 
     exp_e = 1 - np.exp(eps_0 - x)
