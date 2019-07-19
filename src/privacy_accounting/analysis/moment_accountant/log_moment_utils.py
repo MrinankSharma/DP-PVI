@@ -34,8 +34,6 @@ def integral_inf_mp(fn):
 
 @lru_cache(maxsize=100)
 def generate_log_moments(q, noise_scale, max_lambda):
-    print(q, noise_scale, max_lambda)
-
     # these moments are a function of q, noise_scale and max_lambda
 
     # generate pdfs which are to be integrated numerically

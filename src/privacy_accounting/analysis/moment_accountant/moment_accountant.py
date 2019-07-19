@@ -65,7 +65,7 @@ def get_privacy_spent(max_lambda, total_log_moments, target_eps, target_delta):
         return epsilon, delta, lambda_i
 
 
-def compute_log_moments_from_ledger(ledger, max_lambda):
+def compute_log_moments_from_ledger(ledger, max_lambda=32):
     """ Compute the moments of the queries entered into a ledger
     using the Gaussian Mechanism utilising the Moments Accountnt
 
