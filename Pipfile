@@ -7,15 +7,14 @@ verify_ssl = true
 
 [packages]
 numpy = "*"
-ray = "*"
-psutil = "*"
-mpmath = "*"
-repoze-lru = "*"
-torch = "==1.1.0"
+torch = "==1.1.0" # Pinned due to bug with install 1.1.0.post2 on windows/linux
 jupyterlab = "*"
 scipy = "*"
 matplotlib = "*"
 ipympl = "*"
+ray = "*"
+mpmath = "*"
+repoze-lru = "*"
 
 [requires]
 python_version = "3.7"
