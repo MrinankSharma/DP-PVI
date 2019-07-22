@@ -30,8 +30,8 @@ class GaussianDPQuery(dp_query.SumAggregationDPQuery):
 
     def make_global_state(self, l2_norm_clip, noise_stddev):
         return self._GlobalState(
-            torch.tensor([l2_norm_clip], dtype=torch.float64),
-            torch.tensor([noise_stddev], dtype=torch.float64)
+            torch.tensor(l2_norm_clip, dtype=torch.float32),
+            torch.tensor(noise_stddev, dtype=torch.float32)
         )
 
     def initial_global_state(self):

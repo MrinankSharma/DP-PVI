@@ -4,19 +4,19 @@ from math import ceil
 import src.utils.torch_nest_utils as nest
 from src.privacy_accounting.analysis import QueryWithLedger
 from src.privacy_accounting.dp_query import GaussianDPQuery
-from . import WrapperOptimizer
+from .wrapper_optimizer import WrapperOptimizer
 
 
 class DPOptimizer(WrapperOptimizer):
 
     def __init__(self,
-                 optimizer,
+                 optimiser,
                  model,
                  loss_per_example,
                  dp_sum_query,
                  num_microbatches=None):
 
-        self.optimizer = optimizer
+        self.optimiser = optimiser
         self.model = model
         self.loss_per_example = loss_per_example
         self.dp_sum_query = dp_sum_query
@@ -28,7 +28,7 @@ class DPOptimizer(WrapperOptimizer):
 
         loss = self.loss_per_example(self.model(x), y)
 
-        param_groups = self.optimizer.param_groups
+        param_groups = self.optimiser.param_groups
 
         # Get the correct shape gradient tensors to then set to the intial
         # state of the sample. Often all zero for zero gradients.
@@ -42,7 +42,7 @@ class DPOptimizer(WrapperOptimizer):
         microbatches_losses = loss.split(microbatch_size, dim=0)
 
         def process_microbatch(losses, sample_state):
-            self.optimizer.zero_grad()
+            self.optimiser.zero_grad()
             microbatch_loss = losses.mean(dim=0)
             microbatch_loss.backward(retain_graph=True)
             record = self.get_grads(param_groups)
@@ -56,8 +56,8 @@ class DPOptimizer(WrapperOptimizer):
 
         self.apply_grads(param_groups, grads=final_grads)
 
-        self.optimizer.step()
-        self.optimizer.zero_grad()
+        self.optimiser.step()
+        self.optimiser.zero_grad()
 
         # return the loss at the start (for efficiency purposes)
         return torch.sum(loss).detach().numpy()
