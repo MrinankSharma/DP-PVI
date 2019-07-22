@@ -21,6 +21,7 @@ sacred = "*"
 gitpython = "*"
 pymongo = "*"
 pyyaml = "*"
+sklearn = "*"
 
 [requires]
 python_version = "3.7"
