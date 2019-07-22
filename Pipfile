@@ -17,6 +17,10 @@ mpmath = "*"
 repoze-lru = "*"
 requests = "*"
 ruamel-yaml = "*"
+sacred = "*"
+gitpython = "*"
+pymongo = "*"
+pyyaml = "*"
 
 [requires]
 python_version = "3.7"

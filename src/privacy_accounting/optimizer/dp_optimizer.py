@@ -1,6 +1,5 @@
-from math import ceil
-
 import torch
+from math import ceil
 
 import src.utils.torch_nest_utils as nest
 from src.privacy_accounting.analysis import QueryWithLedger

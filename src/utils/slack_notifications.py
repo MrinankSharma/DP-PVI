@@ -1,8 +1,8 @@
+import logging
+
+import requests
 from ruamel.yaml import YAML
 from ruamel.yaml.compat import StringIO
-
-import logging
-import requests
 
 DEFAULT_WEBHOOK_LOCATION = "../../slack_webhook"
 

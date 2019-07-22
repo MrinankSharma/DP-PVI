@@ -1,16 +1,14 @@
 import logging
 
+import numpy as np
 import torch
+import torch.nn as nn
+from scipy.integrate import quad
 from torch.distributions.bernoulli import Bernoulli
 from torch.distributions.normal import Normal
-import torch.nn as nn
 
-import numpy as np
-
-from scipy.integrate import quad
-
-from src.model.model import Model
 import src.utils.numpy_backend as B
+from src.model.model import Model
 
 logger = logging.getLogger(__name__)
 

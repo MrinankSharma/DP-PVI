@@ -37,7 +37,6 @@ class Model(ABC):
     def set_hyperparameters(self, hyperparameters):
         self.hyperparameters = {**self.hyperparameters, **hyperparameters}
 
-
     @abstractmethod
     def get_default_hyperparameters(self):
         '''
