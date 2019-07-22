@@ -404,8 +404,8 @@ def get_eps_substitution(effective_z_t, q_t, target_delta=1e-6, nx=1E6, L=20.0):
     # return np.real(eps_0)
 
 
-def compute_prvacy_loss_from_ledger(ledger, target_eps=None, target_delta=None, adjacency_definition='add_remove',
-                                    nx=1E6, L=20.0):
+def compute_privacy_loss_from_ledger(ledger, target_eps=None, target_delta=None, adjacency_definition='add_remove',
+                                     nx=1E6, L=20.0):
     """ Compute the privacy loss of the queries entered into a ledger
     using the Gaussian Mechanism utilising an approximation to the true privacy bound
     (https://arxiv.org/abs/1906.03049) with one of epsilon or delta fixed.

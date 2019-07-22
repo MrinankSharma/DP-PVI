@@ -32,16 +32,18 @@ class Model(ABC):
         :return: A default set of parameters for the model. These might be all zero. Mostly used to get the shape that
         the parameters should be to make parameter server code more general.
         '''
+        pass
 
     def set_hyperparameters(self, hyperparameters):
         self.hyperparameters = {**self.hyperparameters, **hyperparameters}
 
+    @abstractmethod
     def get_default_hyperparameters(self):
         '''
         :return: A default set of hyperparameters( for the model. These might be all zero. Mostly used to get the shape that
         the hyperparameters should be to make parameter server code more general and easier to remeber what could go in here.
         '''
-        return self.hyperparameters
+        pass
 
     @abstractmethod
     def fit(self, data, t_i, parameters=None, hyperparameters=None):

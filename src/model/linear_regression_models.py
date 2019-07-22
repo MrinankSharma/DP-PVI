@@ -5,7 +5,6 @@ import src.utils.numpy_backend as B
 from src.model.model import Model
 
 
-# @ray.remote
 class LinearRegression1DAnalyticNumpy(Model):
 
     def set_hyperparameters(self, hyperparameters):
