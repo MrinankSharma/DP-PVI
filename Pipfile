@@ -15,6 +15,10 @@ ipympl = "*"
 ray = "*"
 mpmath = "*"
 repoze-lru = "*"
+sacred = "*"
+gitpython = "*"
+pymongo = "*"
+pyyaml = "*"
 
 [requires]
 python_version = "3.7"
