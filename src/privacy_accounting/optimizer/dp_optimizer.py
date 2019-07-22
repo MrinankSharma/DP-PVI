@@ -60,10 +60,8 @@ class DPOptimizer(WrapperOptimizer):
         self.optimizer.step()
         self.optimizer.zero_grad()
 
-        # compute the new loss
-        current_loss = torch.sum(self.loss_per_example(self.model(x), y))
-
-        return current_loss.detach().numpy()
+        # return the loss at the start (for efficiency purposes)
+        return torch.sum(loss).detach().numpy()
 
     def apply_grads(self, param_groups, grads):
         for param_group, grad_group in zip(param_groups, grads):

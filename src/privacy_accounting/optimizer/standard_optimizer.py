@@ -16,10 +16,8 @@ class StandardOptimizer(WrapperOptimizer):
         total_loss = torch.sum(loss)
 
         self.optimizer.zero_grad()
-        # to investigate whether this actually needs to be true
-        total_loss.backward(retain_graph=True)
+        total_loss.backward()
         self.optimizer.step()
         self.optimizer.zero_grad()
 
-        loss = torch.sum(self.loss_per_example(self.model(X), y))
-        return loss.detach().numpy()
+        return torch.sum(loss).detach().numpy()
