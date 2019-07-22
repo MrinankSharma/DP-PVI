@@ -7,4 +7,6 @@ Note: for slack notifications, you will need to add a slack webhook into a file 
 ## Datasets
 `preprocess_data.py` expects the UCI datasets in the `data/abalone` and the `data/adult` directories to be pre-processing. Each dataset then creates a labels file, `y.csv` and additionally several data files, `x_ordinal.csv, x_scaled.csv` and `x_scaled_ordinal.csv`
 
+These datasets can be found at `https://archive.ics.uci.edu/ml/datasets.php`
+
   
