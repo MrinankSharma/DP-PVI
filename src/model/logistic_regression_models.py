@@ -58,7 +58,7 @@ class LogisticRegressionTorchModule(nn.Module):
 
         # we make the assumption that the input parameters are actually a numpy array!
         self.set_parameters_from_numpy(parameters)
-        self.act = nn.Sigmoid()
+        self.act = nn.LogSigmoid()
 
         self.N_samples = hyperparameters["N_samples"]
 
@@ -131,15 +131,14 @@ class LogisticRegressionTorchModule(nn.Module):
 
         # each row corresponds to a input datapoint, each column is a sample
         activation_mat = torch.einsum('i,j->ij', std_i, z_i) + mean_i.repeat(self.N_samples, 1).t()
-        Y = self.act(activation_mat)
 
-        return Y
+        return activation_mat
 
-    def compute_ELBO_loss_per_point(self, Y_pred, Y_true, parameters=None):
+    def compute_ELBO_loss_per_point(self, y, y_true, parameters=None):
         """
         Compute the ELBO loss per training datapoint, given the activation matrix produced by the forward pass
 
-        :param activation_mat: Matrix of activation functions. Each row is a data-point, each column is a sample
+        :param activation_mat: Matrix of activation input. Each row is a data-point, each column is a sample
         :param Y_true: True labels
         :param parameters: Model parameters
         :param hyperparameters: Model hyperparameters
@@ -155,18 +154,20 @@ class LogisticRegressionTorchModule(nn.Module):
                 torch.det(p_var)) - torch.log(torch.det(q_var)))
             return KL
 
-        activation_mat = torch.log(Y_pred / (1 - Y_pred))
+        activation_mat = y
 
         N_data = activation_mat.shape[0]
         N_samples = activation_mat.shape[1]
+
+        mask = y_true.repeat(N_samples, 1).t()
 
         # compute the KL term
         KL_term = -1 / N_data * compute_KL_qp(self.w_mu, torch.diag(torch.exp(self.w_log_var)), self.prior_mu,
                                               torch.diag(torch.exp(self.prior_log_var)))
 
-        likelihood = self.act(Y_true.repeat(N_samples, 1).t() * activation_mat)
+        likelihood = self.act(activation_mat * mask)
 
-        likelihood_term = 1 / N_samples * torch.einsum('ij->i', torch.log(likelihood))
+        likelihood_term = 1 / N_samples * torch.einsum('ij->i', likelihood)
         ELBO_per_point = likelihood_term + KL_term
 
         # we call the ELBO loss the negative of the elbo (we maximise the ELBO)

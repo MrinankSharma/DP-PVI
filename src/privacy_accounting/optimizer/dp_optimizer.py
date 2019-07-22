@@ -6,7 +6,6 @@ from src.privacy_accounting.analysis import QueryWithLedger
 from src.privacy_accounting.dp_query import GaussianDPQuery
 from . import WrapperOptimizer
 
-
 class DPOptimizer(WrapperOptimizer):
 
     def __init__(self,
