@@ -110,11 +110,11 @@ class LogisticRegressionTorchModule(nn.Module):
 
         return p_vals
 
-    def forward(self, X, parameters=None):
+    def forward(self, x, parameters=None):
         """
         Apply forward pass, getting sampled activations and probabilities
 
-        :param X: data tensor
+        :param x: data tensor
         :param N_samples: number of samples to generate
         :param parameters: model parameters
         :param hyperparameters: model hyperparameters
@@ -124,9 +124,9 @@ class LogisticRegressionTorchModule(nn.Module):
 
         # we will apply the local re-parameterisation trick - we need samples of w^T x which has mean mu_w^T x and
         # covariance x^T sigma_w x
-        mean_i = torch.mv(X, self.w_mu)
+        mean_i = torch.mv(x, self.w_mu)
         cov_mat = torch.diag(torch.exp(self.w_log_var))
-        std_i = torch.pow(torch.diag(torch.mm(X, torch.mm(cov_mat, X.t()))), 0.5)
+        std_i = torch.pow(torch.diag(torch.mm(x, torch.mm(cov_mat, x.t()))), 0.5)
 
         # z = w^T x
         z_i = torch.flatten(self.normal_dist.sample([self.N_samples, ]))
@@ -283,7 +283,7 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         super().fit(data, t_i, parameters, hyperparameters)
 
         # convert data into a tensor
-        X = torch.tensor(data["X"], dtype=torch.float64)
+        x = torch.tensor(data["x"], dtype=torch.float64)
         y_true = torch.tensor(data["y"], dtype=torch.float64)
 
         cav_nat_params = B.subtract_params(self.get_parameters(), t_i)
@@ -295,7 +295,7 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         training_array = np.empty(self.hyperparameters['N_steps'])
         # lets just do this for the time being
         for i in range(self.hyperparameters['N_steps']):
-            current_loss = self.wrapped_optimizer.fit_batch(X, y_true)
+            current_loss = self.wrapped_optimizer.fit_batch(x, y_true)
             training_array[i] = current_loss
             if i % print_interval == 0:
                 print("Loss: {:.3f} after {} steps".format(current_loss, i))

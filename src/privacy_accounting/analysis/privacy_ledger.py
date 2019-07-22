@@ -75,7 +75,7 @@ class PrivacyLedger(object):
         self._query_count = self._query_count + 1
         self._query_buffer.append(torch.Tensor([self._sample_count, l2_clipping_bound, noise_stddev]))
 
-    def finalise_samples(self):
+    def finalise_sample(self):
         """ Finalises sample and records sample ledger entry"""
         sample_var = torch.Tensor([self._population_size, self._selection_probability, self._query_count])
         self._sample_buffer.append(sample_var)
@@ -145,5 +145,5 @@ class QueryWithLedger(dp_query.DPQuery):
     def get_noised_result(self, sample_state, global_state):
         """Ensures sample is recorded to the ledger and returns noised result."""
         result, new_global_state = self._query.get_noised_result(sample_state, global_state)
-        self._ledger.finalise_samples()
+        self._ledger.finalise_sample()
         return nest.map_structure(torch.tensor, result), new_global_state

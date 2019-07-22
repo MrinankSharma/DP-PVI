@@ -47,7 +47,7 @@ class TensorBuffer(object):
         assert value.shape == self._entry_shape
 
         self._buffer[self._current_size, :] = value
-        self._current_size = self.current_size + 1
+        self._current_size = self._current_size + 1
 
     @property
     def values(self):
