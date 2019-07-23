@@ -7,7 +7,7 @@ from scipy.integrate import quad
 from torch.distributions.bernoulli import Bernoulli
 from torch.distributions.normal import Normal
 
-import src.utils.numpy_backend as B
+import src.utils.numpy_utils as B
 from src.model.model import Model
 
 logger = logging.getLogger(__name__)

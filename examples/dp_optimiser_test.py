@@ -6,7 +6,8 @@ import torch.nn as nn
 import torch.utils.data as data
 
 from src.privacy_accounting.analysis import PrivacyLedger
-from src.privacy_accounting.analysis.moment_accountant import compute_log_moments_from_ledger, get_privacy_spent
+from src.privacy_accounting.analysis.moment_accountant import moment_accountant as ma
+from src.privacy_accounting.analysis.online_accountant import OnlineAccountant
 from src.privacy_accounting.analysis.pld_accountant import pld_accountant as pld
 from src.privacy_accounting.optimizer import DPGaussianOptimizer
 
@@ -27,31 +28,45 @@ dataset = data.TensorDataset(
 batch_size = 10
 dataloader = data.DataLoader(dataset, batch_size=batch_size)
 
-optimiser = torch.optim.SGD(model.parameters(), lr=0.001)
+optimizer = torch.optim.SGD(model.parameters(), lr=0.001)
 ledger = PrivacyLedger(x.shape[0], batch_size / x.shape[0])
 
-dp_optimiser = DPGaussianOptimizer(
+dp_optimizer = DPGaussianOptimizer(
     l2_norm_clip=5,
     noise_multiplier=4,
-    optimiser=optimiser,
+    optimizer=optimizer,
     model=model,
     ledger=ledger,
     loss_per_example=vec_loss,
     num_microbatches=None
 )
 
+MAOnline = OnlineAccountant(
+    ma.compute_online_privacy_from_ledger,
+    accountancy_parameters={
+        'max_lambda': 32,
+        'target_delta': 0.00001
+    }
+)
+
+PLDOnline = OnlineAccountant(
+    pld.compute_online_privacy_from_ledger,
+    accountancy_parameters={
+        'target_delta': 0.00001
+    }
+)
+
 for epoch in range(100):
     print(epoch)
     for batch_x, batch_y in dataloader:
-        dp_optimiser.fit_batch(batch_x, batch_y)
+        dp_optimizer.fit_batch(batch_x, batch_y)
 
-t0 = time.time()
-log_moments = compute_log_moments_from_ledger(dp_optimiser.ledger.get_formatted_ledger(), 32)
-ma_privacy = get_privacy_spent(32, log_moments, None, 0.00001)
-t_ma = time.time() - t0
-print(f'Moment accountant privacy: {ma_privacy} : {t_ma}')
+    t0 = time.time()
+    ma_privacy = MAOnline.update_privacy(ledger.get_formatted_ledger())
+    t_ma = time.time() - t0
+    print(f'Moment accountant privacy: {ma_privacy} {type(ma_privacy)} : {t_ma}')
 
-t0 = time.time()
-pld_privacy = pld.compute_privacy_loss_from_ledger(ledger.get_formatted_ledger(), target_delta=0.00001)
-t_pld = time.time() - t0
-print(f'PLD accountant privacy: {pld_privacy} : {t_pld}')
+    t0 = time.time()
+    pld_privacy = PLDOnline.update_privacy(ledger.get_formatted_ledger())
+    t_pld = time.time() - t0
+    print(f'PLD accountant privacy: {pld_privacy} : {t_pld}')

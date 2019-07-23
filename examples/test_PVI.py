@@ -1,9 +1,29 @@
+import datetime
+import json
+import numbers
+import os
+
 import numpy as np
 import ray
+from sacred import Experiment
+from sacred.observers import MongoObserver, SlackObserver
 
+import src.utils.numpy_nest_utils as nest_utils
 from src.client.client import DPClient
 from src.model.linear_regression_models import LinearRegression1DAnalyticNumpy
 from src.server.server import SyncronousPVIParameterServer
+
+ex = Experiment('PVI Test Experiment')
+
+ex.observers.append(
+    MongoObserver.create(
+        url='localhost:9001',
+        db_name='sacred'
+    ))
+ex.observers.append(
+    SlackObserver.from_config('../slack.json')
+)
+
 
 
 def whiten_data(data_shards):
@@ -42,10 +62,19 @@ def no_privacy_function(update):
     return update, []
 
 
-if __name__ == '__main__':
-    ray.init()
-
+@ex.config
+def config():
     num_clients = 10
+    log_base_dir = '../logs'
+
+
+@ex.automain
+def main(
+        log_base_dir,
+        num_clients,
+        _run,
+):
+    ray.init()
 
     data_gen_model = LinearRegression1DAnalyticNumpy(
         parameters={
@@ -92,16 +121,43 @@ if __name__ == '__main__':
         for i in range(num_clients)
     ]
 
+    for client in clients: client.set_metadata.remote({'log_params': True})
+
     server = SyncronousPVIParameterServer(
         model_class=LinearRegression1DAnalyticNumpy,
         prior=prior,
         clients=clients,
-        max_iterations=3
+        max_iterations=20
     )
 
     while not server.should_stop():
-        print(f'Iteration {server.iterations}')
-        print(f'Exact inference values \t {exact_inference_parameters}')
-        print(f'PVI Values \t {server.parameters}')
-
         server.tick()
+
+        iteration = server.iterations
+
+        if iteration % 4 == 0:
+            log = {}
+            server_log = server.log_sacred()
+            log['server'] = server_log
+            client_logs = ray.get([client.log_sacred.remote() for client in clients])
+            for i, client_log in enumerate(client_logs):
+                log[f'client_{i}'] = client_log[0]
+
+            log = nest_utils.flatten(log)
+
+            for k, v in log.items():
+                if isinstance(v, numbers.Number):
+                    _run.log_scalar(k, v, iteration)
+
+    log = {}
+    server_log = server.get_log()
+    log['server'] = server_log
+    client_logs = ray.get([client.get_log.remote() for client in clients])
+    log['clients'] = client_logs
+
+    log_dir = os.path.join(log_base_dir, 'tests', str(datetime.datetime.now()))
+    os.makedirs(log_dir)
+    dump_file = os.path.join(log_dir, 'full_log.json')
+    with open(dump_file, 'w') as file:
+        json.dump(log, file)
+    ex.add_artifact(dump_file, 'full_log')

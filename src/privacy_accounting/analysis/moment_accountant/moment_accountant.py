@@ -97,3 +97,27 @@ def compute_privacy_loss_from_ledger(ledger, target_delta=None, target_eps=None,
 
     total_log_moments = compute_log_moments_from_ledger(ledger, max_lambda)
     return get_privacy_spent(max_lambda, total_log_moments, target_eps, target_delta)
+
+
+def compute_online_privacy_from_ledger(ledger, log_moments, target_delta=None, target_eps=None, max_lambda=32):
+    """ Compute the privacy loss of the queries entered into a ledger
+        using the Gaussian Mechanism utilising the Moments Accountant with
+        one of epsilon or delta fixed and composes this with the privacy of
+        previously seen entries, summarised by the log moments.
+
+        :param ledger: The ledger of queries to compute for. An incremental
+        ledger, NOT the whole ledger.
+        :param log_moments: summary log moments of previous queries
+        :param max_lambda: The maximum moment to compute
+        :param target_eps: A target epsilon to aim for.
+        :param target_delta: A target delta to aim for.
+        :return: epsilon, delta
+        """
+    if log_moments is None:
+        log_moments = compute_log_moments_from_ledger(ledger, max_lambda=max_lambda)
+    else:
+        log_moments = log_moments + compute_log_moments_from_ledger(ledger, max_lambda=max_lambda)
+
+    privacy_bound = get_privacy_spent(max_lambda, log_moments, target_eps=target_eps, target_delta=target_delta)
+
+    return privacy_bound, log_moments
