@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 
 import numpy as np
 import torch
@@ -53,8 +54,8 @@ class LogisticRegressionTorchModule(nn.Module):
 
         self.n_in = hyperparameters['n_in']
 
-        self.w_mu = nn.Parameter(torch.zeros(self.n_in, dtype=torch.float64))
-        self.w_log_var = nn.Parameter(torch.zeros(self.n_in, dtype=torch.float64))
+        self.w_mu = nn.Parameter(torch.zeros(self.n_in, dtype=torch.float32))
+        self.w_log_var = nn.Parameter(torch.zeros(self.n_in, dtype=torch.float32))
 
         # we make the assumption that the input parameters are actually a numpy array!
         self.set_parameters_from_numpy(parameters)
@@ -63,8 +64,8 @@ class LogisticRegressionTorchModule(nn.Module):
         self.N_samples = hyperparameters["N_samples"]
 
         # standard normal, for sampling required
-        self.normal_dist = Normal(loc=torch.tensor([0], dtype=torch.float64),
-                                  scale=torch.tensor([1], dtype=torch.float64))
+        self.normal_dist = Normal(loc=torch.tensor([0], dtype=torch.float32),
+                                  scale=torch.tensor([1], dtype=torch.float32))
 
     def set_parameters(self, parameters):
         if parameters is not None:
@@ -73,14 +74,14 @@ class LogisticRegressionTorchModule(nn.Module):
 
     def set_parameters_from_numpy(self, parameters_numpy):
         if parameters_numpy is not None:
-            self.w_mu.data = torch.tensor(parameters_numpy["w_mu"])
-            self.w_log_var.data = torch.tensor(parameters_numpy["w_log_var"])
+            self.w_mu.data = torch.tensor(parameters_numpy["w_mu"], dtype=torch.float32)
+            self.w_log_var.data = torch.tensor(parameters_numpy["w_log_var"], dtype=torch.float32)
 
     def set_prior_parameters_from_numpy(self, prior_nat_params_numpy):
         if prior_nat_params_numpy is not None:
             prior_params = nat_params_to_params_dict(prior_nat_params_numpy)
-            self.prior_mu = torch.tensor(prior_params["w_mu"])
-            self.prior_log_var = torch.tensor(prior_params["w_log_var"])
+            self.prior_mu = torch.tensor(prior_params["w_mu"], dtype=torch.float32)
+            self.prior_log_var = torch.tensor(prior_params["w_log_var"], dtype=torch.float32)
 
     def predict(self, x, integration_limit=500, parameters=None):
         """
@@ -209,6 +210,9 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
                                                                                  **hyperparameters[
                                                                                      'wrapped_optimizer_parameters'])
 
+        self._training_curves = []
+        self._derived_statistics_histories = []
+
     def set_hyperparameters(self, hyperparameters):
         if hyperparameters is not None:
             self.hyperparameters = hyperparameters
@@ -282,8 +286,8 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         super().fit(data, t_i, parameters, hyperparameters)
 
         # convert data into a tensor
-        x = torch.tensor(data["x"], dtype=torch.float64)
-        y_true = torch.tensor(data["y"], dtype=torch.float64)
+        x = torch.tensor(data["x"], dtype=torch.float32)
+        y_true = torch.tensor(data["y"], dtype=torch.float32)
 
         cav_nat_params = B.subtract_params(self.get_parameters(), t_i)
         # numpy dict for the effective prior
@@ -291,12 +295,34 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
 
         print_interval = np.ceil(self.hyperparameters['N_steps'] / 20)
 
-        training_array = np.empty(self.hyperparameters['N_steps'])
+        training_curve = np.empty(self.hyperparameters['N_steps'])
+        derived_statistics_history = []
+
+        self._derived_statistics_history = []
         # lets just do this for the time being
         for i in range(self.hyperparameters['N_steps']):
             current_loss = self.wrapped_optimizer.fit_batch(x, y_true)
-            training_array[i] = current_loss
+            derived_statistics = self.wrapped_optimizer.get_logged_statistics()
+            derived_statistics_history.append(derived_statistics)
+            training_curve[i] = current_loss
             if i % print_interval == 0:
-                print("Loss: {:.3f} after {} steps".format(current_loss, i))
+                logger.info("Loss: {:.3f} after {} steps".format(current_loss, i))
 
-        return self.get_parameters(), training_array
+        # if several fit batches are called, this puts all of their training curves into a list
+        self._training_curves.append(training_curve)
+        self._derived_statistics_histories.append(derived_statistics_history)
+
+        return self.get_parameters()
+
+    def get_incremental_log_record(self):
+        ret = {
+            "derived_statistics": self._derived_statistics_histories,
+            "training_curves": self._training_curves,
+        }
+        self._training_curves = []
+        self._derived_statistics_histories = []
+        return ret
+
+    def get_incremental_sacred_record(self):
+        # we don't want anything from the model to be displayed directly to sacred
+        return {}

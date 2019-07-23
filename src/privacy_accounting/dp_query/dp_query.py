@@ -79,7 +79,7 @@ class DPQuery(abc.ABC):
         :param params: The sample parameters, e.g. clipping bound in DP-SGD.
         :param sample_state: The current sample state.
         :param record: The new record to accumulate.
-        :return: The updated sample state.
+        :return: The updated sample state with extra information about the record
         """
         preprocessed_record = self.preprocess_record(params, record)
         return self.accumulate_preprocessed_record(sample_state, preprocessed_record)
