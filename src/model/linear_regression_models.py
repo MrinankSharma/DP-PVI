@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.random as random
 
-import src.utils.numpy_backend as B
+import src.utils.numpy_utils as B
 from src.model.model import Model
 
 
@@ -49,3 +49,9 @@ class LinearRegression1DAnalyticNumpy(Model):
         return {
             'model_noise': 0
         }
+
+    def log_update(self):
+        return {}
+
+    def log_sacred(self):
+        return {}

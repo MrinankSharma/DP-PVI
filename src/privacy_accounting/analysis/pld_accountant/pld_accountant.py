@@ -491,7 +491,7 @@ def compute_privacy_loss_from_ledger(ledger, target_eps=None, target_delta=None,
             privacy_bound, _ = get_eps_add_remove(effective_z_t, q_t, target_delta=target_delta, nx=nx, L=L)
             return privacy_bound
 
-    if adjacency_definition is 'add_remove':
+    elif adjacency_definition is 'substitution':
         if target_eps is not None:
             privacy_bound, _ = get_delta_substitution(effective_z_t, q_t, target_eps=target_eps, nx=nx, L=L)
             return privacy_bound
@@ -507,7 +507,8 @@ def compute_online_privacy_from_ledger(ledger, F_prod,
                                        adjacency_definition='add_remove', nx=1E6, L=20.0):
     """ Compute new PLD privacy in an online fashion, to speed up computation.
 
-    :param ledger: The ledger of queries to compute for
+    :param ledger: The ledger of queries to compute for. An incremental ledger,
+    NOT the whole ledger.
     :param target_eps: A target epsilon to aim for.
     :param target_delta: A target delta to aim for.
     :param adjacency_definition: The definition of adjacent datasets to use. Can be
@@ -552,7 +553,7 @@ def compute_online_privacy_from_ledger(ledger, F_prod,
                                                        F_prod=F_prod)
             return privacy_bound, F_prod
 
-    if adjacency_definition is 'add_remove':
+    if adjacency_definition is 'substitution':
         if target_eps is not None:
             privacy_bound, F_prod = get_delta_substitution(effective_z_t, q_t, target_eps=target_eps, nx=nx, L=L,
                                                            F_prod=F_prod)

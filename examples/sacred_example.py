@@ -55,13 +55,13 @@ def main(N, batch_size, learning_rate, epochs, privacy, _run):
 
     dataloader = data.DataLoader(dataset, batch_size=batch_size)
 
-    optimiser = torch.optim.SGD(model.parameters(), lr=learning_rate)
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
     ledger = PrivacyLedger(x.shape[0], batch_size / x.shape[0])
 
-    dp_optimiser = DPGaussianOptimizer(
+    dp_optimizer = DPGaussianOptimizer(
         l2_norm_clip=privacy['l2_norm_clip'],
         noise_multiplier=privacy['noise_multiplier'],
-        optimiser=optimiser,
+        optimizer=optimizer,
         model=model,
         ledger=ledger,
         loss_per_example=vec_loss,
@@ -86,7 +86,7 @@ def main(N, batch_size, learning_rate, epochs, privacy, _run):
     for epoch in range(epochs):
         print(epoch)
         for batch_x, batch_y in dataloader:
-            dp_optimiser.fit_batch(batch_x, batch_y)
+            dp_optimizer.fit_batch(batch_x, batch_y)
 
         t0 = time.time()
         ma_privacy = MAOnline.update_privacy(ledger.get_formatted_ledger())

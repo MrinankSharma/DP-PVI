@@ -28,13 +28,13 @@ dataset = data.TensorDataset(
 batch_size = 10
 dataloader = data.DataLoader(dataset, batch_size=batch_size)
 
-optimiser = torch.optim.SGD(model.parameters(), lr=0.001)
+optimizer = torch.optim.SGD(model.parameters(), lr=0.001)
 ledger = PrivacyLedger(x.shape[0], batch_size / x.shape[0])
 
-dp_optimiser = DPGaussianOptimizer(
+dp_optimizer = DPGaussianOptimizer(
     l2_norm_clip=5,
     noise_multiplier=4,
-    optimiser=optimiser,
+    optimizer=optimizer,
     model=model,
     ledger=ledger,
     loss_per_example=vec_loss,
@@ -59,7 +59,7 @@ PLDOnline = OnlineAccountant(
 for epoch in range(100):
     print(epoch)
     for batch_x, batch_y in dataloader:
-        dp_optimiser.fit_batch(batch_x, batch_y)
+        dp_optimizer.fit_batch(batch_x, batch_y)
 
     t0 = time.time()
     ma_privacy = MAOnline.update_privacy(ledger.get_formatted_ledger())

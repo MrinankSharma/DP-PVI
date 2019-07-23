@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections import defaultdict
 
 
 class Model(ABC):
@@ -15,6 +16,8 @@ class Model(ABC):
 
         self.set_parameters(parameters)
         self.set_hyperparameters(hyperparameters)
+
+        self.log = defaultdict(list)
 
     def set_parameters(self, parameters):
         self.parameters = {**self.parameters, **parameters}
@@ -84,4 +87,19 @@ class Model(ABC):
         :param hyperparameters: optional updated hyperparameters
         :return: the model's predictions of the data
         '''
+        pass
+
+    @abstractmethod
+    def log_update(self):
+        """
+        Log various things about the model in self.log. Flexible form.
+        """
+        pass
+
+    @abstractmethod
+    def log_sacred(self):
+        """
+        Log various things we may want to see in the sacred logs. Reduced form
+        :return: A *flat* dictionary containing scalars of interest for the current state.
+        """
         pass
