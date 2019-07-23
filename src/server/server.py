@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
+from collections import defaultdict
 
 import ray
 
-import src.utils.numpy_backend as B
+import src.utils.numpy_utils as B
 
 
 class ParameterServer(ABC):
@@ -24,6 +25,8 @@ class ParameterServer(ABC):
         self.model = model_class()
         self.prior = prior
         self.parameters = prior
+
+        self.log = defaultdict(list)
 
     def set_hyperparameters(self, hyperparameters):
         self.hyperparameters = {**self.hyperparameters, **hyperparameters}
@@ -59,6 +62,24 @@ class ParameterServer(ABC):
     def add_client(self, client):
         self.clients.append(client)
 
+    def get_log(self):
+        return self.log
+
+    @abstractmethod
+    def log_update(self):
+        """
+        Log various things about the server in self.log. Flexible form.
+        """
+        pass
+
+    @abstractmethod
+    def log_sacred(self):
+        """
+        Log various things we may want to see in the sacred logs. Reduced form
+        :return: A flat dictionary containing scalars of interest for the current state, the current iteration.
+        """
+        pass
+
 
 class SyncronousPVIParameterServer(ParameterServer):
 
@@ -82,8 +103,6 @@ class SyncronousPVIParameterServer(ParameterServer):
 
         self.parameters = lambda_new
 
-        print(lambda_old, delta_is)
-
         self.iterations += 1
 
     def should_stop(self):
@@ -97,6 +116,12 @@ class SyncronousPVIParameterServer(ParameterServer):
 
     def get_default_metadata(self):
         return super().get_default_metadata()
+
+    def log_update(self):
+        return {}
+
+    def log_sacred(self):
+        return {}
 
 
 def clip_and_noise(parameters, bound, noise_sigma):

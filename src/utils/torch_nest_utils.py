@@ -1,6 +1,5 @@
 import itertools
 
-import torch
 
 def map_structure(operation, *param_groups):
     """ Expects a pair of list of lists of identical structure representing
@@ -54,7 +53,7 @@ def flatten(param_groups):
 
 
 def parameters_to_tensor_groups(parameter_groups, attribute):
-    """ Function to reduce a parameter group from an optimiser to tensor_group with
+    """ Function to reduce a parameter group from an optimizer to tensor_group with
     the same structure and just the requested parameter
     :param parameter_groups: The parameter group to extract from
     :param attribute: The attribute from the parameter to extrect, e.g. data or grad

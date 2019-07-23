@@ -8,8 +8,17 @@ from repoze.lru import lru_cache
 
 @lru_cache(maxsize=100)
 def get_FF1_add_remove(sigma, q, nx, L):
-    # first ii for which x(ii)>log(1-q),
-    # i.e. start of the integral domain
+    """ For a single Gaussian Mechanism, compute the FFT approximation points for
+    the privacy loss distribution, under the addition/removal adjacency definition.
+    :param sigma: The effective noise applied
+    :param q: The sample probability
+    :param nx: The number of approximation points
+    :param L: The clipping length of the approximation
+    :return: The FFT approximation points
+    """
+
+    # Evaluate the PLD distribution,
+    # This is the case of substitution relation (subsection 5.1)
 
     half = int(nx / 2)
 
@@ -34,13 +43,21 @@ def get_FF1_add_remove(sigma, q, nx, L):
     fx[:half] = temp
 
     FF1 = np.fft.fft(fx * dx)
-    print(sigma, q, FF1)
 
     return FF1
 
 
 @lru_cache(maxsize=100)
 def get_FF1_substitution(sigma, q, nx, L):
+    """ For a single Gaussian Mechanism, compute the FFT approximation points for
+    the privacy loss distribution, under the substitution adjacency definition.
+    :param sigma: The effective noise applied
+    :param q: The sample probability
+    :param nx: The number of approximation points
+    :param L: The clipping length of the approximation
+    :return: The FFT approximation points
+    """
+
     # Evaluate the PLD distribution,
     # This is the case of substitution relation (subsection 5.2)
 
@@ -75,7 +92,7 @@ def get_FF1_substitution(sigma, q, nx, L):
     return fx
 
 
-def get_delta_add_remove(effective_z_t, q_t, target_eps=1.0, nx=1E6, L=20.0):
+def get_delta_add_remove(effective_z_t, q_t, target_eps=1.0, nx=1E6, L=20.0, F_prod=None):
     """ Computes the approximation of the exact privacy as per https://arxiv.org/abs/1906.03049
     for a fixed epsilon, for a list of given mechanisms applied. Considers neighbouring sets
     as those with the addition/removal property.
@@ -85,6 +102,8 @@ def get_delta_add_remove(effective_z_t, q_t, target_eps=1.0, nx=1E6, L=20.0):
     :param target_eps: The target epsilon to aim for.
     :param nx: The number of discretisation points to use.
     :param L: The range truncation parameter
+    :param F_prod: Specify a previous F_prod for computing online accountancy. If none, assume not
+    online.
     :return: (epsilon, delta) privacy bound.
     """
 
@@ -97,7 +116,8 @@ def get_delta_add_remove(effective_z_t, q_t, target_eps=1.0, nx=1E6, L=20.0):
     x = np.linspace(-L, L - dx, nx, dtype=np.complex128)  # grid for the numerical integration
 
     fx_table = []
-    F_prod = np.ones(x.size)
+    if F_prod is None:
+        F_prod = np.ones(x.size)
 
     ncomp = effective_z_t.size
 
@@ -138,10 +158,10 @@ def get_delta_add_remove(effective_z_t, q_t, target_eps=1.0, nx=1E6, L=20.0):
     #     np.real(delta)) + ' (epsilon=' + str(target_eps) + ')')
 
     # Change from original: return signature consistent across methods to give epsilon and delta.
-    return target_eps, np.real(delta)
+    return (target_eps, np.real(delta)), F_prod
 
 
-def get_delta_substitution(effective_z_t, q_t, target_eps=1.0, nx=1E6, L=20.0):
+def get_delta_substitution(effective_z_t, q_t, target_eps=1.0, nx=1E6, L=20.0, F_prod=None):
     """ Computes the approximation of the exact privacy as per https://arxiv.org/abs/1906.03049
     for a fixed epsilon, for a list of given mechanisms applied. Considers neighbouring sets
     as those with the substitution property.
@@ -151,6 +171,8 @@ def get_delta_substitution(effective_z_t, q_t, target_eps=1.0, nx=1E6, L=20.0):
     :param target_eps: The target epsilon to aim for.
     :param nx: The number of discretisation points to use.
     :param L: The range truncation parameter
+    :param F_prod: Specify a previous F_prod for computing online accountancy. If none, assume not
+    online.
     :return: (epsilon, delta) privacy bound.
     """
 
@@ -163,7 +185,8 @@ def get_delta_substitution(effective_z_t, q_t, target_eps=1.0, nx=1E6, L=20.0):
     x = np.linspace(-L, L - dx, nx, dtype=np.complex128)  # grid for the numerical integration
 
     fx_table = []
-    F_prod = np.ones(x.size)
+    if F_prod is None:
+        F_prod = np.ones(x.size)
 
     ncomp = effective_z_t.size
 
@@ -200,20 +223,22 @@ def get_delta_substitution(effective_z_t, q_t, target_eps=1.0, nx=1E6, L=20.0):
 
     # print('Bounded DP-delta after ' + str(int(ncomp)) + ' compositions defined by sigma and q arrays:' + str(np.real(delta)) + ' (epsilon=' + str(target_eps) + ')')
     # Change from original: return signature consistent across methods to give epsilon and delta.
-    return target_eps, np.real(delta)
+    return (target_eps, np.real(delta)), F_prod
 
 
-def get_eps_add_remove(effective_z_t, q_t, target_delta=1e-6, nx=1E6, L=20.0):
+def get_eps_add_remove(effective_z_t, q_t, target_delta=1e-6, nx=1E6, L=20.0, F_prod=None):
     """ Computes the approximation of the exact privacy as per https://arxiv.org/abs/1906.03049
-        for a fixed epsilon, for a list of given mechanisms applied. Considers neighbouring sets
-        as those with the addition/removal property.
+    for a fixed epsilon, for a list of given mechanisms applied. Considers neighbouring sets
+    as those with the addition/removal property.
 
-        :param effective_z_t: 1D numpy array of the effective noises applied in the mechanisms.
-        :param q_t: 1D numpy array of the selection probabilities of the data used in the mechanisms.
-        :param target_delta: The target delta to aim for.
-        :param nx: The number of discretisation points to use.
-        :param L: The range truncation parameter
-        :return: (epsilon, delta) privacy bound.
+    :param effective_z_t: 1D numpy array of the effective noises applied in the mechanisms.
+    :param q_t: 1D numpy array of the selection probabilities of the data used in the mechanisms.
+    :param target_delta: The target delta to aim for.
+    :param nx: The number of discretisation points to use.
+    :param L: The range truncation parameter
+    :param F_prod: Specify a previous F_prod for computing online accountancy. If none, assume not
+    online.
+    :return: (epsilon, delta) privacy bound.
     """
 
     nx = int(nx)
@@ -225,7 +250,8 @@ def get_eps_add_remove(effective_z_t, q_t, target_delta=1e-6, nx=1E6, L=20.0):
     x = np.linspace(-L, L - dx, nx, dtype=np.complex128)  # grid for the numerical integration
 
     fx_table = []
-    F_prod = np.ones(x.size)
+    if F_prod is None:
+        F_prod = np.ones(x.size)
 
     ncomp = effective_z_t.size
 
@@ -305,10 +331,24 @@ def get_eps_add_remove(effective_z_t, q_t, target_delta=1e-6, nx=1E6, L=20.0):
         return float('inf')
     else:
         # print('Unbounded DP-epsilon after ' + str(int(ncomp)) + ' compositions defined by sigma and q arrays: ' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
-        return np.real(eps_0), target_delta
+        return (np.real(eps_0), target_delta), F_prod
 
 
-def get_eps_substitution(effective_z_t, q_t, target_delta=1e-6, nx=1E6, L=20.0):
+def get_eps_substitution(effective_z_t, q_t, target_delta=1e-6, nx=1E6, L=20.0, F_prod=None):
+    """ Computes the approximation of the exact privacy as per https://arxiv.org/abs/1906.03049
+    for a fixed epsilon, for a list of given mechanisms applied. Considers neighbouring sets
+    as those with the substitution property.
+
+    :param effective_z_t: 1D numpy array of the effective noises applied in the mechanisms.
+    :param q_t: 1D numpy array of the selection probabilities of the data used in the mechanisms.
+    :param target_delta: The target delta to aim for.
+    :param nx: The number of discretisation points to use.
+    :param L: The range truncation parameter
+    :param F_prod: Specify a previous F_prod for computing online accountancy. If none, assume not
+    online.
+    :return: (epsilon, delta) privacy bound.
+    """
+
     nx = int(nx)
     half = int(nx / 2)
 
@@ -321,7 +361,8 @@ def get_eps_substitution(effective_z_t, q_t, target_delta=1e-6, nx=1E6, L=20.0):
     eps_0 = 0
 
     fx_table = []
-    F_prod = np.ones(x.size)
+    if F_prod is None:
+        F_prod = np.ones(x.size)
 
     ncomp = effective_z_t.size
 
@@ -396,9 +437,9 @@ def get_eps_substitution(effective_z_t, q_t, target_delta=1e-6, nx=1E6, L=20.0):
         print('Error: epsilon out of [-L,L] window, please check the parameters.')
         return float('inf')
     else:
-        print('Bounded DP-epsilon after ' + str(int(ncomp)) + ' compositions defined by sigma and q arrays: ' + str(
-            np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
-        return np.real(eps_0)
+        # print('Bounded DP-epsilon after ' + str(int(ncomp)) + ' compositions defined by sigma and q arrays: ' + str(
+        #     np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
+        return (np.real(eps_0), target_delta), F_prod
     #
     # print('Bounded DP-epsilon after ' + str(int(ncomp)) + ' compositions:' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
     # return np.real(eps_0)
@@ -444,14 +485,82 @@ def compute_privacy_loss_from_ledger(ledger, target_eps=None, target_delta=None,
 
     if adjacency_definition is 'add_remove':
         if target_eps is not None:
-            return get_delta_add_remove(effective_z_t, q_t, target_eps=target_eps, nx=nx, L=L)
+            privacy_bound, _ = get_delta_add_remove(effective_z_t, q_t, target_eps=target_eps, nx=nx, L=L)
+            return privacy_bound
         else:
-            return get_eps_add_remove(effective_z_t, q_t, target_delta=target_delta, nx=nx, L=L)
+            privacy_bound, _ = get_eps_add_remove(effective_z_t, q_t, target_delta=target_delta, nx=nx, L=L)
+            return privacy_bound
+
+    elif adjacency_definition is 'substitution':
+        if target_eps is not None:
+            privacy_bound, _ = get_delta_substitution(effective_z_t, q_t, target_eps=target_eps, nx=nx, L=L)
+            return privacy_bound
+        else:
+            privacy_bound, _ = get_eps_substitution(effective_z_t, q_t, target_delta=target_delta, nx=nx, L=L)
+            return privacy_bound
+
+    raise ValueError('adjacency_definition must be one of "substitution" or "add_remove".')
+
+
+def compute_online_privacy_from_ledger(ledger, F_prod,
+                                       target_delta=None, target_eps=None,
+                                       adjacency_definition='add_remove', nx=1E6, L=20.0):
+    """ Compute new PLD privacy in an online fashion, to speed up computation.
+
+    :param ledger: The ledger of queries to compute for. An incremental ledger,
+    NOT the whole ledger.
+    :param target_eps: A target epsilon to aim for.
+    :param target_delta: A target delta to aim for.
+    :param adjacency_definition: The definition of adjacent datasets to use. Can be
+    'add_remove' or 'substitution'
+    :param nx: The number of discretisation points to use.
+    :param L: The range truncation parameter
+    :return:
+    """
+
+    if ledger == [] and F_prod is None:
+        return tuple([None, None]), None
+
+    effective_z_t = []
+    q_t = []
+
+    for sample in ledger:
+        effective_z = sum([
+            (q.noise_stddev / q.l2_norm_bound) ** -2 for q in sample.queries
+        ]) ** -0.5
+
+        effective_z_t.append(effective_z)
+        q_t.append(sample.selection_probability)
+
+    effective_z_t = np.array(effective_z_t)
+    q_t = np.array(q_t)
+
+    if target_delta is None and target_eps is None:
+        raise ValueError(
+            "One of the target values must not be None")
+
+    if target_eps is not None and target_delta is not None:
+        raise ValueError(
+            "Exactly one out of eps and delta must be None. (None is).")
 
     if adjacency_definition is 'add_remove':
         if target_eps is not None:
-            return get_delta_substitution(effective_z_t, q_t, target_eps=target_eps, nx=nx, L=L)
+            privacy_bound, F_prod = get_delta_add_remove(effective_z_t, q_t, target_eps=target_eps, nx=nx, L=L,
+                                                         F_prod=F_prod)
+            return privacy_bound, F_prod
         else:
-            return get_eps_substitution(effective_z_t, q_t, target_delta=target_delta, nx=nx, L=L)
+            privacy_bound, F_prod = get_eps_add_remove(effective_z_t, q_t, target_delta=target_delta, nx=nx, L=L,
+                                                       F_prod=F_prod)
+            return privacy_bound, F_prod
+
+    if adjacency_definition is 'substitution':
+        if target_eps is not None:
+            privacy_bound, F_prod = get_delta_substitution(effective_z_t, q_t, target_eps=target_eps, nx=nx, L=L,
+                                                           F_prod=F_prod)
+            return privacy_bound, F_prod
+        else:
+            privacy_bound, F_prod = get_eps_substitution(effective_z_t, q_t, target_delta=target_delta, nx=nx, L=L,
+                                                         F_prod=F_prod)
+            return privacy_bound, F_prod
 
     raise ValueError('adjacency_definition must be one of "substitution" or "add_remove".')
