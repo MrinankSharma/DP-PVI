@@ -22,6 +22,7 @@ class GaussianDPQuery(dp_query.SumAggregationDPQuery):
         :param noise_stddev: The noise magnitude to apply to the query.
         """
         self._l2_norm_clip = l2_norm_clip
+        self._record_l2_norm = None
         self._noise_stddev = noise_stddev
         self._ledger = None
 
@@ -43,12 +44,25 @@ class GaussianDPQuery(dp_query.SumAggregationDPQuery):
     def initial_sample_state(self, param_groups):
         return nest.map_structure(torch.zeros_like, param_groups)
 
+    def get_record_derived_data(self):
+        return {
+            "l2_norm:": self._record_l2_norm
+        }
+
     def preprocess_record(self, params, record):
+        """
+        Return the scaled record and also the l2 norm (to deduce whether clipping occured or not)
+
+        :param params:
+        :param record:
+        :return:
+        """
         l2_norm_clip = params
         l2_norm = torch.sqrt(nest.reduce_structure(lambda p: torch.norm(torch.flatten(p), p=2) ** 2,
                                                    torch.add,
                                                    record))
 
+        self._record_l2_norm = l2_norm
         if l2_norm < l2_norm_clip:
             return record
 

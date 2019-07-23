@@ -209,6 +209,8 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
                                                                                  **hyperparameters[
                                                                                      'wrapped_optimizer_parameters'])
 
+        self._derived_statistics_history = []
+
     def set_hyperparameters(self, hyperparameters):
         if hyperparameters is not None:
             self.hyperparameters = hyperparameters
@@ -291,12 +293,26 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
 
         print_interval = np.ceil(self.hyperparameters['N_steps'] / 20)
 
-        training_array = np.empty(self.hyperparameters['N_steps'])
+        self._training_curve = np.empty(self.hyperparameters['N_steps'])
+
+        self._derived_statistics_history = []
         # lets just do this for the time being
         for i in range(self.hyperparameters['N_steps']):
             current_loss = self.wrapped_optimizer.fit_batch(x, y_true)
-            training_array[i] = current_loss
+            derived_statistics = self.wrapped_optimizer.get_logged_statistics
+            self._derived_statistics_history.append(derived_statistics)
+            self._training_curve[i] = current_loss
             if i % print_interval == 0:
-                print("Loss: {:.3f} after {} steps".format(current_loss, i))
+                logger.info("Loss: {:.3f} after {} steps".format(current_loss, i))
 
-        return self.get_parameters(), training_array
+        return self.get_parameters()
+
+    def log_update(self):
+        return {
+            "derived_statistics": self._derived_statistics_history,
+            "training_curve": self._training_curve,
+        }
+
+    def log_sacred(self):
+        # we don't want anything from the model to be displayed directly to sacred
+        return {}
