@@ -46,7 +46,7 @@ class GaussianDPQuery(dp_query.SumAggregationDPQuery):
 
     def get_record_derived_data(self):
         return {
-            "l2_norm:": self._record_l2_norm
+            "l2_norm:": self._record_l2_norm.numpy().item()
         }
 
     def preprocess_record(self, params, record):

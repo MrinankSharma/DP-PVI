@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import torch
 from math import ceil
 
@@ -51,12 +53,16 @@ class DPOptimizer(WrapperOptimizer):
             derived_record_data = self.dp_sum_query.get_record_derived_data()
             return sample_state, derived_record_data
 
-        self._derived_records_data = []
+        self._derived_records_data = defaultdict(list)
 
         for losses in microbatches_losses:
             sample_state, derived_record_data = process_microbatch(losses,
                                                                    sample_state)  # accumulate up the clipped microbatch gradients
-            self._derived_records_data.append(derived_record_data)
+
+            for k, v in derived_record_data.items():
+                self._derived_records_data[k].append(v)
+
+        self._derived_records_data = dict(self._derived_records_data)
 
         final_grads, _ = self.dp_sum_query.get_noised_result(sample_state, self._global_parameters)
 

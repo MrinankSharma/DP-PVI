@@ -25,4 +25,8 @@ def structured_ndarrays_to_lists(d):
                 ret[k] = l[0]
             else:
                 ret[k] = v.tolist()
+        elif isinstance(v, list):
+            # bit of a hack - assume that the list is fine!
+            ret[k] = v
+
     return ret
