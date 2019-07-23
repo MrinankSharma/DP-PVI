@@ -1,4 +1,5 @@
 import collections
+import numbers
 
 import numpy as np
 
@@ -14,6 +15,23 @@ def flatten(d, parent_key='', sep='.'):
     return dict(items)
 
 
+def structured_lists_to_lists(l):
+    ret = []
+    for x in l:
+        if isinstance(x, list):
+            ret.append(structured_lists_to_lists(x))
+        elif isinstance(x, dict):
+            ret.append(structured_ndarrays_to_lists(x))
+        elif isinstance(x, np.ndarray):
+            if x.size == 1:
+                ret.append(x.tolist()[0])
+            else:
+                ret.append(x.tolist())
+        elif isinstance(x, numbers.Number):
+            ret.append(x)
+    return ret
+
+
 def structured_ndarrays_to_lists(d):
     ret = {}
     for k, v in d.items():
@@ -27,6 +45,6 @@ def structured_ndarrays_to_lists(d):
                 ret[k] = v.tolist()
         elif isinstance(v, list):
             # bit of a hack - assume that the list is fine!
-            ret[k] = v
+            ret[k] = structured_lists_to_lists(v)
 
     return ret
