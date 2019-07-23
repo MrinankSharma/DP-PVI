@@ -1,15 +1,20 @@
 import itertools
+import pickle
+import logging
 
 import numpy as np
 
-from sklearn.preprocessing import OneHotEncoder, StandardScaler, OrdinalEncoder, LabelEncoder, Binarizer
+from sklearn.preprocessing import OneHotEncoder, StandardScaler, OrdinalEncoder, Binarizer
 from sklearn.compose import ColumnTransformer
 from sklearn.utils import as_float_array
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 def process_dataset(data_folder, filename, config, one_hot=True, should_scale=False):
     data = np.loadtxt(data_folder + "/" + filename, dtype=str, delimiter=',')
 
-    post_string = "/x"
+    post_string = ""
 
     # grab the numerical part of the array and convert to a float
     if should_scale:
@@ -25,7 +30,12 @@ def process_dataset(data_folder, filename, config, one_hot=True, should_scale=Fa
         post_string = post_string + "_ordinal"
 
     y = config["label_generator"](data[:, config["target"]].reshape(-1, 1))
-    x = data[:, 0:14]
+
+    mask = np.full(data.shape[1], True)
+    mask[config["target"]] = False
+    x = data[:, mask]
+
+    logger.info("Reduced Data Shape {}".format(x.shape))
 
     preprocessor = ColumnTransformer(transformers=[
         ('num', numerical_transformer, config["numerical_features"]),
@@ -33,10 +43,12 @@ def process_dataset(data_folder, filename, config, one_hot=True, should_scale=Fa
     ])
 
     x_transformed = preprocessor.fit_transform(x)
-    x_transformed.shape
 
-    np.savetxt(data_folder + "/y.csv", y)
-    np.savetxt(data_folder + post_string + ".csv", x_transformed)
+    np.savetxt(data_folder + "/y.csv", y, delimiter=",")
+    np.savetxt(data_folder + "/x" + post_string + ".csv", x_transformed, delimiter=",")
+
+    with open(data_folder + "/preprocessor" + post_string + ".csv", "wb+") as f:
+        pickle.dump(preprocessor, f)
 
 
 if __name__ == "__main__":
@@ -65,5 +77,7 @@ if __name__ == "__main__":
     one_hot = [True, False]
 
     for ss, oh in itertools.product(should_scale, one_hot):
+        logger.info("Processing Adult Dataset with Should Scale: {} One Hot: {}".format(ss, oh))
         process_dataset("/Users/msharma/workspace/DP-PVI/data/adult", "adult.data", adult_config, oh, ss)
+        logger.info("Processing Abalone Dataset with Should Scale: {} One Hot: {}".format(ss, oh))
         process_dataset("/Users/msharma/workspace/DP-PVI/data/abalone", "abalone.data", abalone_config, oh, ss)
