@@ -90,14 +90,14 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    def log_update(self):
+    def get_incremental_log_record(self):
         """
         Log various things about the model in self.log. Flexible form.
         """
         pass
 
     @abstractmethod
-    def log_sacred(self):
+    def get_incremental_sacred_record(self):
         """
         Log various things we may want to see in the sacred logs. Reduced form
         :return: A *flat* dictionary containing scalars of interest for the current state.
