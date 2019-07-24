@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import torch
 from math import ceil
 
@@ -5,6 +7,7 @@ import src.utils.torch_nest_utils as nest
 from src.privacy_accounting.analysis import QueryWithLedger
 from src.privacy_accounting.dp_query import GaussianDPQuery
 from .wrapper_optimizer import WrapperOptimizer
+
 
 class DPOptimizer(WrapperOptimizer):
 
@@ -22,6 +25,7 @@ class DPOptimizer(WrapperOptimizer):
         self.num_microbatches = num_microbatches
 
         self._global_parameters = self.dp_sum_query.initial_global_state()
+        self._derived_records_data = []
 
     def fit_batch(self, x: torch.Tensor, y: torch.Tensor):
 
@@ -46,10 +50,19 @@ class DPOptimizer(WrapperOptimizer):
             microbatch_loss.backward(retain_graph=True)
             record = self.get_grads(param_groups)
             sample_state = self.dp_sum_query.accumulate_record(sample_params, sample_state, record)
-            return sample_state
+            derived_record_data = self.dp_sum_query.get_record_derived_data()
+            return sample_state, derived_record_data
+
+        self._derived_records_data = defaultdict(list)
 
         for losses in microbatches_losses:
-            sample_state = process_microbatch(losses, sample_state)  # accumulate up the clipped microbatch gradients
+            sample_state, derived_record_data = process_microbatch(losses,
+                                                                   sample_state)  # accumulate up the clipped microbatch gradients
+
+            for k, v in derived_record_data.items():
+                self._derived_records_data[k].append(v)
+
+        self._derived_records_data = dict(self._derived_records_data)
 
         final_grads, _ = self.dp_sum_query.get_noised_result(sample_state, self._global_parameters)
 
@@ -76,6 +89,9 @@ class DPOptimizer(WrapperOptimizer):
             grads.append(group_grads)
 
         return grads
+
+    def get_logged_statistics(self):
+        return self._derived_records_data
 
 
 class DPGaussianOptimizer(DPOptimizer):

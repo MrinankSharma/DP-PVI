@@ -5,3 +5,6 @@ class WrapperOptimizer(ABC):
     @abstractmethod
     def fit_batch(self, x, y):
         pass
+
+    def get_logged_statistics(self):
+        return {}

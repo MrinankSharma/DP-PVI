@@ -52,8 +52,8 @@ class LinearRegression1DAnalyticNumpy(Model):
             'model_noise': 0
         }
 
-    def log_update(self):
+    def get_incremental_sacred_record(self):
         return {}
 
-    def log_sacred(self):
+    def get_incremental_log_record(self):
         return {}

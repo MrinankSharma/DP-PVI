@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 
 import numpy as np
 import torch
@@ -212,6 +213,9 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
                                                                                          'wrapped_optimizer_parameters']
                                                                                      )
 
+        self._training_curves = []
+        self._derived_statistics_histories = []
+
     def set_hyperparameters(self, hyperparameters):
         if hyperparameters is not None:
             self.hyperparameters = hyperparameters
@@ -296,18 +300,34 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
 
         print_interval = np.ceil(self.hyperparameters['N_steps'] / 20)
 
-        training_array = np.empty(self.hyperparameters['N_steps'])
+        training_curve = np.empty(self.hyperparameters['N_steps'])
+        derived_statistics_history = []
+
+        self._derived_statistics_history = []
         # lets just do this for the time being
         for i in range(self.hyperparameters['N_steps']):
             current_loss = self.wrapped_optimizer.fit_batch(x, y_true)
-            training_array[i] = current_loss
+            derived_statistics = self.wrapped_optimizer.get_logged_statistics()
+            derived_statistics_history.append(derived_statistics)
+            training_curve[i] = current_loss
             if i % print_interval == 0:
-                print("Loss: {:.3f} after {} steps".format(current_loss, i))
+                logger.info("Loss: {:.3f} after {} steps".format(current_loss, i))
+
+        # if several fit batches are called, this puts all of their training curves into a list
+        self._training_curves.append(training_curve)
+        self._derived_statistics_histories.append(derived_statistics_history)
 
         return self.get_parameters()
 
-    def log_update(self):
-        pass
+    def get_incremental_log_record(self):
+        ret = {
+            "derived_statistics": self._derived_statistics_histories,
+            "training_curves": self._training_curves,
+        }
+        self._training_curves = []
+        self._derived_statistics_histories = []
+        return ret
 
-    def log_sacred(self):
+    def get_incremental_sacred_record(self):
+        # we don't want anything from the model to be displayed directly to sacred
         return {}
