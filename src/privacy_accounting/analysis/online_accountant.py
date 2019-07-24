@@ -45,3 +45,7 @@ class OnlineAccountant(object):
         self._position = len(self._ledger)
 
         return self._privacy_bound
+
+    @property
+    def privacy_bound(self):
+        return self._privacy_bound

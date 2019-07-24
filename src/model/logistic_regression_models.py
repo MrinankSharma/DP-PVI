@@ -53,8 +53,8 @@ class LogisticRegressionTorchModule(nn.Module):
 
         self.n_in = hyperparameters['n_in']
 
-        self.w_mu = nn.Parameter(torch.zeros(self.n_in, dtype=torch.float64))
-        self.w_log_var = nn.Parameter(torch.zeros(self.n_in, dtype=torch.float64))
+        self.w_mu = nn.Parameter(torch.zeros(self.n_in, dtype=torch.float32))
+        self.w_log_var = nn.Parameter(torch.zeros(self.n_in, dtype=torch.float32))
 
         # we make the assumption that the input parameters are actually a numpy array!
         self.set_parameters_from_numpy(parameters)
@@ -63,8 +63,8 @@ class LogisticRegressionTorchModule(nn.Module):
         self.N_samples = hyperparameters["N_samples"]
 
         # standard normal, for sampling required
-        self.normal_dist = Normal(loc=torch.tensor([0], dtype=torch.float64),
-                                  scale=torch.tensor([1], dtype=torch.float64))
+        self.normal_dist = Normal(loc=torch.tensor([0], dtype=torch.float32),
+                                  scale=torch.tensor([1], dtype=torch.float32))
 
     def set_parameters(self, parameters):
         if parameters is not None:
@@ -73,14 +73,14 @@ class LogisticRegressionTorchModule(nn.Module):
 
     def set_parameters_from_numpy(self, parameters_numpy):
         if parameters_numpy is not None:
-            self.w_mu.data = torch.tensor(parameters_numpy["w_mu"])
-            self.w_log_var.data = torch.tensor(parameters_numpy["w_log_var"])
+            self.w_mu.data = torch.tensor(parameters_numpy["w_mu"], dtype=torch.float32)
+            self.w_log_var.data = torch.tensor(parameters_numpy["w_log_var"], dtype=torch.float32)
 
     def set_prior_parameters_from_numpy(self, prior_nat_params_numpy):
         if prior_nat_params_numpy is not None:
             prior_params = nat_params_to_params_dict(prior_nat_params_numpy)
-            self.prior_mu = torch.tensor(prior_params["w_mu"])
-            self.prior_log_var = torch.tensor(prior_params["w_log_var"])
+            self.prior_mu = torch.tensor(prior_params["w_mu"], dtype=torch.float32)
+            self.prior_log_var = torch.tensor(prior_params["w_log_var"], dtype=torch.float32)
 
     def predict(self, x, integration_limit=500, parameters=None):
         """
@@ -200,14 +200,17 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         self.torch_module = LogisticRegressionTorchModule(nat_params_to_params_dict(parameters), hyperparameters)
         super(MeanFieldMultiDimensionalLogisticRegression, self).__init__(parameters, hyperparameters)
 
-        base_optimizer = self.hyperparameters['base_optimizer_class'](self.torch_module.parameters(),
-                                                                      **hyperparameters['base_optimizer_parameters'])
+        if self.hyperparameters['wrapped_optimizer_class'] is not None:
+            base_optimizer = self.hyperparameters['base_optimizer_class'](self.torch_module.parameters(),
+                                                                          **hyperparameters[
+                                                                              'base_optimizer_parameters'])
 
-        self.wrapped_optimizer = self.hyperparameters['wrapped_optimizer_class'](optimizer=base_optimizer,
-                                                                                 model=self.torch_module,
-                                                                                 loss_per_example=self.torch_module.compute_ELBO_loss_per_point,
-                                                                                 **hyperparameters[
-                                                                                     'wrapped_optimizer_parameters'])
+            self.wrapped_optimizer = self.hyperparameters['wrapped_optimizer_class'](optimizer=base_optimizer,
+                                                                                     model=self.torch_module,
+                                                                                     loss_per_example=self.torch_module.compute_ELBO_loss_per_point,
+                                                                                     **hyperparameters[
+                                                                                         'wrapped_optimizer_parameters']
+                                                                                     )
 
     def set_hyperparameters(self, hyperparameters):
         if hyperparameters is not None:
@@ -224,13 +227,15 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
             'w_log_var': self.torch_module.w_log_var.detach().numpy()
         })
 
-    def get_default_parameters(self):
+    @staticmethod
+    def get_default_parameters():
         return {
-            'w_pres': 1,
-            'w_nat_mean': 0
+            'w_pres': np.array([1]),
+            'w_nat_mean': np.array([0])
         }
 
-    def get_default_hyperparameters(self):
+    @staticmethod
+    def get_default_hyperparameters():
         return {
             "base_optimizer_class": None,
             "wrapped_optimizer_class": None,
@@ -242,7 +247,7 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
             "prediction_integration_limit": 50,
         }
 
-    def sample(self, x, parameters):
+    def sample(self, x, parameters=None, hyperparameters=None):
         """
         Create some logistic regression data. *** NOTE: This ignores the precisions of each of the values of w, and
         simply assuming the true (unknown) weight is w; this is different to finding the predictive distribution!! ***
@@ -282,8 +287,8 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         super().fit(data, t_i, parameters, hyperparameters)
 
         # convert data into a tensor
-        x = torch.tensor(data["x"], dtype=torch.float64)
-        y_true = torch.tensor(data["y"], dtype=torch.float64)
+        x = torch.tensor(data["x"], dtype=torch.float32)
+        y_true = torch.tensor(data["y"], dtype=torch.float32)
 
         cav_nat_params = B.subtract_params(self.get_parameters(), t_i)
         # numpy dict for the effective prior
@@ -299,4 +304,10 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
             if i % print_interval == 0:
                 print("Loss: {:.3f} after {} steps".format(current_loss, i))
 
-        return self.get_parameters(), training_array
+        return self.get_parameters()
+
+    def log_update(self):
+        pass
+
+    def log_sacred(self):
+        return {}

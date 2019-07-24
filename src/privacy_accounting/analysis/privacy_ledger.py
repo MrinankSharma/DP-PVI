@@ -1,8 +1,9 @@
 import collections
-from math import ceil
 
 import torch
+from math import ceil
 
+import src.utils.numpy_utils as np_utils
 import src.utils.torch_nest_utils as nest
 from src.privacy_accounting.dp_query import dp_query
 from src.utils.torch_tensor_buffer import TensorBuffer
@@ -32,9 +33,13 @@ def format_ledger(sample_array, query_array):
         for _ in range(int(num_queries)):
             query = query_array[query_pos]
             assert int(query[0]) == sample_pos
-            queries.append(GaussianSumQueryEntry(*query[1:]))
+            queries.append(GaussianSumQueryEntry(
+                *[np_utils.to_pure_python(item) for item in query[1:]]
+            ))
             query_pos += 1
-        samples.append(SampleEntry(population_size, selection_probability, queries))
+        samples.append(SampleEntry(np_utils.to_pure_python(population_size),
+                                   np_utils.to_pure_python(selection_probability),
+                                   queries))
         sample_pos += 1
     return samples
 
