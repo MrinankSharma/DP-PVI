@@ -74,10 +74,10 @@ class Model(ABC):
         '''
 
         if parameters is not None:
-            self.set_parameters(**parameters)
+            self.set_parameters(parameters)
 
         if hyperparameters is not None:
-            self.set_hyperparameters(**hyperparameters)
+            self.set_hyperparameters(hyperparameters)
 
     def sample(self, x, parameters=None, hyperparameters=None):
         '''
