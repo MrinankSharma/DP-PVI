@@ -66,7 +66,7 @@ def default_config(dataset):
 
     prior_pres = 1.0 / 10
     N_samples = 50
-    N_iterations = 10
+    N_iterations = 1
 
 
 # @ray.remote

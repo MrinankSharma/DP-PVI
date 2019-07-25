@@ -287,7 +287,7 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         super().fit(data, t_i, parameters, hyperparameters)
 
         self.hyperparameters["batch_size"]
-        mini_batch_indices = np.random.choice(data["x"].shape[0], self.hyperparameters["batch_size"], replacement=False)
+        mini_batch_indices = np.random.choice(data["x"].shape[0], self.hyperparameters["batch_size"], replace=False)
         x_full = data["x"]
         y_full = data["y"]
 

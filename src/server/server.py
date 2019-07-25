@@ -1,6 +1,6 @@
+import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
-import logging
 
 import ray
 
@@ -10,6 +10,7 @@ from src.utils.yaml_string_dumper import YAMLStringDumper
 
 logger = logging.getLogger(__name__)
 pretty_dump = YAMLStringDumper()
+
 
 class ParameterServer(ABC):
     def __init__(self, model_class, prior, clients=None, hyperparameters=None, metadata=None, model_parameters=None,
@@ -133,7 +134,7 @@ class SyncronousPVIParameterServer(ParameterServer):
         self.iterations += 1
 
     def should_stop(self):
-        if self.iterations > self.max_iterations:
+        if self.iterations > self.max_iterations - 1:
             return True
         else:
             return False
