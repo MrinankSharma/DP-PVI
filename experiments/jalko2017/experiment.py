@@ -169,3 +169,5 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
     final_log = server.get_compiled_log()
     ex.add_artifact(save_log(final_log, ex.get_experiment_info()["name"], logging_base_directory, _run.info["test"]),
                     'full_log')
+
+    print(server.parameters)

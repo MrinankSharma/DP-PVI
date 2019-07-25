@@ -5,6 +5,13 @@ import numpy as np
 
 from repoze.lru import lru_cache
 
+import logging
+import pickle
+import os
+
+from src.privacy_accounting.analysis.utils import grab_pickled_accountant_results
+
+logger = logging.getLogger(__name__)
 
 @lru_cache(maxsize=100)
 def get_FF1_add_remove(sigma, q, nx, L):
@@ -17,10 +24,19 @@ def get_FF1_add_remove(sigma, q, nx, L):
     :return: The FFT approximation points
     """
 
+    try:
+        filename = f"add_remove_{sigma}_{q}_{nx}.p"
+        saved_result_flag, result, fp = grab_pickled_accountant_results(filename)
+    except (AttributeError, EOFError, ImportError, IndexError, pickle.UnpicklingError):
+        logger.error("Error reading accountant Pickle!")
+
+    if saved_result_flag:
+        return result
+
     # Evaluate the PLD distribution,
     # This is the case of substitution relation (subsection 5.1)
-
-    if q == 1.0: q = 1 - 1E-5
+    if q == 1.0:
+        q = 1 - 1E-5
 
     half = int(nx / 2)
 
@@ -46,6 +62,13 @@ def get_FF1_add_remove(sigma, q, nx, L):
 
     FF1 = np.fft.fft(fx * dx)
 
+    try:
+        os.makedirs(os.path.dirname(fp), exist_ok=True)
+        with open(fp, 'wb+') as dump:
+            pickle.dump(FF1, dump)
+    except (FileNotFoundError, pickle.PickleError, pickle.PicklingError):
+        logger.error("Error with saving accountant pickle")
+
     return FF1
 
 
@@ -59,6 +82,15 @@ def get_FF1_substitution(sigma, q, nx, L):
     :param L: The clipping length of the approximation
     :return: The FFT approximation points
     """
+
+    try:
+        filename = f"sub_{sigma}_{q}_{nx}.p"
+        saved_result_flag, result, fp = grab_pickled_accountant_results(filename)
+    except (AttributeError, EOFError, ImportError, IndexError, pickle.UnpicklingError):
+        logger.error("Error reading accountant Pickle!")
+
+    if saved_result_flag:
+        return result
 
     # Evaluate the PLD distribution,
     # This is the case of substitution relation (subsection 5.2)
@@ -90,6 +122,13 @@ def get_FF1_substitution(sigma, q, nx, L):
     temp = np.copy(fx[half:])
     fx[half:] = np.copy(fx[:half])
     fx[:half] = temp
+
+    try:
+        os.makedirs(os.path.dirname(fp), exist_ok=True)
+        with open(fp, 'wb+') as dump:
+            pickle.dump(fx, dump)
+    except (FileNotFoundError, pickle.PickleError, pickle.PicklingError):
+        logger.error("Error with saving accountant pickle")
 
     return fx
 
@@ -124,7 +163,7 @@ def get_delta_add_remove(effective_z_t, q_t, target_eps=1.0, nx=1E6, L=20.0, F_p
     ncomp = effective_z_t.size
 
     if (q_t.size != ncomp):
-        print('The arrays for q and sigma are of different size!')
+        logger.error('The arrays for q and sigma are of different size!')
         return float('inf')
 
     for ij in range(ncomp):
@@ -193,7 +232,7 @@ def get_delta_substitution(effective_z_t, q_t, target_eps=1.0, nx=1E6, L=20.0, F
     ncomp = effective_z_t.size
 
     if (q_t.size != ncomp):
-        print('The arrays for q and sigma are of different size!')
+        logger.error('The arrays for q and sigma are of different size!')
         return float('inf')
 
     for ij in range(ncomp):
@@ -258,7 +297,7 @@ def get_eps_add_remove(effective_z_t, q_t, target_delta=1e-6, nx=1E6, L=20.0, F_
     ncomp = effective_z_t.size
 
     if (q_t.size != ncomp):
-        print('The arrays for q and sigma are of different size!')
+        logger.error('The arrays for q and sigma are of different size!')
         return float('inf')
 
     for ij in range(ncomp):
@@ -329,7 +368,7 @@ def get_eps_add_remove(effective_z_t, q_t, target_delta=1e-6, nx=1E6, L=20.0, F_
         derivative = sum_int2 * dx
 
     if (np.real(eps_0) < -L or np.real(eps_0) > L):
-        print('Error: epsilon out of [-L,L] window, please check the parameters.')
+        logger.error('Epsilon out of [-L,L] window, please check the parameters.')
         return (float('inf'), float('inf')), F_prod
     else:
         # print('Unbounded DP-epsilon after ' + str(int(ncomp)) + ' compositions defined by sigma and q arrays: ' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
@@ -369,7 +408,7 @@ def get_eps_substitution(effective_z_t, q_t, target_delta=1e-6, nx=1E6, L=20.0, 
     ncomp = effective_z_t.size
 
     if (q_t.size != ncomp):
-        print('The arrays for q and sigma are of different size!')
+        logger.error('The arrays for q and sigma are of different size!')
         return float('inf')
 
     for ij in range(ncomp):
@@ -436,7 +475,7 @@ def get_eps_substitution(effective_z_t, q_t, target_delta=1e-6, nx=1E6, L=20.0, 
         derivative = sum_int2 * dx
 
     if (np.real(eps_0) < -L or np.real(eps_0) > L):
-        print('Error: epsilon out of [-L,L] window, please check the parameters.')
+        logger.error('Epsilon out of [-L,L] window, please check the parameters.')
         return (float('inf'), float('inf')), F_prod
     else:
         # print('Bounded DP-epsilon after ' + str(int(ncomp)) + ' compositions defined by sigma and q arrays: ' + str(
