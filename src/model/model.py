@@ -29,8 +29,8 @@ class Model(ABC):
         '''
         return self.parameters
 
-    @abstractmethod
-    def get_default_parameters(self):
+    @staticmethod
+    def get_default_parameters():
         '''
         :return: A default set of parameters for the model. These might be all zero. Mostly used to get the shape that
         the parameters should be to make parameter server code more general.
@@ -40,8 +40,8 @@ class Model(ABC):
     def set_hyperparameters(self, hyperparameters):
         self.hyperparameters = {**self.hyperparameters, **hyperparameters}
 
-    @abstractmethod
-    def get_default_hyperparameters(self):
+    @staticmethod
+    def get_default_hyperparameters():
         '''
         :return: A default set of hyperparameters( for the model. These might be all zero. Mostly used to get the shape that
         the hyperparameters should be to make parameter server code more general and easier to remeber what could go in here.
@@ -90,14 +90,14 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    def log_update(self):
+    def get_incremental_log_record(self):
         """
         Log various things about the model in self.log. Flexible form.
         """
         pass
 
     @abstractmethod
-    def log_sacred(self):
+    def get_incremental_sacred_record(self):
         """
         Log various things we may want to see in the sacred logs. Reduced form
         :return: A *flat* dictionary containing scalars of interest for the current state.

@@ -20,6 +20,8 @@ def get_FF1_add_remove(sigma, q, nx, L):
     # Evaluate the PLD distribution,
     # This is the case of substitution relation (subsection 5.1)
 
+    if q == 1.0: q = 1 - 1E-5
+
     half = int(nx / 2)
 
     dx = 2.0 * L / nx  # discretisation interval \Delta x
@@ -328,7 +330,7 @@ def get_eps_add_remove(effective_z_t, q_t, target_delta=1e-6, nx=1E6, L=20.0, F_
 
     if (np.real(eps_0) < -L or np.real(eps_0) > L):
         print('Error: epsilon out of [-L,L] window, please check the parameters.')
-        return float('inf')
+        return (float('inf'), float('inf')), F_prod
     else:
         # print('Unbounded DP-epsilon after ' + str(int(ncomp)) + ' compositions defined by sigma and q arrays: ' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
         return (np.real(eps_0), target_delta), F_prod
@@ -435,7 +437,7 @@ def get_eps_substitution(effective_z_t, q_t, target_delta=1e-6, nx=1E6, L=20.0, 
 
     if (np.real(eps_0) < -L or np.real(eps_0) > L):
         print('Error: epsilon out of [-L,L] window, please check the parameters.')
-        return float('inf')
+        return (float('inf'), float('inf')), F_prod
     else:
         # print('Bounded DP-epsilon after ' + str(int(ncomp)) + ' compositions defined by sigma and q arrays: ' + str(
         #     np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
@@ -446,7 +448,7 @@ def get_eps_substitution(effective_z_t, q_t, target_delta=1e-6, nx=1E6, L=20.0, 
 
 
 def compute_privacy_loss_from_ledger(ledger, target_eps=None, target_delta=None, adjacency_definition='add_remove',
-                                     nx=1E6, L=20.0):
+                                     nx=1E6, L=50.0):
     """ Compute the privacy loss of the queries entered into a ledger
     using the Gaussian Mechanism utilising an approximation to the true privacy bound
     (https://arxiv.org/abs/1906.03049) with one of epsilon or delta fixed.

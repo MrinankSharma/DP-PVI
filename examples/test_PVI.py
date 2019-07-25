@@ -25,7 +25,6 @@ ex.observers.append(
 )
 
 
-
 def whiten_data(data_shards):
     x_mu = 0
     x_var = 0

@@ -39,19 +39,21 @@ class LinearRegression1DAnalyticNumpy(Model):
 
         return x * mu + random.normal(0, self.noise, x.shape)
 
-    def get_default_parameters(self):
+    @staticmethod
+    def get_default_parameters():
         return {
             'slope_eta_1': np.zeros([1]),
             'slope_eta_2': np.zeros([1])
         }
 
-    def get_default_hyperparameters(self):
+    @staticmethod
+    def get_default_hyperparameters():
         return {
             'model_noise': 0
         }
 
-    def log_update(self):
+    def get_incremental_sacred_record(self):
         return {}
 
-    def log_sacred(self):
+    def get_incremental_log_record(self):
         return {}

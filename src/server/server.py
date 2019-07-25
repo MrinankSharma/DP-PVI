@@ -4,10 +4,12 @@ from collections import defaultdict
 import ray
 
 import src.utils.numpy_utils as B
+from src.privacy_accounting.analysis import QueryWithLedger, OnlineAccountant
 
 
 class ParameterServer(ABC):
-    def __init__(self, model_class, prior, clients=[], hyperparameters=None, metadata=None):
+    def __init__(self, model_class, prior, clients=None, hyperparameters=None, metadata=None, model_parameters=None,
+                 model_hyperparameters=None, ):
 
         if hyperparameters is None:
             hyperparameters = {}
@@ -22,7 +24,7 @@ class ParameterServer(ABC):
         self.set_metadata(metadata)
 
         self.set_clients(clients)
-        self.model = model_class()
+        self.model = model_class(parameters=model_parameters, hyperparameters=model_hyperparameters, )
         self.prior = prior
         self.parameters = prior
 
@@ -57,7 +59,10 @@ class ParameterServer(ABC):
         pass
 
     def set_clients(self, clients):
-        self.clients = clients
+        if clients is None:
+            self.clients = []
+        else:
+            self.clients = clients
 
     def add_client(self, client):
         self.clients.append(client)
@@ -76,15 +81,17 @@ class ParameterServer(ABC):
     def log_sacred(self):
         """
         Log various things we may want to see in the sacred logs. Reduced form
-        :return: A flat dictionary containing scalars of interest for the current state, the current iteration.
+        :return: Nested dictionaries of scalars to log, the current iteration
         """
         pass
 
 
 class SyncronousPVIParameterServer(ParameterServer):
 
-    def __init__(self, model_class, prior, max_iterations=100, clients=[], hyperparameters=None, metadata=None):
-        super().__init__(model_class, prior, clients=clients, hyperparameters=hyperparameters, metadata=metadata)
+    def __init__(self, model_class, prior, max_iterations=100, clients=None, hyperparameters=None, metadata=None,
+                 model_parameters=None, model_hyperparameters=None, ):
+        super().__init__(model_class, prior, clients=clients, hyperparameters=hyperparameters, metadata=metadata,
+                         model_parameters=model_parameters, model_hyperparameters=model_hyperparameters)
         self.iterations = 0
         self.max_iterations = max_iterations
 
@@ -95,7 +102,7 @@ class SyncronousPVIParameterServer(ParameterServer):
         lambda_old = self.parameters
 
         # delta_is = [client.compute_update.remote(lambda_old) for client in self.clients]
-        delta_is = ray.get([client.compute_update.remote(model_parameters=lambda_old) for client in self.clients])
+        delta_is = [client.get_update(model_parameters=lambda_old) for client in self.clients]
 
         # print(delta_is)
 
@@ -118,28 +125,30 @@ class SyncronousPVIParameterServer(ParameterServer):
         return super().get_default_metadata()
 
     def log_update(self):
-        return {}
+        pass
 
     def log_sacred(self):
-        return {}
+        return {}, self.iterations
 
 
-def clip_and_noise(parameters, bound, noise_sigma):
-    for name in parameters.keys():
-        parameters[name] = B.clip(parameters[name], bound) + B.gaussian_noise(parameters.shape, noise_sigma)
-    return parameters
+class DPSyncronousPVIParameterServer(ParameterServer):
 
-
-class SyncronousDPPVIParameterServer(ParameterServer):
-
-    def __init__(self, model_class, prior, max_iterations=100, clients=[]):
-        super().__init__(model_class, prior, clients=clients)
+    def __init__(self, model_class, dp_query_class, accounting_dict, prior, max_iterations=100, clients=None,
+                 hyperparameters=None, metadata=None, model_parameters=None, model_hyperparameters=None, ):
+        super().__init__(model_class, prior, clients=clients, hyperparameters=hyperparameters, metadata=metadata,
+                         model_parameters=model_parameters, model_hyperparameters=model_hyperparameters, )
         self.iterations = 0
         self.max_iterations = max_iterations
 
-        for client in self.clients: client.set_hyperparameters.remote(
-            {'privacy_function': lambda x: clip_and_noise(x, self.clipping_bound, self.privacy_noise_std)}
-        )
+        num_clients = 0 if clients is None else len(clients)
+        dp_query = dp_query_class(**hyperparameters['dp_query_parameters'])
+        self.dp_query = QueryWithLedger(dp_query, num_clients, 1.0 / num_clients)
+
+        self.query_global_state = self.dp_query.initial_global_state()
+
+        self.accountants = {}
+        for k, v in accounting_dict.items():
+            self.accountants[k] = OnlineAccountant(**v)
 
     def tick(self):
         if self.should_stop():
@@ -148,15 +157,19 @@ class SyncronousDPPVIParameterServer(ParameterServer):
         lambda_old = self.parameters
 
         # delta_is = [client.compute_update.remote(lambda_old) for client in self.clients]
-        delta_is = ray.get([client.compute_update.remote(model_parameters=lambda_old) for client in self.clients])
+        delta_is = ray.get([client.get_update(model_parameters=lambda_old) for client in self.clients])
 
-        # print(delta_is)
+        sample_state = self.dp_query.initial_sample_state(delta_is[0])
+        sample_params = self.dp_query.derive_sample_params(self.query_global_state)
 
-        lambda_new = B.add_parameters(lambda_old, *delta_is)
+        for delta_i in delta_is:
+            sample_state = self.dp_query.accumulate_record(sample_params, sample_state, delta_i)
+
+        delta_i_tilde, _ = self.dp_query.get_noised_result(sample_state)
+
+        lambda_new = B.add_parameters(lambda_old, delta_i_tilde)
 
         self.parameters = lambda_new
-
-        print(lambda_old, delta_is)
 
         self.iterations += 1
 
@@ -166,20 +179,25 @@ class SyncronousDPPVIParameterServer(ParameterServer):
         else:
             return False
 
-    def set_hyperparameters(self, hyperparameters):
-        super().set_hyperparameters(hyperparameters)
-
-        self.clipping_bound = self.hyperparameters['clipping_bound']
-        self.privacy_noise_std = self.hyperparameters['privacy_noise_std']
-
     def get_default_hyperparameters(self):
-        return {
-            **super().get_default_hyperparameters(),
-            **{
-                'clipping_bound': B.inf,
-                'privacy_noise_std': 0
-            }
-        }
+        return super().get_default_hyperparameters()
 
     def get_default_metadata(self):
         return super().get_default_metadata()
+
+    def log_update(self):
+        super().log_update()
+
+        for k, v in self.accountants.items():
+            self.log[k].append(v.privacy_bound)
+
+        self.log['ledger'].append(self.dp_query.ledger.get_formatted_ledger())
+
+    def log_sacred(self):
+        log, times_updated = super().log_sacred()
+
+        for k, v in self.accountants.items():
+            log[k + '.epsilon'] = v.privacy_bound[0]
+            log[k + '.delta'] = v.privacy_bound[1]
+
+        return log, times_updated
