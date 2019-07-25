@@ -42,12 +42,12 @@ class Client(ABC):
     def set_metadata(self, metadata):
         self.metadata = {**self.metadata, **metadata}
 
-    @staticmethod
-    def get_default_hyperparameters():
+    @classmethod
+    def get_default_hyperparameters(cls):
         return {}
 
-    @staticmethod
-    def get_default_metadata():
+    @classmethod
+    def get_default_metadata(cls):
         return {}
 
     def get_update(self, model_parameters=None, model_hyperparameters=None):
@@ -65,7 +65,6 @@ class Client(ABC):
         update = self.compute_update(model_parameters=model_parameters, model_hyperparameters=model_hyperparameters)
 
         self.log_update()
-        self.model.log_update()
 
         return update
 
@@ -120,24 +119,25 @@ class StandardClient(Client):
     def set_metadata(self, metadata):
         super().set_metadata(metadata)
 
-    @staticmethod
-    def get_default_hyperparameters():
+    @classmethod
+    def get_default_hyperparameters(cls):
         default_hyperparameters = {
-            **super(StandardClient, StandardClient).get_default_hyperparameters(),
+            **super().get_default_hyperparameters(),
             **{
                 't_i_init_function': lambda x: np.zeros(x.shape),
             }
         }
         return default_hyperparameters
 
-    @staticmethod
-    def get_default_metadata():
+    @classmethod
+    def get_default_metadata(cls):
         return {
-            **super(StandardClient, StandardClient).get_default_metadata(),
+            **super().get_default_metadata(),
             **{
                 'global_iteration': 0,
                 'log_params': False,
                 'log_t_i': False,
+                "log_model_info": True,
             }
         }
 
@@ -189,7 +189,7 @@ class StandardClient(Client):
         if self.metadata['log_t_i']:
             self.log['t_i'].append(np_nest.structured_ndarrays_to_lists(self.t_i))
         if self.metadata['log_model_info']:
-            self.log['model'].append(np_nest.structured_ndarrays_to_lists(self.model.log_update()))
+            self.log['model'].append(np_nest.structured_ndarrays_to_lists(self.model.get_incremental_log_record()))
 
     def log_sacred(self):
         log = {}
@@ -199,7 +199,7 @@ class StandardClient(Client):
         if self.metadata['log_t_i']:
             log['t_i'] = np_nest.structured_ndarrays_to_lists(self.t_i)
 
-        log['model'] = self.model.log_sacred()
+        log['model'] = self.model.get_incremental_sacred_record()
 
         return log, self.times_updated
 
@@ -232,10 +232,10 @@ class DPClient(StandardClient):
 
         return delta_lambda_i_tilde
 
-    @staticmethod
-    def get_default_hyperparameters():
+    @classmethod
+    def get_default_hyperparameters(cls):
         return {
-            **super(DPClient, DPClient).get_default_hyperparameters(),
+            **super().get_default_hyperparameters(),
             'dp_query_parameters': {}
         }
 
