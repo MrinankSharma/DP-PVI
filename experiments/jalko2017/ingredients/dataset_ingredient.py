@@ -1,6 +1,7 @@
 from sacred import Ingredient
 import numpy as np
 import logging
+import os
 
 dataset_ingredient = Ingredient('dataset')
 logger = logging.getLogger("Dataset Generation")
@@ -11,19 +12,21 @@ def cfg():
     scaled = True
     ordinal_cat_encoding = True
     train_proportion = 0.8
-    data_base_dir = "/scratch/DP-PVI/data/"
+    data_base_dir = "/scratch/DP-PVI/data"
 
 
 def generate_filename(name, scaled, ordinal_cat_encoding, data_base_dir):
-    ret = data_base_dir + name + "/x"
+    filename_x = "x"
     ret_y = data_base_dir + name + "/y.csv"
     if scaled:
-        ret = ret + "_scaled"
+        filename_x = filename_x + "_scaled"
 
     if ordinal_cat_encoding:
-        ret = ret + "_ordinal"
+        filename_x = filename_x +"_ordinal"
 
-    ret = ret + ".csv"
+    filename_x = filename_x + ".csv"
+    ret = os.path.join(data_base_dir, name, filename_x)
+    ret_y = os.path.join(data_base_dir, name, "y.csv")
     return ret, ret_y
 
 

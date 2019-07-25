@@ -23,6 +23,10 @@ class TestMongoDbOption(CommandLineOption):
         mongo = MongoObserver.create(url="localhost:9001", db_name='test')
         run.observers.append(mongo)
         logger.info("Saving to database test WITHOUT slack notifications")
+        run.info = {
+            **run.info,
+            "test": True
+        }
 
 
 class ExperimentMongoDbOption(CommandLineOption):
@@ -42,3 +46,8 @@ class ExperimentMongoDbOption(CommandLineOption):
             SlackObserver.from_config('../../slack.json')
         )
         logger.info("Saving to database sacred")
+
+        run.info = {
+            **run.info,
+            "test": False
+        }

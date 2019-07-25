@@ -1,3 +1,4 @@
+import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
 
@@ -7,6 +8,8 @@ import torch
 import src.utils.numpy_nest_utils as np_nest
 import src.utils.numpy_utils as np_utils
 from src.privacy_accounting.analysis import QueryWithLedger, OnlineAccountant
+
+logger = logging.getLogger(__name__)
 
 
 def zero_init_func(tensor):
@@ -34,7 +37,6 @@ class Client(ABC):
         self.model = model_class(model_parameters, model_hyperparameters)
         self.log = defaultdict(list)
         self.times_updated = 0
-
 
     def set_hyperparameters(self, hyperparameters):
         self.hyperparameters = {**self.hyperparameters, **hyperparameters}
@@ -224,8 +226,10 @@ class DPClient(StandardClient):
         super().__init__(model_class, data, model_parameters, model_hyperparameters, hyperparameters, metadata)
 
     def compute_update(self, model_parameters=None, model_hyperparameters=None):
+        logger.info("Computing Client Update")
         delta_lambda_i_tilde = super().compute_update(model_parameters=None, model_hyperparameters=None)
 
+        logger.info("Calculating Privacy Cost")
         formatted_ledger = self.dp_query.ledger.get_formatted_ledger()
         for _, accountant in self.accountants.items():
             accountant.update_privacy(formatted_ledger)

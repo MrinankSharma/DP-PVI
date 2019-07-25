@@ -1,11 +1,15 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
+import logging
 
 import ray
 
 import src.utils.numpy_utils as B
 from src.privacy_accounting.analysis import QueryWithLedger, OnlineAccountant
+from src.utils.yaml_string_dumper import YAMLStringDumper
 
+logger = logging.getLogger(__name__)
+pretty_dump = YAMLStringDumper()
 
 class ParameterServer(ABC):
     def __init__(self, model_class, prior, clients=None, hyperparameters=None, metadata=None, model_parameters=None,
@@ -24,7 +28,7 @@ class ParameterServer(ABC):
         self.set_metadata(metadata)
 
         self.set_clients(clients)
-        self.model = model_class(parameters=model_parameters, hyperparameters=model_hyperparameters, )
+        self.model = model_class(parameters=model_parameters, hyperparameters=model_hyperparameters)
         self.prior = prior
         self.parameters = prior
 
@@ -85,6 +89,19 @@ class ParameterServer(ABC):
         """
         pass
 
+    def get_compiled_log(self):
+        """
+        Get full log, including logs from each client
+        :return: full log
+        """
+        final_log = {}
+        final_log['server'] = self.get_log()
+        client_logs = [client.get_log() for client in self.clients]
+        for i, log in enumerate(client_logs):
+            final_log['client_' + str(i)] = log
+
+        return final_log
+
 
 class SyncronousPVIParameterServer(ParameterServer):
 
@@ -102,13 +119,16 @@ class SyncronousPVIParameterServer(ParameterServer):
         lambda_old = self.parameters
 
         # delta_is = [client.compute_update.remote(lambda_old) for client in self.clients]
+        logger.info("Getting Client Updates")
         delta_is = [client.get_update(model_parameters=lambda_old) for client in self.clients]
 
+        logger.info("Received client updates")
         # print(delta_is)
 
         lambda_new = B.add_parameters(lambda_old, *delta_is)
 
         self.parameters = lambda_new
+        logger.info(f"Iteration {self.iterations} complete.\nNew Parameters:\n {pretty_dump.dump(lambda_new)}\n")
 
         self.iterations += 1
 

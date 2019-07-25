@@ -216,10 +216,6 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         self._training_curves = []
         self._derived_statistics_histories = []
 
-    def set_hyperparameters(self, hyperparameters):
-        if hyperparameters is not None:
-            self.hyperparameters = hyperparameters
-
     def set_parameters(self, nat_parameters):
         if nat_parameters is not None:
             parameters = nat_params_to_params_dict(nat_parameters)
@@ -290,9 +286,14 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         """
         super().fit(data, t_i, parameters, hyperparameters)
 
+        self.hyperparameters["batch_size"]
+        mini_batch_indices = np.random.choice(data["x"].shape[0], self.hyperparameters["batch_size"], replacement=False)
+        x_full = data["x"]
+        y_full = data["y"]
+
         # convert data into a tensor
-        x = torch.tensor(data["x"], dtype=torch.float32)
-        y_true = torch.tensor(data["y"], dtype=torch.float32)
+        x = torch.tensor(x_full[mini_batch_indices, :], dtype=torch.float32)
+        y_true = torch.tensor(y_full[mini_batch_indices], dtype=torch.float32)
 
         cav_nat_params = B.subtract_params(self.get_parameters(), t_i)
         # numpy dict for the effective prior

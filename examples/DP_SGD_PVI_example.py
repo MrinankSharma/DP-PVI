@@ -140,11 +140,7 @@ def main(N, batch_size, learning_rate, epochs, privacy, _run):
         for k, v in sacred_log.items():
             _run.log_scalar(k, v, server.iterations)
 
-    final_log = {}
-    final_log['server'] = server.get_log()
-    client_logs = [client.get_log() for client in clients]
-    for i, log in enumerate(client_logs):
-        final_log['client_' + str(i)] = log
+    final_log = server.get_compiled_log()
 
     log_dir = '../logs/tests'
 
