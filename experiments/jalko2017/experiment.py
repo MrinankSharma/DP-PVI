@@ -39,16 +39,6 @@ def default_config(dataset):
 
         N_iterations = 1000
 
-        privacy_settings = {
-            "L": 10,
-            "C": 5,
-            "sigma_relative": 1.22,
-            "target_delta": 1e-3
-        }
-
-        N_iterations = 5
-        N_samples = 10
-
     elif dataset["name"] == "adult":
         privacy_settings = {
             "L": 195,
@@ -83,6 +73,8 @@ def perform_iteration(server):
     ray.get(server.tick.remote())
     sacred_log = {}
     sacred_log['server'], _ = ray.get(server.log_sacred.remote())
+    params = ray.get(server.get_parameters.remote())
+    logger.info(f"Parameters: {pretty_dump.dump(params)}")
     client_sacred_logs = ray.get(server.get_client_sacred_logs.remote())
     for i, log in enumerate(client_sacred_logs):
         sacred_log['client_' + str(i)] = log[0]
@@ -95,7 +87,7 @@ def perform_iteration(server):
 def run_experiment(privacy_settings, optimisation_settings, logging_base_directory, N_samples, N_iterations, prior_pres,
                    ray_cfg, prediction_type, _run):
     if ray_cfg["redis_address"] == "None":
-        ray.init(num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"])
+        ray.init(num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"], log_to_driver=True)
     else:
         ray.init(redis_address=ray_cfg["redis_address"], num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"])
 

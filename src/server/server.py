@@ -167,6 +167,9 @@ class SyncronousPVIParameterServer(ParameterServer):
     def get_num_iterations(self):
         return self.iterations
 
+    def get_parameters(self):
+        return self.parameters
+
 
 class DPSyncronousPVIParameterServer(ParameterServer):
 
