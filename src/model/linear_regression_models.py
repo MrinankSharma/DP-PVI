@@ -39,15 +39,15 @@ class LinearRegression1DAnalyticNumpy(Model):
 
         return x * mu + random.normal(0, self.noise, x.shape)
 
-    @staticmethod
-    def get_default_parameters():
+    @classmethod
+    def get_default_parameters(cls):
         return {
             'slope_eta_1': np.zeros([1]),
             'slope_eta_2': np.zeros([1])
         }
 
-    @staticmethod
-    def get_default_hyperparameters():
+    @classmethod
+    def get_default_hyperparameters(cls):
         return {
             'model_noise': 0
         }

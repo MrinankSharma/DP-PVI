@@ -280,15 +280,15 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
             # skip if the torch module doesn't exist yet
             pass
 
-    @staticmethod
-    def get_default_parameters():
+    @classmethod
+    def get_default_parameters(cls):
         return {
             'w_pres': np.array([1]),
             'w_nat_mean': np.array([0])
         }
 
-    @staticmethod
-    def get_default_hyperparameters():
+    @classmethod
+    def get_default_hyperparameters(cls):
         return {
             "base_optimizer_class": None,
             "wrapped_optimizer_class": None,
