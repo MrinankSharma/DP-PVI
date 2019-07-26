@@ -5,13 +5,12 @@ import numpy as np
 
 from repoze.lru import lru_cache
 
-import logging
 import pickle
 import os
 
 from src.privacy_accounting.analysis.utils import grab_pickled_accountant_results
 
-logger = logging.getLogger(__name__)
+from ray.services import logger
 
 @lru_cache(maxsize=100)
 def get_FF1_add_remove(sigma, q, nx, L):

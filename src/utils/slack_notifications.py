@@ -6,7 +6,7 @@ from src.utils.yaml_string_dumper import YAMLStringDumper
 
 DEFAULT_WEBHOOK_LOCATION = "../../slack_webhook"
 
-logger = logging.getLogger(__name__)
+from ray.services import logger
 yaml = YAMLStringDumper()
 
 def slack_notification(experiment_tag, content, slack_webhook_file=DEFAULT_WEBHOOK_LOCATION):

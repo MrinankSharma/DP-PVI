@@ -1,6 +1,6 @@
 import itertools
 import pickle
-import logging
+
 
 import numpy as np
 
@@ -8,8 +8,8 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler, OrdinalEncoder,
 from sklearn.compose import ColumnTransformer
 from sklearn.utils import as_float_array
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+
+from ray.services import logger
 
 def process_dataset(data_folder, filename, config, one_hot=True, should_scale=False):
     data = np.loadtxt(data_folder + "/" + filename, dtype=str, delimiter=',')

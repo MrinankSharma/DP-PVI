@@ -1,5 +1,3 @@
-import logging
-
 import numpy as np
 import ray
 import torch
@@ -21,8 +19,11 @@ from src.server import SyncronousPVIParameterServer
 from src.utils.yaml_string_dumper import YAMLStringDumper
 
 ex = Experiment('jalko2017', [dataset_ingredient])
-logger = logging.getLogger(__name__)
+# logging.basicConfig(stream=sys.stdout)
+# logger = logging.getLogger(__name__)
 pretty_dump = YAMLStringDumper()
+
+from ray.services import logger
 
 
 @ex.config
@@ -32,6 +33,15 @@ def default_config(dataset):
         # settings from antiis paper
         privacy_settings = {
             "L": 167,
+            "C": 5,
+            "sigma_relative": 1.22,
+            "target_delta": 1e-3
+        }
+
+        N_iterations = 1000
+
+        privacy_settings = {
+            "L": 10,
             "C": 5,
             "sigma_relative": 1.22,
             "target_delta": 1e-3
@@ -74,7 +84,6 @@ def perform_iteration(server):
     sacred_log = {}
     sacred_log['server'], _ = ray.get(server.log_sacred.remote())
     params = ray.get(server.get_parameters.remote())
-    logger.info(f"Parameters: {pretty_dump.dump(params)}")
     client_sacred_logs = ray.get(server.get_client_sacred_logs.remote())
     for i, log in enumerate(client_sacred_logs):
         sacred_log['client_' + str(i)] = log[0]
@@ -89,7 +98,8 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
     if ray_cfg["redis_address"] == "None":
         ray.init(num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"], log_to_driver=True)
     else:
-        ray.init(redis_address=ray_cfg["redis_address"], num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"])
+        ray.init(redis_address=ray_cfg["redis_address"], num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"],
+                 log_to_driver=True)
 
     training_set, test_set, d_in = load_data()
 

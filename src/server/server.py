@@ -1,14 +1,13 @@
-import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
 
 import ray
+from ray.services import logger
 
 import src.utils.numpy_utils as B
 from src.privacy_accounting.analysis import QueryWithLedger, OnlineAccountant
 from src.utils.yaml_string_dumper import YAMLStringDumper
 
-logger = logging.getLogger(__name__)
 pretty_dump = YAMLStringDumper()
 
 
@@ -110,10 +109,12 @@ class ParameterServer(ABC):
 
         return final_log
 
+
 @ray.remote
 class SyncronousPVIParameterServer(ParameterServer):
 
-    def __init__(self, model_class, prior, max_iterations=100, clients_factories=None, hyperparameters=None, metadata=None,
+    def __init__(self, model_class, prior, max_iterations=100, clients_factories=None, hyperparameters=None,
+                 metadata=None,
                  model_parameters=None, model_hyperparameters=None):
         clients = [factory() for factory in clients_factories]
         super().__init__(model_class, prior, clients=clients, hyperparameters=hyperparameters, metadata=metadata,
@@ -133,13 +134,13 @@ class SyncronousPVIParameterServer(ParameterServer):
 
         logger.info("Received client updates")
         # print(delta_is)
-
         lambda_new = B.add_parameters(lambda_old, *delta_is)
 
         self.parameters = lambda_new
         # update the model parameters
         self.model.set_parameters(self.parameters)
         logger.info(f"Iteration {self.iterations} complete.\nNew Parameters:\n {pretty_dump.dump(lambda_new)}\n")
+        [client.set_metadata({"global_iteration": self.iterations}) for client in self.clients]
 
         self.iterations += 1
 

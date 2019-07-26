@@ -10,9 +10,7 @@ from torch.distributions.normal import Normal
 
 import src.utils.numpy_utils as B
 from src.model.model import Model
-
-logger = logging.getLogger(__name__)
-
+from ray.services import logger
 
 # note that these functions are all using NUMPY variables
 def prediction_function(a, mean, var):

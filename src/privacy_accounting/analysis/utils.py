@@ -1,9 +1,9 @@
 import os
 import pickle
-import logging
 
 accountant_tables_dir = "accountant_tables"
-logger = logging.getLogger(__name__)
+
+from ray.services import logger
 
 
 def set_accountant_tables_dir(new_dir):
@@ -20,4 +20,4 @@ def grab_pickled_accountant_results(filename):
         else:
             return False, None, filepath
     except (IOError, FileNotFoundError):
-        logging.error("Issue with opening Pickled Accountant")
+        logger.error("Issue with opening Pickled Accountant")

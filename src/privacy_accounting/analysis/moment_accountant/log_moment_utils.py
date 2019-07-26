@@ -1,4 +1,3 @@
-import logging
 import math
 import os
 import pickle
@@ -12,7 +11,7 @@ from src.privacy_accounting.analysis.utils import grab_pickled_accountant_result
 float_type = np.float32
 int_type = np.int32
 
-logger = logging.getLogger(__name__)
+from ray.services import logger
 
 
 def to_np_float_64(v):
