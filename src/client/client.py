@@ -206,7 +206,6 @@ class StandardClient(Client):
         return log, self.times_updated
 
 
-# @ray.remote
 class DPClient(StandardClient):
     """ Wrapper class to add privacy tracking to a client, and DP based optimisation."""
 
@@ -224,6 +223,13 @@ class DPClient(StandardClient):
             self.accountants[k] = OnlineAccountant(**v)
 
         super().__init__(model_class, data, model_parameters, model_hyperparameters, hyperparameters, metadata)
+
+    @classmethod
+    def create_factory(cls, model_class, dp_query_class, data, accounting_dict, model_parameters, model_hyperparameters,
+                       hyperparameters, metadata=None):
+
+        return lambda: cls(model_class, dp_query_class, accounting_dict, data, model_parameters, model_hyperparameters,
+                           hyperparameters, metadata)
 
     def compute_update(self, model_parameters=None, model_hyperparameters=None):
         logger.info("Computing Client Update")

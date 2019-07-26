@@ -68,7 +68,7 @@ class LogisticRegressionTorchModule(nn.Module):
     @staticmethod
     def exact_prediction(mu, var):
         # autogenerate prediction intergral range
-        p_val, _ = scipy.integrate.quad(lambda x: prediction_function(x, mu, var), mu-3*np.sqrt(var), mu+4*np.sqrt(var))
+        p_val, _ = scipy.integrate.quad(lambda x: prediction_function(x, mu, var), mu-3*np.sqrt(var), mu+3*np.sqrt(var))
         return p_val
 
     @staticmethod
@@ -127,8 +127,10 @@ class LogisticRegressionTorchModule(nn.Module):
         :param hyperparameters: logistic regression hyperparams
         :return: probability of each point in x being +1
         """
+
         self.set_parameters(parameters)
         self.set_hyperparameters(hyperparameters)
+
         # all per point
         mean_1d = torch.mv(x, self.w_mu)
         cov_mat = torch.diag(torch.exp(self.w_log_var))

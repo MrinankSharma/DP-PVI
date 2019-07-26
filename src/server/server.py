@@ -69,6 +69,13 @@ class ParameterServer(ABC):
         else:
             self.clients = clients
 
+    def get_clients(self):
+        return self.clients
+
+    def get_client_sacred_logs(self):
+        client_sacred_logs = [client.log_sacred() for client in self.get_clients()]
+        return client_sacred_logs
+
     def add_client(self, client):
         self.clients.append(client)
 
@@ -103,11 +110,12 @@ class ParameterServer(ABC):
 
         return final_log
 
-
+@ray.remote
 class SyncronousPVIParameterServer(ParameterServer):
 
-    def __init__(self, model_class, prior, max_iterations=100, clients=None, hyperparameters=None, metadata=None,
-                 model_parameters=None, model_hyperparameters=None, ):
+    def __init__(self, model_class, prior, max_iterations=100, clients_factories=None, hyperparameters=None, metadata=None,
+                 model_parameters=None, model_hyperparameters=None):
+        clients = [factory() for factory in clients_factories]
         super().__init__(model_class, prior, clients=clients, hyperparameters=hyperparameters, metadata=metadata,
                          model_parameters=model_parameters, model_hyperparameters=model_hyperparameters)
         self.iterations = 0
@@ -152,6 +160,12 @@ class SyncronousPVIParameterServer(ParameterServer):
 
     def log_sacred(self):
         return {}, self.iterations
+
+    def get_model_predictions(self, data):
+        return self.model.predict(data["x"])
+
+    def get_num_iterations(self):
+        return self.iterations
 
 
 class DPSyncronousPVIParameterServer(ParameterServer):
