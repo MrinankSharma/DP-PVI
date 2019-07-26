@@ -123,7 +123,6 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
                             "N_steps": optimisation_settings["N_steps"],
                             "N_samples": N_samples,
                             "n_in": d_in,
-                            "prediction_integration_limit": 50,
                             "batch_size": privacy_settings["L"],
                         },
                         hyperparameters={
@@ -140,15 +139,7 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
         model_class=MeanFieldMultiDimensionalLogisticRegression,
         model_parameters=prior_params,
         model_hyperparameters={
-            "base_optimizer_class": None,
-            "wrapped_optimizer_class": None,
-            "base_optimizer_parameters": {'lr': optimisation_settings["lr"]},
-            "wrapped_optimizer_parameters": {},
-            "N_steps": optimisation_settings["N_steps"],
-            "N_samples": N_samples,
-            "n_in": d_in,
-            "prediction_integration_limit": 50,
-            "batch_size": privacy_settings["L"],
+            "prediction": "laplace"
         },
         prior=prior_params,
         clients=clients,

@@ -1,8 +1,8 @@
 import logging
 
-import mpmath as mp
 import numpy as np
 import scipy.optimize
+import scipy.integrate
 import torch
 import torch.nn as nn
 from torch.distributions.bernoulli import Bernoulli
@@ -50,9 +50,9 @@ def params_to_nat_params_dict(params_dict):
 class LogisticRegressionTorchModule(nn.Module):
 
     def __init__(self, parameters, hyperparameters):
-        super(LogisticRegressionTorchModule, self).__init__(parameters, hyperparameters)
+        super(LogisticRegressionTorchModule, self).__init__()
 
-        self.n_in = hyperparameters['n_in']
+        self.set_hyperparameters(hyperparameters)
 
         self.w_mu = nn.Parameter(torch.zeros(self.n_in, dtype=torch.float32))
         self.w_log_var = nn.Parameter(torch.zeros(self.n_in, dtype=torch.float32))
@@ -61,16 +61,14 @@ class LogisticRegressionTorchModule(nn.Module):
         self.set_parameters_from_numpy(parameters)
         self.act = nn.LogSigmoid()
 
-        self.N_samples = hyperparameters["N_samples"]
-
         # standard normal, for sampling required
         self.normal_dist = Normal(loc=torch.tensor([0], dtype=torch.float32),
                                   scale=torch.tensor([1], dtype=torch.float32))
 
     @staticmethod
     def exact_prediction(mu, var):
-        function = lambda x: prediction_function(x, mu, var)
-        p_val, _ = mp.quad(function, [-mp.inf, mp.inf])
+        # autogenerate prediction intergral range
+        p_val, _ = scipy.integrate.quad(lambda x: prediction_function(x, mu, var), mu-3*np.sqrt(var), mu+4*np.sqrt(var))
         return p_val
 
     @staticmethod
@@ -101,15 +99,22 @@ class LogisticRegressionTorchModule(nn.Module):
             self.prior_log_var = torch.tensor(prior_params["w_log_var"], dtype=torch.float32)
 
     def set_hyperparameters(self, hyperparameters):
-        self.hyperparameters = {**self.hyperparameters, **hyperparameters}
-        if self.hyperparameters["prediction"] == "laplace":
-            self._prediction_func = self.laplace_prediction
-        elif self.hyperparameters["prediction"] == "exact":
-            self._prediction_func == self.exact_prediction
-        else:
-            logger.error(f"{self.hyperparameters['prediction']} \
-            is an invalid prediction setting! Please either use laplace or exact")
-            raise ValueError("Invalid logistic regression prediction option")
+        """
+        Convert the hyperparam dict into internal things
+        :param hyperparameters:
+        :return:
+        """
+        if hyperparameters is not None:
+            self.n_in = hyperparameters['n_in']
+            self.N_samples = hyperparameters["N_samples"]
+            if hyperparameters["prediction"] == "laplace":
+                self._prediction_func = self.laplace_prediction
+            elif hyperparameters["prediction"] == "exact":
+                self._prediction_func = self.exact_prediction
+            else:
+                logger.error(f"{self.hyperparameters['prediction']} \
+                is an invalid prediction setting! Please either use laplace or exact")
+                raise ValueError("Invalid logistic regression prediction option")
 
     def predict(self, x, parameters=None, hyperparameters=None):
         """
@@ -122,8 +127,8 @@ class LogisticRegressionTorchModule(nn.Module):
         :param hyperparameters: logistic regression hyperparams
         :return: probability of each point in x being +1
         """
-
         self.set_parameters(parameters)
+        self.set_hyperparameters(hyperparameters)
         # all per point
         mean_1d = torch.mv(x, self.w_mu)
         cov_mat = torch.diag(torch.exp(self.w_log_var))
@@ -227,9 +232,9 @@ class LogisticRegressionTorchModule(nn.Module):
 class MeanFieldMultiDimensionalLogisticRegression(Model):
 
     def __init__(self, parameters, hyperparameters):
-        # initialise torch module first
-        self.torch_module = LogisticRegressionTorchModule(nat_params_to_params_dict(parameters), hyperparameters)
         super(MeanFieldMultiDimensionalLogisticRegression, self).__init__(parameters, hyperparameters)
+
+        self.torch_module = LogisticRegressionTorchModule(nat_params_to_params_dict(parameters), self.hyperparameters)
 
         if self.hyperparameters['wrapped_optimizer_class'] is not None:
             base_optimizer = self.hyperparameters['base_optimizer_class'](self.torch_module.parameters(),
@@ -249,13 +254,31 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
     def set_parameters(self, nat_parameters):
         if nat_parameters is not None:
             parameters = nat_params_to_params_dict(nat_parameters)
-            self.torch_module.set_parameters_from_numpy(parameters)
+            try:
+                self.torch_module.set_parameters_from_numpy(parameters)
+            except AttributeError:
+                # the torch module hasn't been setup yet - just skip for the time being!
+                pass
 
     def get_parameters(self):
-        return params_to_nat_params_dict({
-            'w_mu': self.torch_module.w_mu.detach().numpy(),
-            'w_log_var': self.torch_module.w_log_var.detach().numpy()
-        })
+        try:
+            return params_to_nat_params_dict({
+                'w_mu': self.torch_module.w_mu.detach().numpy(),
+                'w_log_var': self.torch_module.w_log_var.detach().numpy()
+            })
+        except AttributeError:
+            # if this get's called
+            logger.error("Attempted to get parameters before this object was properly initialised")
+            return self.get_default_parameters()
+
+    def set_hyperparameters(self, hyperparameters):
+        self.hyperparameters = {**self.hyperparameters, **hyperparameters}
+        # also update model hypers
+        try:
+            self.torch_module.set_hyperparameters(self.hyperparameters)
+        except AttributeError:
+            # skip if the torch module doesn't exist yet
+            pass
 
     @staticmethod
     def get_default_parameters():
@@ -304,7 +327,7 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
 
         x_tensor = torch.tensor(x, dtype=torch.float32)
 
-        return self.torch_module.predict(x_tensor, self.parameters, self.hyperparameters).numpy()
+        return self.torch_module.predict(x_tensor).numpy()
 
     def fit(self, data, t_i, parameters=None, hyperparameters=None):
         """
@@ -318,7 +341,6 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         """
         super().fit(data, t_i, parameters, hyperparameters)
 
-        self.hyperparameters["batch_size"]
         mini_batch_indices = np.random.choice(data["x"].shape[0], self.hyperparameters["batch_size"], replace=False)
         x_full = data["x"]
         y_full = data["y"]
