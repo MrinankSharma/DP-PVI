@@ -1,10 +1,10 @@
 import logging
-from collections import defaultdict
 
+import mpmath as mp
 import numpy as np
+import scipy.optimize
 import torch
 import torch.nn as nn
-from scipy.integrate import quad
 from torch.distributions.bernoulli import Bernoulli
 from torch.distributions.normal import Normal
 
@@ -50,7 +50,7 @@ def params_to_nat_params_dict(params_dict):
 class LogisticRegressionTorchModule(nn.Module):
 
     def __init__(self, parameters, hyperparameters):
-        super(LogisticRegressionTorchModule, self).__init__()
+        super(LogisticRegressionTorchModule, self).__init__(parameters, hyperparameters)
 
         self.n_in = hyperparameters['n_in']
 
@@ -66,6 +66,23 @@ class LogisticRegressionTorchModule(nn.Module):
         # standard normal, for sampling required
         self.normal_dist = Normal(loc=torch.tensor([0], dtype=torch.float32),
                                   scale=torch.tensor([1], dtype=torch.float32))
+
+    @staticmethod
+    def exact_prediction(mu, var):
+        function = lambda x: prediction_function(x, mu, var)
+        p_val, _ = mp.quad(function, [-mp.inf, mp.inf])
+        return p_val
+
+    @staticmethod
+    def laplace_prediction(mu, var):
+        # we approximate our function to be integrated as an unnormalised gaussian
+        sigmoid = lambda a: (1 + np.exp(-a)) ** -1
+        cost = lambda a: np.float(mu + var * sigmoid(-a) - a)
+        root_results = scipy.optimize.root(cost, 0)
+        a_max = root_results["x"][0]
+        c = 1 / var + sigmoid(a_max) * sigmoid(1 - a_max)
+        p_val = prediction_function(a_max, mu, var) * np.sqrt(2 * np.pi / c)
+        return p_val
 
     def set_parameters(self, parameters):
         if parameters is not None:
@@ -83,7 +100,18 @@ class LogisticRegressionTorchModule(nn.Module):
             self.prior_mu = torch.tensor(prior_params["w_mu"], dtype=torch.float32)
             self.prior_log_var = torch.tensor(prior_params["w_log_var"], dtype=torch.float32)
 
-    def predict(self, x, integration_limit=500, parameters=None):
+    def set_hyperparameters(self, hyperparameters):
+        self.hyperparameters = {**self.hyperparameters, **hyperparameters}
+        if self.hyperparameters["prediction"] == "laplace":
+            self._prediction_func = self.laplace_prediction
+        elif self.hyperparameters["prediction"] == "exact":
+            self._prediction_func == self.exact_prediction
+        else:
+            logger.error(f"{self.hyperparameters['prediction']} \
+            is an invalid prediction setting! Please either use laplace or exact")
+            raise ValueError("Invalid logistic regression prediction option")
+
+    def predict(self, x, parameters=None, hyperparameters=None):
         """
         Bayesian prediction on probability at certain point, performed using numerical integration
         so this is the 'fully Bayesian' probability
@@ -104,7 +132,9 @@ class LogisticRegressionTorchModule(nn.Module):
         p_vals = torch.Tensor(len(mean_vars))
 
         for ind, mean_var in enumerate(mean_vars):
-            p_val, err = quad(prediction_function, -integration_limit, integration_limit, mean_var)
+            mu = mean_var[0].detach().numpy()
+            var = mean_var[1].detach().numpy()
+            p_val = torch.tensor(self._prediction_func(mu, var), dtype=torch.float32)
             p_vals[ind] = p_val
 
         return p_vals
@@ -244,7 +274,7 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
             "N_steps": 1,
             "N_samples": 50,
             "n_in": 2,
-            "prediction_integration_limit": 50,
+            "prediction": "laplace"
         }
 
     def sample(self, x, parameters=None, hyperparameters=None):
@@ -272,7 +302,9 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         """
         super().predict(x, parameters, hyperparameters)
 
-        return self.torch_module.predict(x, self.hyperparameters["prediction_integration_limit"], parameters).numpy()
+        x_tensor = torch.tensor(x, dtype=torch.float32)
+
+        return self.torch_module.predict(x_tensor, self.parameters, self.hyperparameters).numpy()
 
     def fit(self, data, t_i, parameters=None, hyperparameters=None):
         """

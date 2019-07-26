@@ -129,6 +129,8 @@ class SyncronousPVIParameterServer(ParameterServer):
         lambda_new = B.add_parameters(lambda_old, *delta_is)
 
         self.parameters = lambda_new
+        # update the model parameters
+        self.model.set_parameters(self.parameters)
         logger.info(f"Iteration {self.iterations} complete.\nNew Parameters:\n {pretty_dump.dump(lambda_new)}\n")
 
         self.iterations += 1

@@ -11,6 +11,7 @@ import src.utils.numpy_nest_utils as numpy_nest
 # noinspection PyUnresolvedReferences
 from experiments.jalko2017.MongoDBOption import TestMongoDbOption, ExperimentMongoDbOption
 from experiments.jalko2017.ingredients.dataset_ingredient import dataset_ingredient, load_data
+from experiments.jalko2017.measure_performance import compute_prediction_accuracy, compute_log_likelihood
 from experiments.utils import save_log
 from src.client.client import DPClient
 from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression
@@ -37,7 +38,7 @@ def default_config(dataset):
 
         optimisation_settings = {
             "lr": 0.01,
-            "N_steps": 50,
+            "N_steps": 10,
         }
 
     elif dataset["name"] == "adult":
@@ -48,12 +49,7 @@ def default_config(dataset):
         }
 
         optimisation_settings = {
-            "base_optimiser_settings": {
-                "lr": 0.01
-            },
-            "wrapped_optimiser_settings": {
-
-            }
+            "lr": 0.01
         }
 
     logging_base_directory = "/scratch/DP-PVI/logs"
@@ -66,7 +62,7 @@ def default_config(dataset):
 
     prior_pres = 1.0 / 10
     N_samples = 50
-    N_iterations = 1
+    N_iterations = 100
 
 
 # @ray.remote
@@ -162,6 +158,15 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
     while not server.should_stop():
         # dispatch work to ray and grab the log
         sacred_log = perform_iteration(server)
+
+        # compute predictive performance
+        y_pred_train = server.model.predict(training_set["x"])
+        y_pred_test = server.model.predict(test_set["x"])
+        sacred_log["train_ll"] = compute_log_likelihood(y_pred_train, training_set["y"])
+        sacred_log["train_accuracy"] = compute_prediction_accuracy(y_pred_train, training_set["y"])
+        sacred_log["test_ll"] = compute_log_likelihood(y_pred_test, test_set["y"])
+        sacred_log["test_accuracy"] = compute_prediction_accuracy(y_pred_test, test_set["y"])
+
         # sacred_log = ray.get(perform_iteration.remote(server))
         for k, v in sacred_log.items():
             _run.log_scalar(k, v, server.iterations)
@@ -169,5 +174,3 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
     final_log = server.get_compiled_log()
     ex.add_artifact(save_log(final_log, ex.get_experiment_info()["name"], logging_base_directory, _run.info["test"]),
                     'full_log')
-
-    print(server.parameters)
