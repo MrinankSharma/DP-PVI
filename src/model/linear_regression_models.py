@@ -156,8 +156,8 @@ class LinearRegressionTorchModule(nn.Module):
         """
         self.set_parameters(parameters)
         
-        y_mean = x @ self.w_mu.data
-        y_var = (x ** 2) @ torch.exp(self.w_log_var.data) + self.noise ** 2
+        y_mean = x @ self.w_mu
+        y_var = (x ** 2) @ torch.exp(self.w_log_var) + self.noise ** 2
 
         return y_mean, y_var
 
@@ -171,10 +171,10 @@ class LinearRegressionTorchModule(nn.Module):
         :return: x
         """
         self.set_parameters(parameters)
+        y_mean, y_var = self.predict(x)
+        return y_mean, y_var, x
 
-        return x
-
-    def compute_loss_per_point(self, x, y, parameters=None):
+    def compute_loss_per_point(self, y_pred, y, parameters=None):
         """
         Compute the negative local free energy per training datapoint, given the training data tensor x and y
 
@@ -186,12 +186,15 @@ class LinearRegressionTorchModule(nn.Module):
         """
         self.set_parameters(parameters)
 
+        y_mean, y_var, x = y_pred
+
         # compute the differential entropy term
         diff_entropy = torch.log(torch.prod(torch.exp(self.w_log_var))) / 2
 
         # compute the likelihood term
         likelihood_term = []
 
+        # can we replace this somehow?
         for i in x.shape[0]:
             likelihood_term.append((x[i] ** 2) @ torch.exp(self.w_log_var) + (x[i] @ self.w_mu) ** 2 - 2 * y[i] * x[i] @ self.w_mu)
 
