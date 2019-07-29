@@ -1,29 +1,13 @@
 import logging
 
 import requests
-from ruamel.yaml import YAML
-from ruamel.yaml.compat import StringIO
+
+from src.utils.yaml_string_dumper import YAMLStringDumper
 
 DEFAULT_WEBHOOK_LOCATION = "../../slack_webhook"
 
-
-class MyYAML(YAML):
-    def dump(self, data, stream=None, **kw):
-        inefficient = False
-        if stream is None:
-            inefficient = True
-            stream = StringIO()
-        YAML.dump(self, data, stream, **kw)
-        if inefficient:
-            return stream.getvalue()
-
-
-yaml = MyYAML()  # or typ='safe'/'unsafe' etc
-
-logger = logging.getLogger(__name__)
-yaml = MyYAML()
-yaml.indent(mapping=8, sequence=2, offset=8)
-
+from ray.services import logger
+yaml = YAMLStringDumper()
 
 def slack_notification(experiment_tag, content, slack_webhook_file=DEFAULT_WEBHOOK_LOCATION):
     """
