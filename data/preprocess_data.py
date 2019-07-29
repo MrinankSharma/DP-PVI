@@ -1,18 +1,20 @@
-import itertools
-import pickle
 import argparse
+import itertools
+import logging
+import pickle
 
 import numpy as np
-
-from sklearn.preprocessing import OneHotEncoder, StandardScaler, OrdinalEncoder, Binarizer
 from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder, StandardScaler, OrdinalEncoder, Binarizer
 from sklearn.utils import as_float_array
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("Data Preprocessor")
+
 argparser = argparse.ArgumentParser()
-argparser.add_argument("--data-dir", dest="data-dir", required=True, type=str)
+argparser.add_argument("--data-dir", dest="data_dir", required=True, type=str)
 args = argparser.parse_args()
 
-from ray.services import logger
 
 def process_dataset(data_folder, filename, config, one_hot=True, should_scale=False):
     data = np.loadtxt(data_folder + "/" + filename, dtype=str, delimiter=',')
