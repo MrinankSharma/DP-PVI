@@ -1,6 +1,6 @@
 import itertools
 import pickle
-
+import argparse
 
 import numpy as np
 
@@ -8,6 +8,9 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler, OrdinalEncoder,
 from sklearn.compose import ColumnTransformer
 from sklearn.utils import as_float_array
 
+argparser = argparse.ArgumentParser()
+argparse.add_argument("--data-dir", dest="data-dir", required=True, type=str)
+args = argparser.parse_args()
 
 from ray.services import logger
 
@@ -78,6 +81,6 @@ if __name__ == "__main__":
 
     for ss, oh in itertools.product(should_scale, one_hot):
         logger.info("Processing Adult Dataset with Should Scale: {} One Hot: {}".format(ss, oh))
-        process_dataset("/Users/msharma/workspace/DP-PVI/data/adult", "adult.data", adult_config, oh, ss)
+        process_dataset(f"{args.data_dir}/adult", "adult.data", adult_config, oh, ss)
         logger.info("Processing Abalone Dataset with Should Scale: {} One Hot: {}".format(ss, oh))
-        process_dataset("/Users/msharma/workspace/DP-PVI/data/abalone", "abalone.data", abalone_config, oh, ss)
+        process_dataset(f"{args.data_dir}/abalone", "abalone.data", abalone_config, oh, ss)
