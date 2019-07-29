@@ -1,0 +1,19 @@
+experiment_file: /Users/msharma/workspace/DP-PVI/examples/example_ray_process.py
+dataset:
+  name:
+    - dataset 1
+    - dataset 2
+  scaled:
+    - True
+    - False
+  nested:
+    example:
+      list_one:
+        - 12
+        - 17
+        - 19
+type:
+  - 1
+  - 2
+example_scalar: 17
+num_seeds: 10
