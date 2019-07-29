@@ -120,7 +120,7 @@ class LinearRegressionTorchModule(nn.Module):
         super(LinearRegressionTorchModule, self).__init__()
 
         self.n_in = hyperparameters['n_in']
-        self.noise = self.hyperparameters['model_noise']
+        self.noise = hyperparameters['model_noise']
 
         self.w_mu = nn.Parameter(torch.zeros(self.n_in, dtype=torch.float32))
         self.w_log_var = nn.Parameter(torch.zeros(self.n_in, dtype=torch.float32))
@@ -146,16 +146,14 @@ class LinearRegressionTorchModule(nn.Module):
 
     def predict(self, x, parameters=None):
         """
-        Bayesian prediction on probability at certain point, performed using numerical integration
+        Bayesian prediction on probability at certain point, where the predictive distribution is Gaussian
         so this is the 'fully Bayesian' probability
 
-        :param x: a single data point to predict on
-        :param integration_limit: how much to truncate numerical integration for the predictive distribution
-        :param parameters: logistic regression parameters
-        :param hyperparameters: logistic regression hyperparams
-        :return: probability of each point in x being +1
+        :param x: a single data-point to predict on
+        :param parameters: linear regression parameters
+        :param hyperparameters: linear regression hyperparams
+        :return: mean and variance of the predictive distribution
         """
-
         self.set_parameters(parameters)
         
         y_mean = x @ self.w_mu.data
@@ -165,12 +163,12 @@ class LinearRegressionTorchModule(nn.Module):
 
     def forward(self, x, parameters=None):
         """
-        Apply forward pass, getting sampled activations and probabilities
+        Apply forward pass, simply return x since we only need x and y to maximize local free energy
 
         :param x: data tensor
         :param parameters: model parameters
         :param hyperparameters: model hyperparameters
-        :return: Y: probability matrix, activation_mat: matrix of activation values (makes ELBO loss calculation easier)
+        :return: x
         """
         self.set_parameters(parameters)
 
@@ -178,13 +176,13 @@ class LinearRegressionTorchModule(nn.Module):
 
     def compute_loss_per_point(self, x, y, parameters=None):
         """
-        Compute the ELBO loss per training datapoint, given the activation matrix produced by the forward pass
+        Compute the negative local free energy per training datapoint, given the training data tensor x and y
 
-        :param activation_mat: Matrix of activation input. Each row is a data-point, each column is a sample
-        :param Y_true: True labels
+        :param x: training data tensor. Each row is a data-point
+        :param y: training data tensor
         :param parameters: Model parameters
         :param hyperparameters: Model hyperparameters
-        :return: ELBO per point
+        :return: negative local free energy per point
         """
         self.set_parameters(parameters)
 
@@ -208,7 +206,7 @@ class LinearRegressionTorchModule(nn.Module):
 
         return -loss_per_point
 
-    def sample(self, x, parameters):
+    def sample(self, x, parameters=None):
         """
         Create some linear regression data. *** NOTE: This ignores the precisions of each of the values of w, and
         simply assuming the true (unknown) weight is w; this is different to finding the predictive distribution!! ***
@@ -218,9 +216,9 @@ class LinearRegressionTorchModule(nn.Module):
         :param hyperparameters: model hyperparameters (will also not update)
         :return: y: tensor of predictions
         """
-        w_mu = parameters["w_mu"]
+        self.set_parameters(parameters)
         
-        return torch.mv(x, w_mu) + random.normal(0, self.noise, x.shape[0])
+        return torch.mv(x, self.w_mu.data) + random.normal(0, self.noise, x.shape[0])
 
 
 class LinearRegressionMultiDimSGD(Model):
@@ -253,14 +251,14 @@ class LinearRegressionMultiDimSGD(Model):
 
     def get_parameters(self):
         return params_to_nat_params_dict({
-            'w_mu': self.torch_module.w_mu.detach().numpy(),
+            'w_mu': self.torch_module.w_mu.detach().numpy(),    # Why use .detach() rather than .data?
             'w_log_var': self.torch_module.w_log_var.detach().numpy()
         })
 
     def get_default_parameters(self):
         return {
-            'w_pres': 1,
-            'w_nat_mean': 0
+            'w_pres': np.ones(2),
+            'w_nat_mean': np.zeros(2)
         }
 
     def get_default_hyperparameters(self):
@@ -276,26 +274,25 @@ class LinearRegressionMultiDimSGD(Model):
 
     def sample(self, x, parameters):
         """
-        Create some logistic regression data. *** NOTE: This ignores the precisions of each of the values of w, and
+        Create some linear regression data. *** NOTE: This ignores the precisions of each of the values of w, and
         simply assuming the true (unknown) weight is w; this is different to finding the predictive distribution!! ***
 
         :param x: input values to predict at
         :param parameters: model parameters (not will not update)
         :param hyperparameters: model hyperparameters (will also not update)
-        :return: y: tensor of parameter labels
+        :return: y: tensor of predictions
         """
         return self.torch_module.sample(x, parameters).numpy()
 
     def predict(self, x, parameters=None, hyperparameters=None):
         """
-        Bayesian prediction on probability at certain point, performed using numerical integration
+        Bayesian prediction on probability at certain point, where the predictive distribution is Gaussian
         so this is the 'fully Bayesian' probability
 
-        :param x: data to predict on
-        :param integration_limit: how much to truncate numerical integration for the predictive distribution
-        :param parameters: logistic regression parameters
-        :param hyperparameters: logistic regression hyperparams
-        :return: probability of each point in x being +1
+        :param x: a single data-point to predict on
+        :param parameters: linear regression parameters
+        :param hyperparameters: linear regression hyperparams
+        :return: mean and variance of the predictive distribution
         """
         super().predict(x, parameters, hyperparameters)
 
@@ -315,7 +312,7 @@ class LinearRegressionMultiDimSGD(Model):
 
         # convert data into a tensor
         x = torch.tensor(data["x"], dtype=torch.float32)
-        y_true = torch.tensor(data["y"], dtype=torch.float32)
+        y = torch.tensor(data["y"], dtype=torch.float32)
 
         cav_nat_params = B.subtract_params(self.get_parameters(), t_i)
         # numpy dict for the effective prior
@@ -329,7 +326,7 @@ class LinearRegressionMultiDimSGD(Model):
         self._derived_statistics_history = []
         # lets just do this for the time being
         for i in range(self.hyperparameters['N_steps']):
-            current_loss = self.wrapped_optimizer.fit_batch(x, y_true)
+            current_loss = self.wrapped_optimizer.fit_batch(x, y)
             derived_statistics = self.wrapped_optimizer.get_logged_statistics()
             derived_statistics_history.append(derived_statistics)
             training_curve[i] = current_loss
