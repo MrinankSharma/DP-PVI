@@ -1,0 +1,16 @@
+dataset:
+  name:
+    - adult
+
+private_settings:
+  sigma_relative:
+    - 40.17
+    - 27.84
+    - 19.29
+    - 13.3
+    - 9.27
+    - 6.42
+    - 4.45
+    - 3.085
+    - 2.14
+    - 1.48

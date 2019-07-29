@@ -47,7 +47,7 @@ def default_config(dataset):
             "target_delta": 1e-3
         }
 
-        N_iterations = 1000
+        N_iterations = 10
 
     elif dataset["name"] == "adult":
         privacy_settings = {
@@ -60,15 +60,15 @@ def default_config(dataset):
 
     logging_base_directory = "/scratch/DP-PVI/logs"
 
-    optimisation_settings = {
-        "lr": 0.5,
-        "N_steps": 1,
-    }
-
     ray_cfg = {
         "redis_address": "None",
         "num_cpus": 1,
         "num_gpus": 0,
+    }
+
+    optimisation_settings = {
+        "lr": 0.1,
+        "N_steps": 1,
     }
 
     prior_pres = 1.0
