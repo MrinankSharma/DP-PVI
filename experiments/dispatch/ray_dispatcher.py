@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 argparser = argparse.ArgumentParser()
 argparser.add_argument("--cpus", dest="num_cpus", default=None, type=int)
 argparser.add_argument("--gpus", dest="num_gpus", default=None, type=int)
-argparse.add_argument("--exp-file", dest="exp_file", required=True, type=str)
+argparser.add_argument("--exp-file", dest="exp_file", required=True, type=str)
 args = argparser.parse_args()
 
 yaml = YAML()

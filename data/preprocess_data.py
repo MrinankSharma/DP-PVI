@@ -9,7 +9,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.utils import as_float_array
 
 argparser = argparse.ArgumentParser()
-argparse.add_argument("--data-dir", dest="data-dir", required=True, type=str)
+argparser.add_argument("--data-dir", dest="data-dir", required=True, type=str)
 args = argparser.parse_args()
 
 from ray.services import logger
