@@ -2,6 +2,7 @@ import numpy as np
 
 inf = np.inf
 
+
 def add_parameters(*params):
     '''
     Assuming a list of dicts of parameter tensors, add each corresponding element from each together
@@ -51,7 +52,7 @@ def to_pure_python(val):
             return val.tolist()[0]
         else:
             return val.tolist()
-    elif np.issubdtype(val, float) or np.issubdtype(val, np.int):
+    elif np.issubdtype(val, np.float32) or np.issubdtype(val, np.int) or np.issubdtype(val, np.float64):
         return val.tolist()
 
     return val

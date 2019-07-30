@@ -22,6 +22,7 @@ gitpython = "*"
 pymongo = "*"
 pyyaml = "*"
 sklearn = "*"
+setproctitle = "*"
 
 [requires]
 python_version = "3.7"

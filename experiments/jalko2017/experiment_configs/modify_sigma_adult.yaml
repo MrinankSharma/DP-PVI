@@ -1,8 +1,9 @@
+experiment_file: /scratch/DP-PVI/DP-PVI/experiments/jalko2017/experiment.py
 dataset:
   name:
     - adult
 
-private_settings:
+privacy_settings:
   sigma_relative:
     - 40.17
     - 27.84
@@ -14,3 +15,5 @@ private_settings:
     - 3.085
     - 2.14
     - 1.48
+    -
+num_seeds: 10

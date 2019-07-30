@@ -1,10 +1,14 @@
-from sacred import Ingredient
-import numpy as np
 import logging
 import os
+import sys
+
+import numpy as np
+from sacred import Ingredient
 
 dataset_ingredient = Ingredient('dataset')
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger("Dataset Generation")
+
 
 @dataset_ingredient.config
 def cfg():
@@ -22,7 +26,7 @@ def generate_filename(name, scaled, ordinal_cat_encoding, data_base_dir):
         filename_x = filename_x + "_scaled"
 
     if ordinal_cat_encoding:
-        filename_x = filename_x +"_ordinal"
+        filename_x = filename_x + "_ordinal"
 
     filename_x = filename_x + ".csv"
     ret = os.path.join(data_base_dir, name, filename_x)
@@ -33,7 +37,7 @@ def generate_filename(name, scaled, ordinal_cat_encoding, data_base_dir):
 @dataset_ingredient.capture
 def load_data(name, scaled, ordinal_cat_encoding, train_proportion, data_base_dir):
     x_loc, y_loc = generate_filename(name, scaled, ordinal_cat_encoding, data_base_dir)
-    logging.info(f"Using Dataset {x_loc}")
+    logger.info(f"Using Dataset {x_loc}")
     x = np.loadtxt(x_loc, delimiter=",")
     y = np.loadtxt(y_loc, delimiter=",")
     N = x.shape[0]

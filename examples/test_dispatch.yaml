@@ -1,19 +1,13 @@
-experiment_file: /Users/msharma/workspace/DP-PVI/examples/example_ray_process.py
+experiment_file: /Users/msharma/workspace/DP-PVI/experiments/jalko2017/experiment.py
 dataset:
   name:
-    - dataset 1
-    - dataset 2
-  scaled:
-    - True
-    - False
-  nested:
-    example:
-      list_one:
-        - 12
-        - 17
-        - 19
-type:
-  - 1
-  - 2
-example_scalar: 17
-num_seeds: 10
+    - abalone
+  data_base_dir: /Users/msharma/workspace/DP-PVI/data/
+
+privacy_settings:
+  sigma_relative:
+    - 1
+    - 2
+
+logging_base_directory: /Users/msharma/workspace/DP-PVI/logs
+num_seeds: 1

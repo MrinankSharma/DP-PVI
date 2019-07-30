@@ -1,4 +1,4 @@
-
+import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
 
@@ -9,7 +9,7 @@ import src.utils.numpy_nest_utils as np_nest
 import src.utils.numpy_utils as np_utils
 from src.privacy_accounting.analysis import QueryWithLedger, OnlineAccountant
 
-from ray.services import logger
+logger = logging.getLogger(__name__)
 
 
 def zero_init_func(tensor):

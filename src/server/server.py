@@ -1,14 +1,16 @@
+import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
 
 import ray
-from ray.services import logger
 
 import src.utils.numpy_utils as B
 from src.privacy_accounting.analysis import QueryWithLedger, OnlineAccountant
 from src.utils.yaml_string_dumper import YAMLStringDumper
 
 pretty_dump = YAMLStringDumper()
+
+logger = logging.getLogger(__name__)
 
 
 class ParameterServer(ABC):
@@ -110,7 +112,6 @@ class ParameterServer(ABC):
         return final_log
 
 
-@ray.remote
 class SyncronousPVIParameterServer(ParameterServer):
 
     def __init__(self, model_class, prior, max_iterations=100, clients_factories=None, hyperparameters=None,

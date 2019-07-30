@@ -151,7 +151,8 @@ class QueryWithLedger(dp_query.DPQuery):
         """Ensures sample is recorded to the ledger and returns noised result."""
         result, new_global_state = self._query.get_noised_result(sample_state, global_state)
         self._ledger.finalise_sample()
-        return nest.map_structure(torch.tensor, result), new_global_state
+        op = lambda tensor: tensor.clone().detach()
+        return nest.map_structure(op, result), new_global_state
 
     def get_record_derived_data(self):
         return self._query.get_record_derived_data()
