@@ -2,6 +2,7 @@ import numpy as np
 
 inf = np.inf
 
+
 def add_parameters(*params):
     '''
     Assuming a list of dicts of parameter tensors, add each corresponding element from each together
@@ -43,3 +44,15 @@ def clip(parameter, bound):
 
 def gaussian_noise(shape, std, mean=0):
     return np.random.normal(mean, std, shape)
+
+
+def to_pure_python(val):
+    if isinstance(val, np.ndarray):
+        if val.size == 1:
+            return val.tolist()[0]
+        else:
+            return val.tolist()
+    elif np.issubdtype(val, np.float32) or np.issubdtype(val, np.int) or np.issubdtype(val, np.float64):
+        return val.tolist()
+
+    return val

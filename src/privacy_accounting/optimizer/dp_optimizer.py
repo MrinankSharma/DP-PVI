@@ -28,7 +28,6 @@ class DPOptimizer(WrapperOptimizer):
         self._derived_records_data = []
 
     def fit_batch(self, x: torch.Tensor, y: torch.Tensor):
-
         loss = self.loss_per_example(self.model(x), y)
 
         param_groups = self.optimizer.param_groups

@@ -62,13 +62,15 @@ class LinearRegression1DAnalyticNumpy(Model):
 
 class LinearRegressionMultiDimAnalyticNumpy(Model):
 
-    def get_default_parameters(self):
+    @classmethod
+    def get_default_parameters(cls):
         return {
             'w_nat_mean': np.zeros(2),    # natural mean = var inverse * mu
             'w_pres': np.ones(2)          # precision = var inverse
         }
 
-    def get_default_hyperparameters(self):
+    @classmethod
+    def get_default_hyperparameters(cls):
         return {
             'n_in': 2,
             'model_noise': 0    # model_noise is standard deviation
