@@ -1,4 +1,5 @@
 experiment_file: /scratch/DP-PVI/DP-PVI/experiments/jalko2017/experiment.py
+experiment_tag: reproduce_abalone_plot_one
 dataset:
   name:
     - abalone
