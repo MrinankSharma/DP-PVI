@@ -2,11 +2,13 @@ import numpy as np
 import numpy.random as random
 import torch
 import torch.nn as nn
+import logging
 
 import src.utils.numpy_utils as B
 from src.model.model import Model
 from src.model.logistic_regression_models import params_to_nat_params, nat_params_to_params, nat_params_to_params_dict, params_to_nat_params_dict
 
+logger = logging.getLogger(__name__)
 
 class LinearRegression1DAnalyticNumpy(Model):
 
@@ -18,7 +20,7 @@ class LinearRegression1DAnalyticNumpy(Model):
 
     def get_default_hyperparameters(self):
         return {
-            'model_noise': 0    # model_noise is standard deviation
+            'model_noise': 1    # model_noise is standard deviation
         }
 
     def set_hyperparameters(self, hyperparameters):
@@ -62,18 +64,16 @@ class LinearRegression1DAnalyticNumpy(Model):
 
 class LinearRegressionMultiDimAnalyticNumpy(Model):
 
-    @classmethod
-    def get_default_parameters(cls):
+    def get_default_parameters(self):
         return {
             'w_nat_mean': np.zeros(2),    # natural mean = var inverse * mu
             'w_pres': np.ones(2)          # precision = var inverse
         }
 
-    @classmethod
-    def get_default_hyperparameters(cls):
+    def get_default_hyperparameters(self):
         return {
             'n_in': 2,
-            'model_noise': 0    # model_noise is standard deviation
+            'model_noise': 1    # model_noise is standard deviation
         }
 
     def set_hyperparameters(self, hyperparameters):
@@ -200,7 +200,7 @@ class LinearRegressionTorchModule(nn.Module):
         
         # compute the prior term
         prior_var_inv = 1 / torch.exp(self.prior_log_var)
-        prior_term = (prior_var_inv @ torch.exp(self.w_log_var) + (self.w_mu ** 2) @ prior_var_inv - 2 * (prior_mu * prior_var_inv) @ self.w_mu) / -2
+        prior_term = (prior_var_inv @ torch.exp(self.w_log_var) + (self.w_mu ** 2) @ prior_var_inv - 2 * (self.prior_mu * prior_var_inv) @ self.w_mu) / -2
 
         # compute loss per point
         loss_per_point = likelihood_term + (diff_entropy + prior_term) / x.shape[0]
@@ -229,14 +229,14 @@ class LinearRegressionMultiDimSGD(Model):
         self.torch_module = LinearRegressionTorchModule(nat_params_to_params_dict(parameters), hyperparameters)
         super(LinearRegressionMultiDimSGD, self).__init__(parameters, hyperparameters)
 
-        base_optimizer = self.hyperparameters['base_optimizer_class'](self.torch_module.parameters(),
-                                                                      **hyperparameters['base_optimizer_parameters'])
+        if self.hyperparameters['wrapped_optimizer_class'] is not None:
+            base_optimizer = self.hyperparameters['base_optimizer_class'](self.torch_module.parameters(),
+                                                                          **hyperparameters['base_optimizer_parameters'])
 
-        self.wrapped_optimizer = self.hyperparameters['wrapped_optimizer_class'](optimizer=base_optimizer,
-                                                                                 model=self.torch_module,
-                                                                                 loss_per_example=self.torch_module.compute_loss_per_point,
-                                                                                 **hyperparameters[
-                                                                                     'wrapped_optimizer_parameters'])
+            self.wrapped_optimizer = self.hyperparameters['wrapped_optimizer_class'](optimizer=base_optimizer,
+                                                                                     model=self.torch_module,
+                                                                                     loss_per_example=self.torch_module.compute_loss_per_point,
+                                                                                     **hyperparameters['wrapped_optimizer_parameters'])
 
         self._training_curves = []
         self._derived_statistics_histories = []
@@ -270,7 +270,7 @@ class LinearRegressionMultiDimSGD(Model):
             "wrapped_optimizer_params": {},
             "N_steps": 1,
             "n_in": 2,
-            "model_noise": 0    # model_noise is standard deviation
+            "model_noise": 1    # model_noise is standard deviation
         }
 
     def sample(self, x, parameters):
