@@ -149,10 +149,10 @@ class LinearRegressionTorchModule(nn.Module):
         Bayesian prediction on probability at certain point, where the predictive distribution is Gaussian
         so this is the 'fully Bayesian' probability
 
-        :param x: a single data-point to predict on
+        :param x: data tensor. Each row is a data-point
         :param parameters: linear regression parameters
         :param hyperparameters: linear regression hyperparams
-        :return: mean and variance of the predictive distribution
+        :return: mean and variance of the predictive distribution of each y
         """
         self.set_parameters(parameters)
         
@@ -163,14 +163,16 @@ class LinearRegressionTorchModule(nn.Module):
 
     def forward(self, x, parameters=None):
         """
-        Apply forward pass, simply return x since we only need x and y to maximize local free energy
+        Apply forward pass, return mean and variance of the predictive distribution and x,
+        since we need x to maximize local free energy
 
-        :param x: data tensor
+        :param x: data tensor. Each row is a data-point
         :param parameters: model parameters
         :param hyperparameters: model hyperparameters
-        :return: x
+        :return: mean and variance of the predictive distribution of each y, as well as x
         """
         self.set_parameters(parameters)
+
         y_mean, y_var = self.predict(x)
         return y_mean, y_var, x
 
@@ -178,7 +180,7 @@ class LinearRegressionTorchModule(nn.Module):
         """
         Compute the negative local free energy per training datapoint, given the training data tensor x and y
 
-        :param x: training data tensor. Each row is a data-point
+        :param y_pred: y_mean, y_var, x. Each row of x is a data-point
         :param y: training data tensor
         :param parameters: Model parameters
         :param hyperparameters: Model hyperparameters
@@ -192,13 +194,7 @@ class LinearRegressionTorchModule(nn.Module):
         diff_entropy = torch.log(torch.prod(torch.exp(self.w_log_var))) / 2
 
         # compute the likelihood term
-        likelihood_term = []
-
-        # can we replace this somehow?
-        for i in x.shape[0]:
-            likelihood_term.append((x[i] ** 2) @ torch.exp(self.w_log_var) + (x[i] @ self.w_mu) ** 2 - 2 * y[i] * x[i] @ self.w_mu)
-
-        likelihood_term = torch.cat(likelihood_term) / (-2 * self.noise ** 2)
+        likelihood_term = ((x ** 2) @ torch.exp(self.w_log_var) + (x @ self.w_mu) ** 2 - 2 * (y.view(y.shape[0], 1) * x) @ self.w_mu) / (-2 * self.noise ** 2)
         
         # compute the prior term
         prior_var_inv = 1 / torch.exp(self.prior_log_var)
@@ -221,7 +217,7 @@ class LinearRegressionTorchModule(nn.Module):
         """
         self.set_parameters(parameters)
         
-        return torch.mv(x, self.w_mu.data) + random.normal(0, self.noise, x.shape[0])
+        return x @ self.w_mu.data + random.normal(0, self.noise, x.shape[0])
 
 
 class LinearRegressionMultiDimSGD(Model):
@@ -254,7 +250,7 @@ class LinearRegressionMultiDimSGD(Model):
 
     def get_parameters(self):
         return params_to_nat_params_dict({
-            'w_mu': self.torch_module.w_mu.detach().numpy(),    # Why use .detach() rather than .data?
+            'w_mu': self.torch_module.w_mu.detach().numpy(),
             'w_log_var': self.torch_module.w_log_var.detach().numpy()
         })
 
@@ -292,10 +288,10 @@ class LinearRegressionMultiDimSGD(Model):
         Bayesian prediction on probability at certain point, where the predictive distribution is Gaussian
         so this is the 'fully Bayesian' probability
 
-        :param x: a single data-point to predict on
+        :param x: data tensor. Each row is a data-point
         :param parameters: linear regression parameters
         :param hyperparameters: linear regression hyperparams
-        :return: mean and variance of the predictive distribution
+        :return: mean and variance of the predictive distribution of each y
         """
         super().predict(x, parameters, hyperparameters)
 
