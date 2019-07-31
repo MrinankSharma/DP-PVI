@@ -9,7 +9,7 @@ import src.privacy_accounting.analysis.moment_accountant as moment_accountant
 import src.privacy_accounting.analysis.pld_accountant as pld_accountant
 import src.utils.numpy_nest_utils as numpy_nest
 # noinspection PyUnresolvedReferences
-from experiments.jalko2017.MongoDBOption import TestMongoDbOption, ExperimentMongoDbOption
+from experiments.jalko2017.MongoDBOption import TestOption, ExperimentOption
 from experiments.jalko2017.ingredients.dataset_ingredient import dataset_ingredient, load_data
 from experiments.jalko2017.measure_performance import compute_prediction_accuracy, compute_log_likelihood
 from experiments.utils import save_log

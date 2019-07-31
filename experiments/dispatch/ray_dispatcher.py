@@ -65,7 +65,7 @@ def generate_commands_from_yaml(yaml_filepath):
     all_options.append(seed_values)
     product = itertools.product(*all_options)
 
-    run_flag = "--test" if args.test else "--run"
+    run_flag = "--test" if args.test else "--experiment"
     command_strings = []
     for p in product:
         # the -r flag indicates that this is a proper run!

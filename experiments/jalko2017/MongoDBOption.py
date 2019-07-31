@@ -9,11 +9,11 @@ Custom flags for database logging
 """
 
 
-class TestMongoDbOption(CommandLineOption):
+class TestOption(CommandLineOption):
     """
     Run using a database called test in the standard location
     """
-    short_flag = 'test'
+    short_flag = 'tr'
 
     @classmethod
     def apply(cls, args, run):
@@ -27,11 +27,11 @@ class TestMongoDbOption(CommandLineOption):
         }
 
 
-class ExperimentMongoDbOption(CommandLineOption):
+class ExperimentOption(CommandLineOption):
     """
     Use the sacred database.
     """
-    short_flag = 'full-exp'
+    short_flag = 'fr'
 
     @classmethod
     def apply(cls, args, run):
