@@ -98,10 +98,11 @@ if __name__ == "__main__":
     except FileNotFoundError:
         logger.error("Could not find experiment dispatcher yaml file!")
 
-    dispatch_command_strings(commands, cpus_per_command=1, pause_time=2.0)
-    # if we have unavailable resources
+    dispatch_command_strings(commands, cpus_per_command=1, pause_time=60.0)
+    # if we have unavailable resources - right at the end (e.g. imagine sending off two commands - we don't want ray to
+    # shutdown immediately!)
     while not init_resources == ray.available_resources():
-        time.sleep(10)
+        time.sleep(60)
     logger.info("All resources available again - taking down server")
     ray.shutdown()
     subprocess.call("ray stop", shell=True)
