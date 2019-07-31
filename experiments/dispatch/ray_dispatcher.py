@@ -3,7 +3,6 @@ import itertools
 import logging
 import os
 import subprocess
-import sys
 import time
 
 import ray
@@ -31,9 +30,9 @@ def dispatch_command_strings(commands, cpus_per_command=1, gpus_per_command=0, p
         print(resources)
         if "CPU" in resources and resources["CPU"] >= cpus_per_command:
             if gpus_per_command == 0 or ("GPU" in resources and resources["GPU"] >= gpus_per_command):
-                command = commands.pop() + f" ray_cfg.redis_address=localhost:9002 ray_cfg.num_cpus=cpus_per_command ray_cfg.num_gpus=gpus_per_command&"
+                command = commands.pop() + f" ray_cfg.redis_address=localhost:9002 ray_cfg.num_cpus={cpus_per_command} ray_cfg.num_gpus={gpus_per_command} &"
                 logger.info(f"Starting  {command}")
-                subprocess.call(command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.call(command, shell=True, stdout=subprocess.DEVNULL)
                 time.sleep(pause_time)
 
         time.sleep(0.5)
@@ -79,8 +78,9 @@ def generate_commands_from_yaml(yaml_filepath):
 
 
 if __name__ == "__main__":
-    subprocess.call(f"ray stop; ray start --head --redis-port 9002 --num-cpus {args.num_cpus} --num-gpus {args.num_gpus}",
-                    shell=True)
+    subprocess.call(
+        f"ray stop; ray start --head --redis-port 9002 --num-cpus {args.num_cpus} --num-gpus {args.num_gpus}",
+        shell=True)
     ray.init(redis_address="localhost:9002")
     # logger.info(f"Nodes: {ray.nodes()}")
     # logger.info(f"Tasks {ray.tasks()}")

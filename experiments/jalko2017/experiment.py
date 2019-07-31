@@ -39,15 +39,6 @@ def default_config(dataset):
 
         N_iterations = 1000
 
-        privacy_settings = {
-            "L": 10,
-            "C": 5,
-            "sigma_relative": 1.22,
-            "target_delta": 1e-3
-        }
-
-        N_iterations = 10
-
     elif dataset["name"] == "adult":
         privacy_settings = {
             "L": 195,
@@ -136,7 +127,7 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
     )]
 
     # custom decorator based on passed in resources!
-    remote_decorator = ray.remote(num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"])
+    remote_decorator = ray.remote(num_cpus=int(ray_cfg["num_cpus"]), num_gpus=int(ray_cfg["num_gpus"]))
     server = remote_decorator(SyncronousPVIParameterServer).remote(
         model_class=MeanFieldMultiDimensionalLogisticRegression,
         model_parameters=prior_params,
