@@ -78,10 +78,13 @@ def generate_commands_from_yaml(yaml_filepath):
 
 
 if __name__ == "__main__":
-    subprocess.call(
-        f"ray stop; ray start --head --redis-port 9002 --num-cpus {args.num_cpus} --num-gpus {args.num_gpus}",
-        shell=True)
+    logger.info("Creating  Ray Server")
+    # for some reason this don't work on Hinton
+    # subprocess.call(
+    #     f"ray stop; ray start --head --redis-port 9002 --num-cpus {args.num_cpus} --num-gpus {args.num_gpus}",
+    #     shell=True)
     ray.init(redis_address="localhost:9002")
+    logger.info("Ray Server Created")
     # logger.info(f"Nodes: {ray.nodes()}")
     # logger.info(f"Tasks {ray.tasks()}")
     init_resources = ray.cluster_resources()
