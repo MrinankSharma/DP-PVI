@@ -39,7 +39,7 @@ class ExperimentOption(CommandLineOption):
         mongo = MongoObserver.create(url="localhost:9001", db_name='sacred')
         run.observers.append(mongo)
         run.observers.append(
-            SlackObserver.from_config('../../slack.json')
+            SlackObserver.from_config(run.config["slack_json_file"])
         )
         logger.info("Saving to database sacred")
 

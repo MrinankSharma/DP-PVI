@@ -68,6 +68,8 @@ def default_config(dataset):
 
     experiment_tag = "test"
 
+    slack_json_file = "/scratch/DP-PVI/DP-PVI/slack.json"
+
 
 @ex.automain
 def run_experiment(privacy_settings, optimisation_settings, logging_base_directory, N_samples, N_iterations, prior_pres,
