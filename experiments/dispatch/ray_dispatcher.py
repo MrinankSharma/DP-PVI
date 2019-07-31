@@ -34,8 +34,9 @@ def dispatch_command_strings(commands, cpus_per_command=1, gpus_per_command=0, p
                 logger.info(f"Starting  {command}")
                 subprocess.call(command, shell=True, stdout=subprocess.DEVNULL)
                 time.sleep(pause_time)
-
-        time.sleep(0.5)
+        else:
+            # wait a minute to see if more resources are free
+            time.sleep(60.0)
 
 
 def nested_dict_to_option_strings(d, base_key=None):
@@ -98,7 +99,7 @@ if __name__ == "__main__":
     except FileNotFoundError:
         logger.error("Could not find experiment dispatcher yaml file!")
 
-    dispatch_command_strings(commands, cpus_per_command=1, pause_time=60.0)
+    dispatch_command_strings(commands, cpus_per_command=1, pause_time=2.0)
     # if we have unavailable resources - right at the end (e.g. imagine sending off two commands - we don't want ray to
     # shutdown immediately!)
     while not init_resources == ray.available_resources():
