@@ -66,6 +66,8 @@ def default_config(dataset):
 
     prediction_type = "laplace"
 
+    experiment_tag = "test"
+
 
 @ex.automain
 def run_experiment(privacy_settings, optimisation_settings, logging_base_directory, N_samples, N_iterations, prior_pres,

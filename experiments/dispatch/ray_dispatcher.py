@@ -27,7 +27,7 @@ def dispatch_command_strings(commands, cpus_per_command=1, gpus_per_command=0, p
 
     while len(commands) > 0:
         resources = ray.available_resources()
-        print(resources)
+        logger.info(f"Currently Available {resources}")
         if "CPU" in resources and resources["CPU"] >= cpus_per_command:
             if gpus_per_command == 0 or ("GPU" in resources and resources["GPU"] >= gpus_per_command):
                 command = commands.pop() + f" ray_cfg.redis_address=localhost:9002 ray_cfg.num_cpus={cpus_per_command} ray_cfg.num_gpus={gpus_per_command} &"
