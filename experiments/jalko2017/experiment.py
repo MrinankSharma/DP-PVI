@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 import numpy as np
@@ -39,6 +40,14 @@ def default_config(dataset):
 
         N_iterations = 1000
 
+        privacy_settings = {
+            "L": 10,
+            "C": 5,
+            "sigma_relative": 1.22,
+            "target_delta": 1e-3
+        }
+
+        N_iterations = 10
     elif dataset["name"] == "adult":
         privacy_settings = {
             "L": 195,
@@ -66,14 +75,14 @@ def default_config(dataset):
 
     prediction_type = "laplace"
 
-    experiment_tag = "test"
+    experiment_tag = "test_tag"
 
     slack_json_file = "/scratch/DP-PVI/DP-PVI/slack.json"
 
 
 @ex.automain
 def run_experiment(privacy_settings, optimisation_settings, logging_base_directory, N_samples, N_iterations, prior_pres,
-                   ray_cfg, prediction_type, _run):
+                   ray_cfg, prediction_type, experiment_tag, _run, _config):
     if ray_cfg["redis_address"] == "None":
         logger.info("Creating new ray server")
         ray.init(num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"], logging_level=logging.INFO)
@@ -170,5 +179,11 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
             _run.log_scalar(k, v, num_iterations)
 
     final_log = ray.get(server.get_compiled_log.remote())
-    ex.add_artifact(save_log(final_log, ex.get_experiment_info()["name"], logging_base_directory, _run.info["test"]),
-                    'full_log')
+    t = datetime.datetime.now()
+    ex.add_artifact(
+        save_log(final_log, "full_log", ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
+                 _run.info["test"], t), 'full_log')
+    ex.add_artifact(
+        save_log(_config, "sacred_cfg", ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
+                 _run.info["test"], t),
+        'sacred_cfg')
