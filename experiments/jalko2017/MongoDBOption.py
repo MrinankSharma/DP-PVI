@@ -31,7 +31,7 @@ class ExperimentMongoDbOption(CommandLineOption):
     """
     Use the sacred database.
     """
-    short_flag = 'run'
+    short_flag = 'full_exp'
 
     @classmethod
     def apply(cls, args, run):
