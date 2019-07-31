@@ -40,14 +40,6 @@ def default_config(dataset):
 
         N_iterations = 1000
 
-        privacy_settings = {
-            "L": 10,
-            "C": 5,
-            "sigma_relative": 1.22,
-            "target_delta": 1e-3
-        }
-
-        N_iterations = 10
     elif dataset["name"] == "adult":
         privacy_settings = {
             "L": 195,
