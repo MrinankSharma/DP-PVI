@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 import numpy as np
@@ -38,7 +39,7 @@ def default_config(dataset):
         }
 
         N_iterations = 1000
-        
+
     elif dataset["name"] == "adult":
         privacy_settings = {
             "L": 195,
