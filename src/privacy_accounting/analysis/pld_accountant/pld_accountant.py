@@ -1,16 +1,15 @@
 """ Paper: https://arxiv.org/abs/1906.03049
     Referenced code from: https://github.com/DPBayes/PLD-Accountant """
 
-import numpy as np
-
-from repoze.lru import lru_cache
-
-import pickle
 import os
+import pickle
+
+import numpy as np
+from ray.services import logger
+from repoze.lru import lru_cache
 
 from src.privacy_accounting.analysis.utils import grab_pickled_accountant_results
 
-from ray.services import logger
 
 @lru_cache(maxsize=100)
 def get_FF1_add_remove(sigma, q, nx, L):
@@ -544,7 +543,7 @@ def compute_privacy_loss_from_ledger(ledger, target_eps=None, target_delta=None,
 
 def compute_online_privacy_from_ledger(ledger, F_prod,
                                        target_delta=None, target_eps=None,
-                                       adjacency_definition='add_remove', nx=1E6, L=20.0):
+                                       adjacency_definition='add_remove', nx=1E6, L=50.0):
     """ Compute new PLD privacy in an online fashion, to speed up computation.
 
     :param ledger: The ledger of queries to compute for. An incremental ledger,
