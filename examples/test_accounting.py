@@ -16,7 +16,6 @@ online_pld = OnlineAccountant(
     pld.compute_online_privacy_from_ledger,
     accountancy_parameters={
         'target_delta': 0.001,
-        'L': 50
     }
 )
 
@@ -29,8 +28,15 @@ for i in range(10):
 
 print('Moment Accountant', 'Final',
       ma.compute_privacy_loss_from_ledger(ledger.get_formatted_ledger(), target_delta=0.001))
-for L in range(20, 1000, 20):
-    print('PLD Accountant', 'Final', L,
+
+for L in range(50, 1000, 200):
+    print('PLD Accountant ar', 'Final', L,
           pld.compute_privacy_loss_from_ledger(ledger.get_formatted_ledger(), target_delta=0.001, L=L))
-    print('PLD Accountant2', 'Final', L,
+    print('PLD Accountant2 ar', 'Final', L,
           pld2.compute_privacy_loss_from_ledger(ledger.get_formatted_ledger(), target_delta=0.001, L=L))
+    print('PLD Accountant sub', 'Final', L,
+          pld.compute_privacy_loss_from_ledger(ledger.get_formatted_ledger(), target_delta=0.001, L=L,
+                                               adjacency_definition="substitution"))
+    print('PLD Accountant2 sub', 'Final', L,
+          pld2.compute_privacy_loss_from_ledger(ledger.get_formatted_ledger(), target_delta=0.001, L=L,
+                                                adjacency_definition="substitution"))

@@ -124,8 +124,8 @@ def get_eps_unbounded(sigma_t, q_t, target_delta=1e-6, nx=1E6, L=20.0):
         print('Error: epsilon out of [-L,L] window, please check the parameters.')
         return float('inf')
     else:
-        print('Unbounded DP-epsilon after ' + str(int(ncomp)) + ' compositions defined by sigma and q arrays: ' + str(
-            np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
+        # print('Unbounded DP-epsilon after ' + str(int(ncomp)) + ' compositions defined by sigma and q arrays: ' + str(
+        #     np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
         return np.real(eps_0)
 
 
@@ -249,12 +249,134 @@ def get_eps_bounded(sigma_t, q_t, target_delta=1e-6, nx=1E6, L=20.0):
         print('Error: epsilon out of [-L,L] window, please check the parameters.')
         return float('inf')
     else:
-        print('Bounded DP-epsilon after ' + str(int(ncomp)) + ' compositions defined by sigma and q arrays: ' + str(
-            np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
+        # print('Bounded DP-epsilon after ' + str(int(ncomp)) + ' compositions defined by sigma and q arrays: ' + str(
+        #     np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
         return np.real(eps_0)
     #
     # print('Bounded DP-epsilon after ' + str(int(ncomp)) + ' compositions:' + str(np.real(eps_0)) + ' (delta=' + str(target_delta) + ')')
     # return np.real(eps_0)
+
+def get_delta_unbounded(target_eps=1.0, sigma=2.0, q=0.01, ncomp=1E4, nx=1E6, L=20.0):
+    nx = int(nx)
+
+    tol_newton = 1e-10  # set this to, e.g., 0.01*target_delta
+
+    dx = 2.0 * L / nx  # discretisation interval \Delta x
+    x = np.linspace(-L, L - dx, nx, dtype=np.complex128)  # grid for the numerical integration
+
+    # first ii for which x(ii)>log(1-q),
+    # i.e. start of the integral domain
+    ii = int(np.floor(float(nx * (L + np.log(1 - q)) / (2 * L))))
+
+    # Evaluate the PLD distribution,
+    # The case of remove/add relation (Subsection 5.1)
+    Linvx = (sigma ** 2) * np.log((np.exp(x[ii + 1:]) - (1 - q)) / q) + 0.5
+    ALinvx = (1 / np.sqrt(2 * np.pi * sigma ** 2)) * ((1 - q) * np.exp(-Linvx * Linvx / (2 * sigma ** 2)) +
+                                                      q * np.exp(-(Linvx - 1) * (Linvx - 1) / (2 * sigma ** 2)));
+    dLinvx = (sigma ** 2 * np.exp(x[ii + 1:])) / (np.exp(x[ii + 1:]) - (1 - q));
+
+    fx = np.zeros(nx)
+    fx[ii + 1:] = np.real(ALinvx * dLinvx)
+    half = int(nx / 2)
+
+    # Flip fx, i.e. fx <- D(fx), the matrix D = [0 I;I 0]
+    temp = np.copy(fx[half:])
+    fx[half:] = np.copy(fx[:half])
+    fx[:half] = temp
+
+    # Compute the DFT
+    FF1 = np.fft.fft(fx * dx)
+
+    # first jj for which 1-exp(target_eps-x)>0,
+    # i.e. start of the integral domain
+    jj = int(np.floor(float(nx * (L + target_eps) / (2 * L))))
+
+    # Compute the inverse DFT
+    cfx = np.fft.ifft((FF1 ** ncomp / dx))
+
+    # Flip again, i.e. cfx <- D(cfx), D = [0 I;I 0]
+    temp = np.copy(cfx[half:])
+    cfx[half:] = cfx[:half]
+    cfx[:half] = temp
+
+    # Evaluate \delta(target_eps) and \delta'(target_eps)
+    exp_e = 1 - np.exp(target_eps - x)
+    integrand = exp_e * cfx
+    sum_int = np.sum(integrand[jj + 1:])
+    delta = sum_int * dx
+
+    # print('Unbounded DP-delta after ' + str(int(ncomp)) + ' compositions:' + str(np.real(delta)) + ' (epsilon=' + str(
+    #     target_eps) + ')')
+
+    return np.real(delta)
+
+
+# Parameters:
+# target_eps - target epsilon
+# sigma - noise sigma
+# q - subsampling ratio
+# nx - number of points in the discretisation grid
+# L -  limit for the integral
+# ncomp - compute up to ncomp number of compositions
+
+
+def get_delta_bounded(target_eps=1.0, sigma=2.0, q=0.01, ncomp=1E4, nx=1E6, L=20.0):
+    nx = int(nx)
+
+    tol_newton = 1e-10  # set this to, e.g., 0.01*target_delta
+
+    dx = 2.0 * L / nx  # discretisation interval \Delta x
+    x = np.linspace(-L, L - dx, nx, dtype=np.complex128)  # grid for the numerical integration
+
+    # Evaluate the PLD distribution,
+    # This is the case of substitution relation (subsection 5.2)
+    c = q * np.exp(-1 / (2 * sigma ** 2))
+    ey = np.exp(x)
+    term1 = (-(1 - q) * (1 - ey) + np.sqrt((1 - q) ** 2 * (1 - ey) ** 2 + 4 * c ** 2 * ey)) / (2 * c)
+    term1 = np.maximum(term1, 1e-16)
+    Linvx = (sigma ** 2) * np.log(term1)
+
+    sq = np.sqrt((1 - q) ** 2 * (1 - ey) ** 2 + 4 * c ** 2 * ey)
+    nom1 = 4 * c ** 2 * ey - 2 * (1 - q) ** 2 * ey * (1 - ey)
+    term1 = nom1 / (2 * sq)
+    nom2 = term1 + (1 - q) * ey
+    nom2 = nom2 * (sq + (1 - q) * (1 - ey))
+    dLinvx = sigma ** 2 * nom2 / (4 * c ** 2 * ey)
+
+    ALinvx = (1 / np.sqrt(2 * np.pi * sigma ** 2)) * ((1 - q) * np.exp(-Linvx * Linvx / (2 * sigma ** 2)) +
+                                                      q * np.exp(-(Linvx - 1) * (Linvx - 1) / (2 * sigma ** 2)))
+
+    fx = np.real(ALinvx * dLinvx)
+    half = int(nx / 2)
+
+    # Flip fx, i.e. fx <- D(fx), the matrix D = [0 I;I 0]
+    temp = np.copy(fx[half:])
+    fx[half:] = np.copy(fx[:half])
+    fx[:half] = temp
+
+    FF1 = np.fft.fft(fx * dx)  # Compute the DFFT
+
+    # first jj for which 1-exp(target_eps-x)>0,
+    # i.e. start of the integral domain
+    jj = int(np.floor(float(nx * (L + np.real(target_eps)) / (2 * L))))
+
+    # Compute the inverse DFT
+    cfx = np.fft.ifft((FF1 ** ncomp / dx))
+
+    # Flip again, i.e. cfx <- D(cfx), D = [0 I;I 0]
+    temp = np.copy(cfx[half:])
+    cfx[half:] = cfx[:half]
+    cfx[:half] = temp
+
+    # Evaluate \delta(target_eps) and \delta'(target_eps)
+    exp_e = 1 - np.exp(target_eps - x)
+    integrand = exp_e * cfx
+    sum_int = np.sum(integrand[jj + 1:])
+    delta = sum_int * dx
+
+    # print('Bounded DP-delta after ' + str(int(ncomp)) + ' compositions:' + str(np.real(delta)) + ' (epsilon=' + str(
+    #     target_eps) + ')')
+    return np.real(delta)
 
 
 def compute_privacy_loss_from_ledger(ledger, target_eps=None, target_delta=None, adjacency_definition='add_remove',
@@ -277,6 +399,7 @@ def compute_privacy_loss_from_ledger(ledger, target_eps=None, target_delta=None,
     q_t = []
 
     for sample in ledger:
+        # note this specific effective z calculation allows for different scale factors to be applied!
         effective_z = sum([
             (q.noise_stddev / q.l2_norm_bound) ** -2 for q in sample.queries
         ]) ** -0.5
@@ -296,19 +419,20 @@ def compute_privacy_loss_from_ledger(ledger, target_eps=None, target_delta=None,
             "Exactly one out of eps and delta must be None. (None is).")
 
     if adjacency_definition is 'add_remove':
+        # target_eps is set - get delta!
         if target_eps is not None:
-            privacy_bound = get_eps_unbounded(effective_z_t, q_t, target_eps=target_eps, nx=nx, L=L)
-            return privacy_bound
+            privacy_bound = get_delta_unbounded(effective_z_t, q_t, target_eps=target_eps, nx=nx, L=L)
+            return privacy_bound, target_delta
         else:
             privacy_bound = get_eps_unbounded(effective_z_t, q_t, target_delta=target_delta, nx=nx, L=L)
-            return privacy_bound
+            return privacy_bound,
 
     elif adjacency_definition is 'substitution':
         if target_eps is not None:
-            privacy_bound = get_eps_unbounded(effective_z_t, q_t, target_eps=target_eps, nx=nx, L=L)
+            privacy_bound = get_delta_bounded(effective_z_t, q_t, target_eps=target_eps, nx=nx, L=L)
             return privacy_bound
         else:
-            privacy_bound = get_eps_unbounded(effective_z_t, q_t, target_delta=target_delta, nx=nx, L=L)
+            privacy_bound = get_eps_bounded(effective_z_t, q_t, target_delta=target_delta, nx=nx, L=L)
             return privacy_bound
 
     raise ValueError('adjacency_definition must be one of "substitution" or "add_remove".')

@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from experiments.jalko2017.output.sacred_retrieval import *
+from src.utils.sacred_retrieval import *
 
 a = SacredExperimentAccess(database_name='test')
 exps = a.get_experiments(complete=True)[-5:]
@@ -18,7 +18,6 @@ configs = get_unique_dicts(configs)
 grouped_results = [dict(config=config, results=a.load_artifacts(
     a.get_experiments(complete=True, additional_filter={f'config.{k}': v for k, v in config.items()}))) for config in
                    configs]
-# grouped_results = [dict(config=config, results=a.get_experiments(complete=True, additional_filter={'config':config})) for config in configs]
 
 fig = plt.figure(figsize=(8, 6))
 

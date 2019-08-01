@@ -23,7 +23,7 @@ def get_FF1_add_remove(sigma, q, nx, L):
     """
 
     try:
-        filename = f"add_remove_{sigma}_{q}_{nx}.p"
+        filename = f"add_remove_{sigma}_{q}_{nx}_{L}.p"
         saved_result_flag, result, fp = grab_pickled_accountant_results(filename)
     except (AttributeError, EOFError, ImportError, IndexError, pickle.UnpicklingError):
         logger.error("Error reading accountant Pickle!")
@@ -82,7 +82,7 @@ def get_FF1_substitution(sigma, q, nx, L):
     """
 
     try:
-        filename = f"sub_{sigma}_{q}_{nx}.p"
+        filename = f"sub_{sigma}_{q}_{nx}_{L}.p"
         saved_result_flag, result, fp = grab_pickled_accountant_results(filename)
     except (AttributeError, EOFError, ImportError, IndexError, pickle.UnpicklingError):
         logger.error("Error reading accountant Pickle!")
@@ -121,14 +121,15 @@ def get_FF1_substitution(sigma, q, nx, L):
     fx[half:] = np.copy(fx[:half])
     fx[:half] = temp
 
+    FF1 = np.fft.fft(fx * dx)
     try:
         os.makedirs(os.path.dirname(fp), exist_ok=True)
         with open(fp, 'wb+') as dump:
-            pickle.dump(fx, dump)
+            pickle.dump(FF1, dump)
     except (FileNotFoundError, pickle.PickleError, pickle.PicklingError):
         logger.error("Error with saving accountant pickle")
 
-    return fx
+    return FF1
 
 
 def get_delta_add_remove(effective_z_t, q_t, target_eps=1.0, nx=1E6, L=20.0, F_prod=None):
@@ -289,6 +290,7 @@ def get_eps_add_remove(effective_z_t, q_t, target_delta=1e-6, nx=1E6, L=20.0, F_
     x = np.linspace(-L, L - dx, nx, dtype=np.complex128)  # grid for the numerical integration
 
     fx_table = []
+
     if F_prod is None:
         F_prod = np.ones(x.size)
 
@@ -303,6 +305,7 @@ def get_eps_add_remove(effective_z_t, q_t, target_delta=1e-6, nx=1E6, L=20.0, F_
         sigma = float(effective_z_t[ij])
         q = float(q_t[ij])
 
+        # this isn't doing the right thing!!
         FF1 = get_FF1_add_remove(sigma, q, nx, L)
 
         # Compute the DFT
@@ -504,6 +507,7 @@ def compute_privacy_loss_from_ledger(ledger, target_eps=None, target_delta=None,
     q_t = []
 
     for sample in ledger:
+        # note this specific effective z calculation allows for different scale factors to be applied!
         effective_z = sum([
             (q.noise_stddev / q.l2_norm_bound) ** -2 for q in sample.queries
         ]) ** -0.5
@@ -564,6 +568,7 @@ def compute_online_privacy_from_ledger(ledger, F_prod,
     q_t = []
 
     for sample in ledger:
+        # note this specific effective z calculation allows for different scale factors to be applied!
         effective_z = sum([
             (q.noise_stddev / q.l2_norm_bound) ** -2 for q in sample.queries
         ]) ** -0.5

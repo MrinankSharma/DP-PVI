@@ -75,6 +75,7 @@ def compute_log_moments_from_ledger(ledger, max_lambda=32):
     """
     total_log_moments = np.zeros(max_lambda, dtype=float)
     for sample in ledger:
+        # note this specific effective z calculation allows for different scale factors to be applied!
         effective_z = sum([
             (q.noise_stddev / q.l2_norm_bound) ** -2 for q in sample.queries
         ]) ** -0.5
