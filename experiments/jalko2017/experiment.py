@@ -38,7 +38,14 @@ def default_config(dataset):
             "target_delta": 1e-3
         }
 
-        N_iterations = 1000
+        privacy_settings = {
+            "L": 20,
+            "C": 5,
+            "sigma_relative": 1.22,
+            "target_delta": 1e-3
+        }
+
+        N_iterations = 100
 
     elif dataset["name"] == "adult":
         privacy_settings = {
@@ -162,6 +169,8 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
         # compute predictive performance
         y_pred_train = ray.get(server.get_model_predictions.remote(training_set))
         y_pred_test = ray.get(server.get_model_predictions.remote(test_set))
+        print(y_pred_test)
+        print(test_set["y"])
         sacred_log["train_all"] = compute_log_likelihood(y_pred_train, training_set["y"])
         sacred_log["train_accuracy"] = compute_prediction_accuracy(y_pred_train, training_set["y"])
         sacred_log["test_all"] = compute_log_likelihood(y_pred_test, test_set["y"])

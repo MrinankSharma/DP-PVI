@@ -35,6 +35,7 @@ def process_dataset(data_folder, filename, config, one_hot=True, should_scale=Fa
         post_string = post_string + "_ordinal"
 
     y = config["label_generator"](data[:, config["target"]].reshape(-1, 1))
+    y[y == 0] = -1
 
     mask = np.full(data.shape[1], True)
     mask[config["target"]] = False
