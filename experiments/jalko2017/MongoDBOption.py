@@ -19,10 +19,6 @@ class TestOption(CommandLineOption):
 
     @classmethod
     def apply(cls, args, run):
-        a = SacredExperimentAccess(database_name="test")
-        if len(a.get_experiments(config=run.config)) > 0:
-            logger.info("Experiment has already been run - don't bother!")
-            sys.exit()
         mongo = MongoObserver.create(url="localhost:9001", db_name='test')
         run.observers.append(mongo)
         logger.info("Saving to database test WITHOUT slack notifications")
@@ -41,8 +37,9 @@ class ExperimentOption(CommandLineOption):
     @classmethod
     def apply(cls, args, run):
         a = SacredExperimentAccess()
-        if len(a.get_experiments(name="jalko2017", config=run.config, complete=True)) > 0:
+        if len(a.get_experiments(config=run.config)) > 0:
             logger.info("Experiment has already been run - don't bother!")
+            logger.info("Note that this will **not** show up in sacred")
             sys.exit()
 
         # run.config contains the configuration. You can read from there.
