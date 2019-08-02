@@ -12,6 +12,18 @@ class SacredExperimentAccess(object):
         self.database = client[database_name]
         self.fs = gridfs.GridFS(self.database)
 
+    @staticmethod
+    def filter_from_nested_dict(d, base_key=""):
+        ret = {}
+        for k, v in d.items():
+            if isinstance(v, dict):
+                sub_vals = SacredExperimentAccess.filter_from_nested_dict(v, f"{base_key}{k}.")
+                ret = {**ret, **sub_vals}
+            else:
+                ret[base_key+k] = v
+        return ret
+
+
     def get_experiments(self, name=None, complete=False, config=None, additional_filter=None):
         filter = {}
         if name:
@@ -19,7 +31,8 @@ class SacredExperimentAccess(object):
         if complete:
             filter['status'] = 'COMPLETED'
         if config:
-            filter['config'] = config
+            # config will be a dictionary
+            filter = {**filter, **SacredExperimentAccess.filter_from_nested_dict(config, "config.")}
         if additional_filter:
             filter = {**filter, **additional_filter}
 

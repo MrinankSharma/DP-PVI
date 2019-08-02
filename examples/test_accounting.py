@@ -23,8 +23,8 @@ for i in range(10):
     ledger.record_sum_query(5, 4)
     ledger.finalise_sample()
 
-    # print('Moment Accountant', i, online_ma.update_privacy(ledger.get_formatted_ledger()))
-    # print('PLD Accountant', i, online_pld.update_privacy(ledger.get_formatted_ledger()))
+    print('Moment Accountant', i, online_ma.update_privacy(ledger.get_formatted_ledger()))
+    print('PLD Accountant', i, online_pld.update_privacy(ledger.get_formatted_ledger()))
 
 print('Moment Accountant', 'Final',
       ma.compute_privacy_loss_from_ledger(ledger.get_formatted_ledger(), target_delta=0.001))

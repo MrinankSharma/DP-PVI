@@ -20,6 +20,7 @@ from src.privacy_accounting.dp_query import GaussianDPQuery
 from src.privacy_accounting.optimizer import DPOptimizer
 from src.server import SyncronousPVIParameterServer
 from src.utils.yaml_string_dumper import YAMLStringDumper
+from src.utils.sacred_retrieval import SacredExperimentAccess
 
 ex = Experiment('jalko2017', [dataset_ingredient])
 logger = logging.getLogger(__name__)
@@ -38,7 +39,14 @@ def default_config(dataset):
             "target_delta": 1e-3
         }
 
-        N_iterations = 1000
+        privacy_settings = {
+            "L": 16,
+            "C": 5,
+            "sigma_relative": 1.22,
+            "target_delta": 1e-3
+        }
+
+        N_iterations = 10
 
     elif dataset["name"] == "adult":
         privacy_settings = {
