@@ -7,11 +7,11 @@ import torch.utils.data as data
 from sacred import Experiment
 from sacred.observers import MongoObserver
 
-from src.privacy_accounting.analysis import PrivacyLedger
-from src.privacy_accounting.analysis.moment_accountant import moment_accountant as ma
-from src.privacy_accounting.analysis.online_accountant import OnlineAccountant
-from src.privacy_accounting.analysis.pld_accountant import pld_accountant as pld
-from src.privacy_accounting.optimizer import DPGaussianOptimizer
+from src.privacy.analysis import PrivacyLedger
+from src.privacy.analysis.moment_accountant import moment_accountant as ma
+from src.privacy.analysis.online_accountant import OnlineAccountant
+from src.privacy.analysis.pld_accountant import pld_accountant as pld
+from src.privacy.optimizer import DPGaussianOptimizer
 
 ex = Experiment('Test Experiment')
 

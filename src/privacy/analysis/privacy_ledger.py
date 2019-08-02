@@ -5,7 +5,7 @@ from math import ceil
 
 import src.utils.numpy_utils as np_utils
 import src.utils.torch_nest_utils as nest
-from src.privacy_accounting.dp_query import dp_query
+from src.privacy.dp_query import dp_query
 from src.utils.torch_tensor_buffer import TensorBuffer
 
 SampleEntry = collections.namedtuple(  # pylint: disable=invalid-name

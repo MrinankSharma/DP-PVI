@@ -4,8 +4,8 @@ import torch
 from math import ceil
 
 import src.utils.torch_nest_utils as nest
-from src.privacy_accounting.analysis import QueryWithLedger
-from src.privacy_accounting.dp_query import GaussianDPQuery
+from src.privacy.analysis import QueryWithLedger
+from src.privacy.dp_query import GaussianDPQuery
 from .wrapper_optimizer import WrapperOptimizer
 
 
@@ -62,6 +62,7 @@ class DPOptimizer(WrapperOptimizer):
                 self._derived_records_data[k].append(v)
 
         self._derived_records_data = dict(self._derived_records_data)
+
 
         final_grads, _ = self.dp_sum_query.get_noised_result(sample_state, self._global_parameters)
 

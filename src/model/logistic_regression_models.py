@@ -1,8 +1,6 @@
 import logging
 
 import numpy as np
-import scipy.optimize
-import scipy.integrate
 import torch
 import torch.nn as nn
 from torch.distributions.bernoulli import Bernoulli
@@ -12,6 +10,7 @@ import src.utils.numpy_utils as B
 from src.model.model import Model
 
 logger = logging.getLogger(__name__)
+
 
 # note that these functions are all using NUMPY variables
 def prediction_function(a, mean, var):
@@ -59,27 +58,22 @@ class LogisticRegressionTorchModule(nn.Module):
         # we make the assumption that the input parameters are actually a numpy array!
         self.set_parameters_from_numpy(parameters)
         self.act = nn.LogSigmoid()
+        self.sigmoid = nn.Sigmoid()
 
         # standard normal, for sampling required
         self.normal_dist = Normal(loc=torch.tensor([0], dtype=torch.float32),
                                   scale=torch.tensor([1], dtype=torch.float32))
 
-    @staticmethod
-    def exact_prediction(mu, var):
-        # autogenerate prediction intergral range
-        p_val, _ = scipy.integrate.quad(lambda x: prediction_function(x, mu, var), mu-3*np.sqrt(var), mu+3*np.sqrt(var))
-        return p_val
+        # dummy value to begin with!
+        self.N_full = torch.tensor(1.0)
+        self.prediction_type = "prohibit"
 
-    @staticmethod
-    def laplace_prediction(mu, var):
-        # we approximate our function to be integrated as an unnormalised gaussian
-        sigmoid = lambda a: (1 + np.exp(-a)) ** -1
-        cost = lambda a: np.float(mu + var * sigmoid(-a) - a)
-        root_results = scipy.optimize.root(cost, 0)
-        a_max = root_results["x"][0]
-        c = 1 / var + sigmoid(a_max) * sigmoid(1 - a_max)
-        p_val = prediction_function(a_max, mu, var) * np.sqrt(2 * np.pi / c)
-        return p_val
+    def set_N_full(self, N_full):
+        """
+        Note - input assumed to be a numpy type
+        :param N_full: int numpy
+        """
+        self.N_full = torch.tensor(N_full, dtype=torch.float32)
 
     def set_parameters(self, parameters):
         if parameters is not None:
@@ -106,10 +100,8 @@ class LogisticRegressionTorchModule(nn.Module):
         if hyperparameters is not None:
             self.n_in = hyperparameters['n_in']
             self.N_samples = hyperparameters["N_samples"]
-            if hyperparameters["prediction"] == "laplace":
-                self._prediction_func = self.laplace_prediction
-            elif hyperparameters["prediction"] == "exact":
-                self._prediction_func = self.exact_prediction
+            if hyperparameters["prediction"] == "prohibit" or hyperparameters["prediction"] == "exact":
+                self.prediction_type = hyperparameters["prediction"]
             else:
                 logger.error(f"{self.hyperparameters['prediction']} \
                 is an invalid prediction setting! Please either use laplace or exact")
@@ -137,11 +129,16 @@ class LogisticRegressionTorchModule(nn.Module):
         mean_vars = list(zip(mean_1d, cov_list))
         p_vals = torch.Tensor(len(mean_vars))
 
-        for ind, mean_var in enumerate(mean_vars):
-            mu = mean_var[0].detach().numpy()
-            var = mean_var[1].detach().numpy()
-            p_val = torch.tensor(self._prediction_func(mu, var), dtype=torch.float32)
-            p_vals[ind] = p_val
+        if self.prediction_type == "exact":
+            for ind, mean_var in enumerate(mean_vars):
+                mu = mean_var[0].detach().numpy()
+                var = mean_var[1].detach().numpy()
+                p_val = torch.tensor(self._prediction_func(mu, var), dtype=torch.float32)
+                p_vals[ind] = p_val
+        elif self.prediction_type == "prohibit":
+            p_vals = self.sigmoid(mean_1d * (1 + cov_list / 8 * np.pi) ** -0.5).detach()
+        else:
+            raise ValueError("Invalid prediction type supplied")
 
         return p_vals
 
@@ -173,7 +170,9 @@ class LogisticRegressionTorchModule(nn.Module):
 
     def compute_ELBO_loss_per_point(self, y, y_true, parameters=None):
         """
-        Compute the ELBO loss per training datapoint, given the activation matrix produced by the forward pass
+        Compute the ELBO loss per training datapoint, given the activation matrix produced by the forward pass.
+
+        NOTE: this currently depends on the number of points
 
         :param activation_mat: Matrix of activation input. Each row is a data-point, each column is a sample
         :param Y_true: True labels
@@ -193,14 +192,14 @@ class LogisticRegressionTorchModule(nn.Module):
 
         activation_mat = y
 
-        N_data = activation_mat.shape[0]
         N_samples = activation_mat.shape[1]
 
         mask = y_true.repeat(N_samples, 1).t()
 
         # compute the KL term
-        KL_term = -1 / N_data * compute_KL_qp(self.w_mu, torch.diag(torch.exp(self.w_log_var)), self.prior_mu,
-                                              torch.diag(torch.exp(self.prior_log_var)))
+        # scale by the TOTAL number of data points!
+        KL_term = -1 / self.N_full * compute_KL_qp(self.w_mu, torch.diag(torch.exp(self.w_log_var)), self.prior_mu,
+                                                   torch.diag(torch.exp(self.prior_log_var)))
 
         likelihood = self.act(activation_mat * mask)
 
@@ -298,7 +297,7 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
             "N_steps": 1,
             "N_samples": 50,
             "n_in": 2,
-            "prediction": "laplace"
+            "prediction": "prohibit"
         }
 
     def sample(self, x, parameters=None, hyperparameters=None):
@@ -345,6 +344,7 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         mini_batch_indices = np.random.choice(data["x"].shape[0], self.hyperparameters["batch_size"], replace=False)
         x_full = data["x"]
         y_full = data["y"]
+        N_full = x_full.shape[0]
 
         # convert data into a tensor
         x = torch.tensor(x_full[mini_batch_indices, :], dtype=torch.float32)
@@ -353,8 +353,9 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         cav_nat_params = B.subtract_params(self.get_parameters(), t_i)
         # numpy dict for the effective prior
         self.torch_module.set_prior_parameters_from_numpy(cav_nat_params)
+        self.torch_module.set_N_full(N_full)
 
-        print_interval = np.ceil(self.hyperparameters['N_steps'] / 20)
+        print_interval = np.ceil(self.hyperparameters['N_steps'] / 100)
 
         training_curve = np.empty(self.hyperparameters['N_steps'])
         derived_statistics_history = []

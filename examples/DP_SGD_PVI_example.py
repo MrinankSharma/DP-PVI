@@ -7,13 +7,13 @@ import torch
 from sacred import Experiment
 from sacred.observers import MongoObserver, SlackObserver
 
-import src.privacy_accounting.analysis.moment_accountant as moment_accountant
-import src.privacy_accounting.analysis.pld_accountant as pld_accountant
+import src.privacy.analysis.moment_accountant as moment_accountant
+import src.privacy.analysis.pld_accountant as pld_accountant
 import src.utils.numpy_nest_utils as numpy_nest
 from src.client import DPClient
 from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression
-from src.privacy_accounting.dp_query import GaussianDPQuery
-from src.privacy_accounting.optimizer import DPOptimizer
+from src.privacy.dp_query import GaussianDPQuery
+from src.privacy.optimizer import DPOptimizer
 from src.server import SyncronousPVIParameterServer
 
 ex = Experiment('Full Experiment')

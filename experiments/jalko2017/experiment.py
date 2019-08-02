@@ -1,13 +1,14 @@
 import datetime
 import logging
+import time
 
 import numpy as np
 import ray
 import torch
 from sacred import Experiment
 
-import src.privacy_accounting.analysis.moment_accountant as moment_accountant
-import src.privacy_accounting.analysis.pld_accountant as pld_accountant
+import src.privacy.analysis.moment_accountant as moment_accountant
+import src.privacy.analysis.pld_accountant as pld_accountant
 import src.utils.numpy_nest_utils as numpy_nest
 # noinspection PyUnresolvedReferences
 from experiments.jalko2017.MongoDBOption import TestOption, ExperimentOption
@@ -16,11 +17,10 @@ from experiments.jalko2017.measure_performance import compute_prediction_accurac
 from experiments.utils import save_log
 from src.client.client import DPClient
 from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression
-from src.privacy_accounting.dp_query import GaussianDPQuery
-from src.privacy_accounting.optimizer import DPOptimizer
+from src.privacy.dp_query import GaussianDPQuery
+from src.privacy.optimizer import DPOptimizer
 from src.server import SyncronousPVIParameterServer
 from src.utils.yaml_string_dumper import YAMLStringDumper
-from src.utils.sacred_retrieval import SacredExperimentAccess
 
 ex = Experiment('jalko2017', [dataset_ingredient])
 logger = logging.getLogger(__name__)
@@ -39,23 +39,27 @@ def default_config(dataset):
             "target_delta": 1e-3
         }
 
-        privacy_settings = {
-            "L": 16,
-            "C": 5,
-            "sigma_relative": 1.22,
-            "target_delta": 1e-3
+        optimisation_settings = {
+            "lr": 0.01,
+            "N_steps": 1000,
         }
 
-        N_iterations = 10
+        N_iterations = 1
 
     elif dataset["name"] == "adult":
         privacy_settings = {
             "L": 195,
             "C": 75,
-            "target_delta": 1e-3
+            "target_delta": 1e-3,
+            "sigma_relative": 1.22
         }
 
-        N_iterations = 2000
+        optimisation_settings = {
+            "lr": 0.01,
+            "N_steps": 2000,
+        }
+
+        N_iterations = 1
 
     logging_base_directory = "/scratch/DP-PVI/logs"
 
@@ -65,16 +69,13 @@ def default_config(dataset):
         "num_gpus": 0,
     }
 
-    optimisation_settings = {
-        "lr": 0.1,
-        "N_steps": 1,
-    }
-
     prior_pres = 1.0
-    N_samples = 100
+    N_samples = 200
 
-    prediction_type = "laplace"
-
+    prediction = {
+        "interval": 1,
+        "type": "prohibit"
+    }
     experiment_tag = "test_tag"
 
     slack_json_file = "/scratch/DP-PVI/DP-PVI/slack.json"
@@ -82,10 +83,11 @@ def default_config(dataset):
 
 @ex.automain
 def run_experiment(privacy_settings, optimisation_settings, logging_base_directory, N_samples, N_iterations, prior_pres,
-                   ray_cfg, prediction_type, experiment_tag, _run, _config):
+                   ray_cfg, prediction, experiment_tag, _run, _config):
     if ray_cfg["redis_address"] == "None":
         logger.info("Creating new ray server")
-        ray.init(num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"], logging_level=logging.INFO)
+        ray.init(num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"], logging_level=logging.INFO,
+                 local_mode=False)
     else:
         logger.info("Connecting to existing server")
         ray.init(redis_address=ray_cfg["redis_address"], logging_level=logging.INFO)
@@ -121,7 +123,7 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
         },
         model_parameters=prior_params,
         model_hyperparameters={
-            "base_optimizer_class": torch.optim.Adagrad,
+            "base_optimizer_class": torch.optim.SGD,
             "wrapped_optimizer_class": DPOptimizer,
             "base_optimizer_parameters": {'lr': optimisation_settings["lr"]},
             "wrapped_optimizer_parameters": {},
@@ -145,7 +147,7 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
         model_class=MeanFieldMultiDimensionalLogisticRegression,
         model_parameters=prior_params,
         model_hyperparameters={
-            "prediction": prediction_type,
+            "prediction": prediction["type"],
         },
         prior=prior_params,
         clients_factories=client_factories,
@@ -154,29 +156,44 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
 
     while not ray.get(server.should_stop.remote()):
         # dispatch work to ray and grab the log
-        logger.info("Server Tick")
+        st_tick = time.time()
         ray.get(server.tick.remote())
         num_iterations = ray.get(server.get_num_iterations.remote())
+
+        st_log = time.time()
         sacred_log = {}
         sacred_log['server'], _ = ray.get(server.log_sacred.remote())
         params = ray.get(server.get_parameters.remote())
         client_sacred_logs = ray.get(server.get_client_sacred_logs.remote())
         for i, log in enumerate(client_sacred_logs):
             sacred_log['client_' + str(i)] = log[0]
-
         sacred_log = numpy_nest.flatten(sacred_log, sep='.')
-        logger.info(f"Completed Iteration {num_iterations} Parameters:\n {pretty_dump.dump(params)}")
 
-        # compute predictive performance
-        y_pred_train = ray.get(server.get_model_predictions.remote(training_set))
-        y_pred_test = ray.get(server.get_model_predictions.remote(test_set))
-        sacred_log["train_all"] = compute_log_likelihood(y_pred_train, training_set["y"])
-        sacred_log["train_accuracy"] = compute_prediction_accuracy(y_pred_train, training_set["y"])
-        sacred_log["test_all"] = compute_log_likelihood(y_pred_test, test_set["y"])
-        sacred_log["test_accuracy"] = compute_prediction_accuracy(y_pred_test, test_set["y"])
+        st_pred = time.time()
+        # predict every interval, and also for the last 'interval' runs.
+        if ((num_iterations - 1) % prediction["interval"] == 0) or (
+                N_iterations - num_iterations < prediction["interval"]):
+            y_pred_train = ray.get(server.get_model_predictions.remote(training_set))
+            y_pred_test = ray.get(server.get_model_predictions.remote(test_set))
+            sacred_log["train_all"] = compute_log_likelihood(y_pred_train, training_set["y"])
+            sacred_log["train_accuracy"] = compute_prediction_accuracy(y_pred_train, training_set["y"])
+            sacred_log["test_all"] = compute_log_likelihood(y_pred_test, test_set["y"])
+            test_acc = compute_prediction_accuracy(y_pred_test, test_set["y"])
+            sacred_log["test_accuracy"] = test_acc
+        end_pred = time.time()
 
         for k, v in sacred_log.items():
             _run.log_scalar(k, v, num_iterations)
+        end = time.time()
+
+        logger.info(f"Server Ticket Complete\n"
+                    f"Server Timings:\n"
+                    f"  Server Tick: {st_log - st_tick:.2f}s\n"
+                    f"  Predictions: {end_pred - st_pred:.2f}s\n"
+                    f"  Logging:     {end - end_pred + st_pred - st_log:.2f}s\n\n"
+                    f"Parameters:\n"
+                    f" {pretty_dump.dump(params)}\n"
+                    f"Iteration Number:{num_iterations}\n")
 
     final_log = ray.get(server.get_compiled_log.remote())
     t = datetime.datetime.now()
@@ -187,3 +204,5 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
         save_log(_config, "sacred_cfg", ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
                  _run.info["test"], t),
         'sacred_cfg')
+
+    return test_acc

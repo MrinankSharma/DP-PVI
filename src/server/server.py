@@ -5,7 +5,7 @@ from collections import defaultdict
 import ray
 
 import src.utils.numpy_utils as B
-from src.privacy_accounting.analysis import QueryWithLedger, OnlineAccountant
+from src.privacy.analysis import QueryWithLedger, OnlineAccountant
 from src.utils.yaml_string_dumper import YAMLStringDumper
 
 from src.utils.numpy_nest_utils import structured_ndarrays_to_lists

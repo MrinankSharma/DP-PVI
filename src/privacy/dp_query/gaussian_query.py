@@ -3,7 +3,7 @@ import collections
 import torch
 
 import src.utils.torch_nest_utils as nest
-from src.privacy_accounting.dp_query import dp_query
+from src.privacy.dp_query import dp_query
 
 
 class GaussianDPQuery(dp_query.SumAggregationDPQuery):
@@ -65,7 +65,6 @@ class GaussianDPQuery(dp_query.SumAggregationDPQuery):
         self._record_l2_norm = l2_norm
         if l2_norm < l2_norm_clip:
             return record
-
         else:
             return nest.map_structure(lambda p: torch.div(p, torch.abs(l2_norm / l2_norm_clip)), record)
 

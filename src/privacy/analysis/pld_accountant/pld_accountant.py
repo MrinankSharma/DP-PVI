@@ -8,7 +8,7 @@ import numpy as np
 from ray.services import logger
 from repoze.lru import lru_cache
 
-from src.privacy_accounting.analysis.utils import grab_pickled_accountant_results
+from src.privacy.analysis.utils import grab_pickled_accountant_results
 
 
 @lru_cache(maxsize=100)

@@ -1,7 +1,7 @@
-import src.privacy_accounting.analysis.moment_accountant as ma
-import src.privacy_accounting.analysis.pld_accountant as pld
-import src.privacy_accounting.analysis.pld_accountant.compute_eps_var as pld2
-from src.privacy_accounting.analysis import OnlineAccountant, PrivacyLedger
+import src.privacy.analysis.moment_accountant as ma
+import src.privacy.analysis.pld_accountant as pld
+import src.privacy.analysis.pld_accountant.compute_eps_var as pld2
+from src.privacy.analysis import OnlineAccountant, PrivacyLedger
 
 ledger = PrivacyLedger(1000, 0.01)
 
