@@ -23,6 +23,7 @@ pymongo = "*"
 pyyaml = "*"
 sklearn = "*"
 setproctitle = "*"
+pyarrow = "*"
 
 [requires]
 python_version = "3.7"
