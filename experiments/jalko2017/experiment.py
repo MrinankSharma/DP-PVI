@@ -42,7 +42,7 @@ def default_config(dataset):
         }
 
         optimisation_settings = {
-            "lr": 0.01,
+            "lr": 0.1,
             "N_steps": 1000,
         }
 
@@ -57,7 +57,7 @@ def default_config(dataset):
         }
 
         optimisation_settings = {
-            "lr": 0.01,
+            "lr": 0.1,
             "N_steps": 2000,
         }
 
@@ -92,7 +92,7 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
         if ray_cfg["redis_address"] == "None":
             logger.info("Creating new ray server")
             ray.init(num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"], logging_level=logging.INFO,
-                     local_mode=False)
+                     local_mode=True)
         else:
             logger.info("Connecting to existing server")
             ray.init(redis_address=ray_cfg["redis_address"], logging_level=logging.INFO)
@@ -128,7 +128,7 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
             },
             model_parameters=prior_params,
             model_hyperparameters={
-                "base_optimizer_class": torch.optim.SGD,
+                "base_optimizer_class": torch.optim.Adagrad,
                 "wrapped_optimizer_class": DPOptimizer,
                 "base_optimizer_parameters": {'lr': optimisation_settings["lr"]},
                 "wrapped_optimizer_parameters": {},
