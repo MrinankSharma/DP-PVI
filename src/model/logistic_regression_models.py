@@ -182,12 +182,13 @@ class LogisticRegressionTorchModule(nn.Module):
         """
         self.set_parameters(parameters)
 
-        def compute_KL_qp(q_mean, q_var, p_mean, p_var):
+        def compute_KL_qp(q_mean, q_var, p_mean, p_var, q_log_var_diag):
             k = q_mean.shape[0]
             p_inv = torch.inverse(p_var)
             m1_m2 = p_mean - q_mean
+            # note that we a-priori know that q_var is a diagonal matrix
             KL = 0.5 * (torch.trace(torch.mm(p_inv, q_var)) + torch.dot(m1_m2, torch.mv(p_inv, m1_m2)) - k + np.log(
-                torch.det(p_var)) - torch.log(torch.det(q_var)))
+                torch.det(p_var)) - torch.sum(q_log_var_diag))
             return KL
 
         activation_mat = y
@@ -199,7 +200,7 @@ class LogisticRegressionTorchModule(nn.Module):
         # compute the KL term
         # scale by the TOTAL number of data points!
         KL_term = -1 / self.N_full * compute_KL_qp(self.w_mu, torch.diag(torch.exp(self.w_log_var)), self.prior_mu,
-                                                   torch.diag(torch.exp(self.prior_log_var)))
+                                                   torch.diag(torch.exp(self.prior_log_var)), self.w_log_var)
 
         likelihood = self.act(activation_mat * mask)
 

@@ -4,6 +4,8 @@ import time
 
 import numpy as np
 import ray
+# ray must be imported before pyarrow
+import pyarrow
 import torch
 from sacred import Experiment
 
@@ -21,7 +23,6 @@ from src.privacy.dp_query import GaussianDPQuery
 from src.privacy.optimizer import DPOptimizer
 from src.server import SyncronousPVIParameterServer
 from src.utils.yaml_string_dumper import YAMLStringDumper
-import pyarrow
 
 ex = Experiment('jalko2017', [dataset_ingredient])
 logger = logging.getLogger(__name__)
@@ -84,12 +85,14 @@ def default_config(dataset):
 
 @ex.automain
 def run_experiment(privacy_settings, optimisation_settings, logging_base_directory, N_samples, N_iterations, prior_pres,
-                   ray_cfg, prediction, experiment_tag, _run, _config):
+                   ray_cfg, prediction, experiment_tag, _run, _config, seed):
+    np.random.seed(seed)
+    torch.manual_seed(seed)
     try:
         if ray_cfg["redis_address"] == "None":
             logger.info("Creating new ray server")
             ray.init(num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"], logging_level=logging.INFO,
-                     local_mode=False)
+                     local_mode=True)
         else:
             logger.info("Connecting to existing server")
             ray.init(redis_address=ray_cfg["redis_address"], logging_level=logging.INFO)
@@ -201,11 +204,11 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
         t = datetime.datetime.now()
         ex.add_artifact(
             save_log(final_log, "full_log", ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
-                     _run.info["test"], t), 'full_log')
+                     _run.info["test"], t), 'full_log.json')
         ex.add_artifact(
             save_log(_config, "sacred_cfg", ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
                      _run.info["test"], t),
-            'sacred_cfg')
+            'sacred_cfg.json')
     except pyarrow.lib.ArrowIOError:
         return "Experiment Terminated, was this you?"
 
