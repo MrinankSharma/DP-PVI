@@ -341,14 +341,9 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         """
         super().fit(data, t_i, parameters, hyperparameters)
 
-        mini_batch_indices = np.random.choice(data["x"].shape[0], self.hyperparameters["batch_size"], replace=False)
         x_full = data["x"]
         y_full = data["y"]
         N_full = x_full.shape[0]
-
-        # convert data into a tensor
-        x = torch.tensor(x_full[mini_batch_indices, :], dtype=torch.float32)
-        y_true = torch.tensor(y_full[mini_batch_indices], dtype=torch.float32)
 
         cav_nat_params = B.subtract_params(self.get_parameters(), t_i)
         # numpy dict for the effective prior
@@ -363,6 +358,12 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         self._derived_statistics_history = []
         # lets just do this for the time being
         for i in range(self.hyperparameters['N_steps']):
+            # sample minibatch at each step ...
+            mini_batch_indices = np.random.choice(data["x"].shape[0], self.hyperparameters["batch_size"], replace=False)
+            # convert data into a tensor
+            x = torch.tensor(x_full[mini_batch_indices, :], dtype=torch.float32)
+            y_true = torch.tensor(y_full[mini_batch_indices], dtype=torch.float32)
+
             current_loss = self.wrapped_optimizer.fit_batch(x, y_true)
             derived_statistics = self.wrapped_optimizer.get_logged_statistics()
             derived_statistics_history.append(derived_statistics)

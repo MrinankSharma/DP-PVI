@@ -43,10 +43,10 @@ def default_config(dataset):
 
         optimisation_settings = {
             "lr": 0.1,
-            "N_steps": 1000,
+            "N_steps": 1,
         }
 
-        N_iterations = 1
+        N_iterations = 1000
 
     elif dataset["name"] == "adult":
         privacy_settings = {
@@ -58,10 +58,10 @@ def default_config(dataset):
 
         optimisation_settings = {
             "lr": 0.1,
-            "N_steps": 2000,
+            "N_steps": 1,
         }
 
-        N_iterations = 1
+        N_iterations = 2000
 
     logging_base_directory = "/scratch/DP-PVI/logs"
 
@@ -72,7 +72,7 @@ def default_config(dataset):
     }
 
     prior_pres = 1.0
-    N_samples = 100
+    N_samples = 50
 
     prediction = {
         "interval": 1,
@@ -211,6 +211,6 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
                      _run.info["test"], t),
             'sacred_cfg.json')
     except pyarrow.lib.ArrowIOError:
-        return "Experiment Terminated, was this you?"
+        raise("Experiment Terminated - was this you?")
 
     return test_acc
