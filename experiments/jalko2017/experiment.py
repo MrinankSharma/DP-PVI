@@ -75,7 +75,7 @@ def default_config(dataset):
     N_samples = 50
 
     prediction = {
-        "interval": 1,
+        "interval": 25,
         "type": "prohibit"
     }
     experiment_tag = "test_tag"
