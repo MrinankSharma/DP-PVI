@@ -61,7 +61,7 @@ def generate_commands_from_yaml(yaml_filepath):
         exp_config = yaml.load(yaml_file.read())
 
     exp_file = exp_config.pop("experiment_file")
-    seed_values = [("seed", i) for i in range(exp_config.pop("num_seeds"))]
+    seed_values = [("seed", i) for i in range(1, exp_config.pop("num_seeds") + 1)]
     all_options = nested_dict_to_option_strings(exp_config)
     all_options.append(seed_values)
     product = itertools.product(*all_options)
