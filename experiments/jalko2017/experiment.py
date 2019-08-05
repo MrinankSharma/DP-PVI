@@ -92,7 +92,7 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
         if ray_cfg["redis_address"] == "None":
             logger.info("Creating new ray server")
             ray.init(num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"], logging_level=logging.INFO,
-                     local_mode=True)
+                     local_mode=False)
         else:
             logger.info("Connecting to existing server")
             ray.init(redis_address=ray_cfg["redis_address"], logging_level=logging.INFO)
