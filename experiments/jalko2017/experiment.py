@@ -72,7 +72,7 @@ def default_config(dataset):
     }
 
     prior_pres = 1.0
-    N_samples = 200
+    N_samples = 100
 
     prediction = {
         "interval": 1,
