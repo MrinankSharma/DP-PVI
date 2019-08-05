@@ -7,6 +7,7 @@ import numpy as np
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler, OrdinalEncoder, Binarizer
 from sklearn.utils import as_float_array
+from sklearn.pipeline import Pipeline
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("Data Preprocessor")
@@ -31,10 +32,11 @@ def process_dataset(data_folder, filename, config, one_hot=True, should_scale=Fa
     if one_hot:
         categorical_transformer = OneHotEncoder(sparse=False)
     else:
-        categorical_transformer = OrdinalEncoder()
+        categorical_transformer = Pipeline([('labeler', OrdinalEncoder()), ('scaler', StandardScaler())])
         post_string = post_string + "_ordinal"
 
     y = config["label_generator"](data[:, config["target"]].reshape(-1, 1))
+    y[y == 0] = -1
 
     mask = np.full(data.shape[1], True)
     mask[config["target"]] = False
@@ -52,7 +54,7 @@ def process_dataset(data_folder, filename, config, one_hot=True, should_scale=Fa
     np.savetxt(data_folder + "/y.csv", y, delimiter=",")
     np.savetxt(data_folder + "/x" + post_string + ".csv", x_transformed, delimiter=",")
 
-    with open(data_folder + "/preprocessor" + post_string + ".csv", "wb+") as f:
+    with open(data_folder + "/preprocessor" + post_string + ".p", "wb+") as f:
         pickle.dump(preprocessor, f)
 
 

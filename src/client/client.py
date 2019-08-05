@@ -7,7 +7,7 @@ import torch
 
 import src.utils.numpy_nest_utils as np_nest
 import src.utils.numpy_utils as np_utils
-from src.privacy_accounting.analysis import QueryWithLedger, OnlineAccountant
+from src.privacy.analysis import QueryWithLedger, OnlineAccountant
 
 logger = logging.getLogger(__name__)
 
@@ -173,6 +173,7 @@ class StandardClient(Client):
         )
 
         self.t_i = t_i_new
+        logger.info(f"New t_i {self.t_i}")
 
         self.times_updated += 1
 

@@ -3,7 +3,6 @@ import itertools
 import logging
 import os
 import subprocess
-import sys
 import time
 
 import ray
@@ -28,15 +27,16 @@ def dispatch_command_strings(commands, cpus_per_command=1, gpus_per_command=0, p
 
     while len(commands) > 0:
         resources = ray.available_resources()
-        print(resources)
+        logger.info(f"Currently Available {resources}")
         if "CPU" in resources and resources["CPU"] >= cpus_per_command:
             if gpus_per_command == 0 or ("GPU" in resources and resources["GPU"] >= gpus_per_command):
-                command = commands.pop() + f" ray_cfg.redis_address=localhost:9002 ray_cfg.num_cpus=cpus_per_command ray_cfg.num_gpus=gpus_per_command&"
+                command = commands.pop() + f" ray_cfg.redis_address=localhost:9002 ray_cfg.num_cpus={cpus_per_command} ray_cfg.num_gpus={gpus_per_command} &"
                 logger.info(f"Starting  {command}")
-                subprocess.call(command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.call(command, shell=True, stdout=subprocess.DEVNULL)
                 time.sleep(pause_time)
-
-        time.sleep(0.5)
+        else:
+            # wait a minute to see if more resources are free
+            time.sleep(60.0)
 
 
 def nested_dict_to_option_strings(d, base_key=None):
@@ -66,7 +66,7 @@ def generate_commands_from_yaml(yaml_filepath):
     all_options.append(seed_values)
     product = itertools.product(*all_options)
 
-    run_flag = "--test" if args.test else "--run"
+    run_flag = "--test" if args.test else "--experiment"
     command_strings = []
     for p in product:
         # the -r flag indicates that this is a proper run!
@@ -79,9 +79,13 @@ def generate_commands_from_yaml(yaml_filepath):
 
 
 if __name__ == "__main__":
-    subprocess.call(f"ray stop; ray start --head --redis-port 9002 --num-cpus {args.num_cpus} --num-gpus {args.num_gpus}",
-                    shell=True)
+    logger.info("Creating  Ray Server")
+    # for some reason this don't work on Hinton
+    # subprocess.call(
+    #     f"ray stop; ray start --head --redis-port 9002 --num-cpus {args.num_cpus} --num-gpus {args.num_gpus}",
+    #     shell=True)
     ray.init(redis_address="localhost:9002")
+    logger.info("Ray Server Created")
     # logger.info(f"Nodes: {ray.nodes()}")
     # logger.info(f"Tasks {ray.tasks()}")
     init_resources = ray.cluster_resources()
@@ -96,9 +100,10 @@ if __name__ == "__main__":
         logger.error("Could not find experiment dispatcher yaml file!")
 
     dispatch_command_strings(commands, cpus_per_command=1, pause_time=2.0)
-    # if we have unavailable resources
+    # if we have unavailable resources - right at the end (e.g. imagine sending off two commands - we don't want ray to
+    # shutdown immediately!)
     while not init_resources == ray.available_resources():
-        time.sleep(10)
+        time.sleep(60)
     logger.info("All resources available again - taking down server")
     ray.shutdown()
     subprocess.call("ray stop", shell=True)

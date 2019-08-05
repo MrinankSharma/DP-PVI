@@ -16,7 +16,7 @@ def cfg():
     scaled = True
     ordinal_cat_encoding = True
     train_proportion = 0.8
-    data_base_dir = "/scratch/DP-PVI/data"
+    data_base_dir = "/scratch/DP-PVI/DP-PVI/data"
 
 
 def generate_filename(name, scaled, ordinal_cat_encoding, data_base_dir):

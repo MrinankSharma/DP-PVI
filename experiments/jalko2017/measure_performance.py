@@ -6,8 +6,8 @@ def compute_log_likelihood(predictions, y):
     mod[mod == 1] = 0
     # hack to view the likelihoods!
     probs = -mod + y * predictions + 1e-20
-    probs[probs ==0] = 1e-40
-    ll = np.sum(np.log(-mod + y * predictions + 1e-10))/np.size(y)
+    probs[probs == 0] = 1e-40
+    ll = np.sum(np.log(-mod + y * predictions + 1e-10)) / np.size(y)
     return ll
 
 

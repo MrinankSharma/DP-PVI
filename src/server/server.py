@@ -5,8 +5,10 @@ from collections import defaultdict
 import ray
 
 import src.utils.numpy_utils as B
-from src.privacy_accounting.analysis import QueryWithLedger, OnlineAccountant
+from src.privacy.analysis import QueryWithLedger, OnlineAccountant
 from src.utils.yaml_string_dumper import YAMLStringDumper
+
+from src.utils.numpy_nest_utils import structured_ndarrays_to_lists
 
 pretty_dump = YAMLStringDumper()
 
@@ -83,12 +85,11 @@ class ParameterServer(ABC):
     def get_log(self):
         return self.log
 
-    @abstractmethod
     def log_update(self):
         """
         Log various things about the server in self.log. Flexible form.
         """
-        pass
+        self.log["params"].append(structured_ndarrays_to_lists(self.parameters))
 
     @abstractmethod
     def log_sacred(self):
@@ -143,6 +144,8 @@ class SyncronousPVIParameterServer(ParameterServer):
         logger.info(f"Iteration {self.iterations} complete.\nNew Parameters:\n {pretty_dump.dump(lambda_new)}\n")
         [client.set_metadata({"global_iteration": self.iterations}) for client in self.clients]
 
+        self.log_update()
+
         self.iterations += 1
 
     def should_stop(self):
@@ -156,9 +159,6 @@ class SyncronousPVIParameterServer(ParameterServer):
 
     def get_default_metadata(self):
         return super().get_default_metadata()
-
-    def log_update(self):
-        pass
 
     def log_sacred(self):
         return {}, self.iterations
