@@ -211,6 +211,6 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
                      _run.info["test"], t),
             'sacred_cfg.json')
     except pyarrow.lib.ArrowIOError:
-        raise("Experiment Terminated - was this you?")
+        raise Exception("Experiment Terminated - was this you?")
 
     return test_acc
