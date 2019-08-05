@@ -190,7 +190,6 @@ class LogisticRegressionTorchModule(nn.Module):
             KL = 0.5 * (torch.trace(torch.mm(p_inv, q_var)) + torch.dot(m1_m2, torch.mv(p_inv, m1_m2)) - k + np.log(
                 torch.det(p_var)) - torch.sum(q_log_var_diag))
             return KL
-
         activation_mat = y
 
         N_samples = activation_mat.shape[1]

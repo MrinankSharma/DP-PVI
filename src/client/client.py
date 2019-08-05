@@ -16,6 +16,18 @@ def zero_init_func(tensor):
     return torch.Tensor(tensor).fill_(0)
 
 
+def ensure_positive_t_i_factory(key):
+    def inner_function(params):
+        ret = dict(params)
+        val = ret[key]
+        val[val < 0] = 0.0
+        ret[key] = val
+
+        return ret
+
+    return inner_function
+
+
 # @ray.remote
 class Client(ABC):
 
@@ -116,7 +128,8 @@ class StandardClient(Client):
     def set_hyperparameters(self, hyperparameters):
         super().set_hyperparameters(hyperparameters)
 
-        self.t_i_init_func = hyperparameters['t_i_init_function']
+        self.t_i_init_func = self.hyperparameters['t_i_init_function']
+        self.t_i_postprocess_funtion = self.hyperparameters['t_i_postprocess_function']
 
     def set_metadata(self, metadata):
         super().set_metadata(metadata)
@@ -127,6 +140,7 @@ class StandardClient(Client):
             **super().get_default_hyperparameters(),
             **{
                 't_i_init_function': lambda x: np.zeros(x.shape),
+                't_i_postprocess_function': lambda x: x,
             }
         }
         return default_hyperparameters
@@ -155,12 +169,12 @@ class StandardClient(Client):
                                     model_parameters,
                                     model_hyperparameters)
 
-        # compute the change in parameters needed
         delta_lambda_i = np_utils.subtract_params(lambda_new,
                                                   lambda_old)
 
         # apply the privacy function, specified by the server
         # delta_lambda_i_tilde, privacy_stats = self.privacy_function(delta_lambda_i)
+
         delta_lambda_i_tilde = delta_lambda_i
 
         # compute the new
@@ -171,6 +185,9 @@ class StandardClient(Client):
                                      lambda_old),
             t_i_old
         )
+
+        t_i_new = self.t_i_postprocess_funtion(t_i_new)
+        delta_lambda_i_tilde = np_utils.subtract_params(t_i_new, t_i_old)
 
         self.t_i = t_i_new
         logger.info(f"New t_i {self.t_i}")

@@ -17,7 +17,7 @@ from experiments.jalko2017.MongoDBOption import TestOption, ExperimentOption
 from experiments.jalko2017.ingredients.dataset_ingredient import dataset_ingredient, load_data
 from experiments.jalko2017.measure_performance import compute_prediction_accuracy, compute_log_likelihood
 from experiments.utils import save_log
-from src.client.client import DPClient
+from src.client.client import DPClient, ensure_positive_t_i_factory
 from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression
 from src.privacy.dp_query import GaussianDPQuery
 from src.privacy.optimizer import DPOptimizer
@@ -142,7 +142,8 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
                     'l2_norm_clip': privacy_settings["C"],
                     'noise_stddev': privacy_settings["C"] * privacy_settings["sigma_relative"]
                 },
-                't_i_init_function': lambda x: np.zeros(x.shape)
+                't_i_init_function': lambda x: np.zeros(x.shape),
+                't_i_postprocess_function': ensure_positive_t_i_factory("w_pres")
             }
         )]
 
