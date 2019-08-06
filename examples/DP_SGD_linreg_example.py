@@ -7,13 +7,12 @@ import torch
 from sacred import Experiment
 from sacred.observers import MongoObserver, SlackObserver
 
-import src.privacy_accounting.analysis.moment_accountant as moment_accountant
-import src.privacy_accounting.analysis.pld_accountant as pld_accountant
+import src.privacy.analysis.moment_accountant as moment_accountant
 import src.utils.numpy_nest_utils as numpy_nest
 from src.client import DPClient, StandardClient
 from src.model.linear_regression_models import LinearRegressionMultiDimSGD
-from src.privacy_accounting.dp_query import GaussianDPQuery
-from src.privacy_accounting.optimizer import DPOptimizer, StandardOptimizer
+from src.privacy.dp_query import GaussianDPQuery
+from src.privacy.optimizer import DPOptimizer, StandardOptimizer
 from src.server import SyncronousPVIParameterServer
 
 ex = Experiment('Multi-dim Linear Regression Experiment')
@@ -33,9 +32,10 @@ ex = Experiment('Multi-dim Linear Regression Experiment')
 @ex.config
 def cfg():
     N = 1000
-    batch_size = 10
+    batch_size = 1000
     learning_rate = 0.001
-    epochs = 100
+    epochs = 500
+    model_noise = 1
     privacy = {
         "l2_norm_clip": 5,
         "noise_multiplier": 4,
@@ -44,29 +44,31 @@ def cfg():
     }
 
 
-#ex.add_config('test_config.yaml')
-
-
 @ex.automain
-def main(N, batch_size, learning_rate, epochs, privacy, _run):
-    x = np.array([[1, 0.29449245], [1, -0.14604409], [1, -0.21363078], [1, 2.50904502], 
-                  [1, -0.0729865], [1, 0.74002993], [1, -0.62756792], [1, -0.19469873], 
-                  [1, 0.19276911], [1, 0.68966338]], dtype=np.float32)
-#    y = np.array([1.29449245, 0.85395591, 0.78636922, 3.50904502, 0.9270135,
-#                  1.74002993, 0.37243208, 0.80530127, 1.19276911, 1.68966338], dtype=np.float32)
-    y = np.array([0.70853103, 0.240928, -1.41032053, 2.88666036, 2.0095466,
-                  3.53902563, 1.18043607, -1.05195666, 0.55742282, 1.7068966], dtype=np.float32)
+def main(N, batch_size, learning_rate, epochs, model_noise, privacy, _run):
+    true_params = np.array([-1, 2], dtype=np.float32)
+    x = np.ones((N, 2))
+    x[:, 1] = np.random.normal(0, 1, N)
+    y = x @ true_params + np.random.normal(0, model_noise, N)
 
     dataset = {
         'x': x,
         'y': y,
     }
 
-    target_delta = 0.0001
+    target_delta = 1e-4
 
     prior_params = {
         "w_nat_mean": np.array([0.0, 0.0], dtype=np.float64),
         "w_pres": np.array([1.0, 1.0], dtype=np.float64)
+    }
+
+    prior_sigma = 1
+    exact_infer_var = np.linalg.inv((x.T @ x) / model_noise ** 2 + np.identity(2) / prior_sigma ** 2)
+    exact_infer_mean = (exact_infer_var @ x.T @ y) / model_noise ** 2
+    exact_infer_params = {
+        'mean': exact_infer_mean,
+        'var': exact_infer_var
     }
 
     clients = [
@@ -79,13 +81,6 @@ def main(N, batch_size, learning_rate, epochs, privacy, _run):
                     'accountancy_parameters': {
                         'target_delta': target_delta
                     }
-                },
-                'PLDAccountant': {
-                    'accountancy_update_method': pld_accountant.compute_online_privacy_from_ledger,
-                    'accountancy_parameters': {
-                        'target_delta': target_delta,
-                        'L': 50
-                    }
                 }
             },
             data=dataset,
@@ -93,39 +88,39 @@ def main(N, batch_size, learning_rate, epochs, privacy, _run):
             model_hyperparameters={
                 "base_optimizer_class": torch.optim.SGD,
                 "wrapped_optimizer_class": DPOptimizer,
-                "base_optimizer_parameters": {'lr': 0.02},
+                "base_optimizer_parameters": {'lr': learning_rate},
                 "wrapped_optimizer_parameters": {},
-                "N_steps": 10,
+                "N_steps": 5,
                 "n_in": 2,
-                "batch_size": x.shape[0],
-                "model_noise": 1
+                "batch_size": batch_size,
+                "model_noise": model_noise
             },
             hyperparameters={
                 'dp_query_parameters': {
                     'l2_norm_clip': 5,
-                    'noise_stddev': 4
+                    'noise_stddev': 5
                 },
                 't_i_init_function': lambda x: np.zeros(x.shape)
             }
         )
-#        StandardClient.create_factory(
-#            model_class=LinearRegressionMultiDimSGD,
-#            data=dataset,
-#            model_parameters=prior_params,
-#            model_hyperparameters={
-#                "base_optimizer_class": torch.optim.SGD,
-#                "wrapped_optimizer_class": StandardOptimizer,
-#                "base_optimizer_parameters": {'lr': 0.02},
-#                "wrapped_optimizer_parameters": {},
-#                "N_steps": 10,
-#                "n_in": 2,
-#                "batch_size": x.shape[0],
-#                "model_noise": 1
-#            },
-#            hyperparameters={
-#                't_i_init_function': lambda x: np.zeros(x.shape)
-#            }
-#        )
+       # StandardClient.create_factory(
+       #     model_class=LinearRegressionMultiDimSGD,
+       #     data=dataset,
+       #     model_parameters=prior_params,
+       #     model_hyperparameters={
+       #         "base_optimizer_class": torch.optim.SGD,
+       #         "wrapped_optimizer_class": StandardOptimizer,
+       #         "base_optimizer_parameters": {'lr': 0.02},
+       #         "wrapped_optimizer_parameters": {},
+       #         "N_steps": 10,
+       #         "n_in": 2,
+       #         "batch_size": x.shape[0],
+       #         "model_noise": 1
+       #     },
+       #     hyperparameters={
+       #         't_i_init_function': lambda x: np.zeros(x.shape)
+       #     }
+       # )
     ]
 
     server = SyncronousPVIParameterServer(
@@ -134,16 +129,16 @@ def main(N, batch_size, learning_rate, epochs, privacy, _run):
         model_hyperparameters={
             "base_optimizer_class": torch.optim.SGD,
             "wrapped_optimizer_class": None,
-            "base_optimizer_parameters": {'lr': 0.01},
+            "base_optimizer_parameters": {'lr': learning_rate},
             "wrapped_optimizer_parameters": {},
-            "N_steps": 500,
+            "N_steps": 0,
             "n_in": 2,
-            "batch_size": x.shape[0],
-            "model_noise": 1
+            "batch_size": batch_size,
+            "model_noise": model_noise
         },
         prior=prior_params,
         clients_factories=clients,
-        max_iterations=100
+        max_iterations=epochs
     )
 
     while not server.should_stop():
@@ -161,6 +156,7 @@ def main(N, batch_size, learning_rate, epochs, privacy, _run):
             _run.log_scalar(k, v, server.iterations)
 
     final_log = server.get_compiled_log()
+    final_log['exact_inference'] = numpy_nest.structured_ndarrays_to_lists(exact_infer_params)
 
     log_dir = '../logs/tests'
 
