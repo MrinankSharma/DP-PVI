@@ -4,6 +4,8 @@ import time
 
 import numpy as np
 import ray
+# ray must be imported before pyarrow
+import pyarrow
 import torch
 from sacred import Experiment
 
@@ -15,13 +17,12 @@ from experiments.jalko2017.MongoDBOption import TestOption, ExperimentOption
 from experiments.jalko2017.ingredients.dataset_ingredient import dataset_ingredient, load_data
 from experiments.jalko2017.measure_performance import compute_prediction_accuracy, compute_log_likelihood
 from experiments.utils import save_log
-from src.client.client import DPClient
+from src.client.client import DPClient, ensure_positive_t_i_factory
 from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression
 from src.privacy.dp_query import GaussianDPQuery
 from src.privacy.optimizer import DPOptimizer
 from src.server import SyncronousPVIParameterServer
 from src.utils.yaml_string_dumper import YAMLStringDumper
-import pyarrow
 
 ex = Experiment('jalko2017', [dataset_ingredient])
 logger = logging.getLogger(__name__)
@@ -41,11 +42,11 @@ def default_config(dataset):
         }
 
         optimisation_settings = {
-            "lr": 0.01,
-            "N_steps": 1000,
+            "lr": 0.1,
+            "N_steps": 1,
         }
 
-        N_iterations = 1
+        N_iterations = 1000
 
     elif dataset["name"] == "adult":
         privacy_settings = {
@@ -56,11 +57,11 @@ def default_config(dataset):
         }
 
         optimisation_settings = {
-            "lr": 0.01,
-            "N_steps": 2000,
+            "lr": 0.1,
+            "N_steps": 1,
         }
 
-        N_iterations = 1
+        N_iterations = 2000
 
     logging_base_directory = "/scratch/DP-PVI/logs"
 
@@ -71,10 +72,10 @@ def default_config(dataset):
     }
 
     prior_pres = 1.0
-    N_samples = 200
+    N_samples = 50
 
     prediction = {
-        "interval": 1,
+        "interval": 25,
         "type": "prohibit"
     }
     experiment_tag = "test_tag"
@@ -84,12 +85,14 @@ def default_config(dataset):
 
 @ex.automain
 def run_experiment(privacy_settings, optimisation_settings, logging_base_directory, N_samples, N_iterations, prior_pres,
-                   ray_cfg, prediction, experiment_tag, _run, _config):
+                   ray_cfg, prediction, experiment_tag, _run, _config, seed):
+    np.random.seed(seed)
+    torch.manual_seed(seed)
     try:
         if ray_cfg["redis_address"] == "None":
             logger.info("Creating new ray server")
             ray.init(num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"], logging_level=logging.INFO,
-                     local_mode=False)
+                     local_mode=True)
         else:
             logger.info("Connecting to existing server")
             ray.init(redis_address=ray_cfg["redis_address"], logging_level=logging.INFO)
@@ -125,7 +128,7 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
             },
             model_parameters=prior_params,
             model_hyperparameters={
-                "base_optimizer_class": torch.optim.SGD,
+                "base_optimizer_class": torch.optim.Adagrad,
                 "wrapped_optimizer_class": DPOptimizer,
                 "base_optimizer_parameters": {'lr': optimisation_settings["lr"]},
                 "wrapped_optimizer_parameters": {},
@@ -139,7 +142,8 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
                     'l2_norm_clip': privacy_settings["C"],
                     'noise_stddev': privacy_settings["C"] * privacy_settings["sigma_relative"]
                 },
-                't_i_init_function': lambda x: np.zeros(x.shape)
+                't_i_init_function': lambda x: np.zeros(x.shape),
+                't_i_postprocess_function': ensure_positive_t_i_factory("w_pres")
             }
         )]
 
@@ -201,12 +205,12 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
         t = datetime.datetime.now()
         ex.add_artifact(
             save_log(final_log, "full_log", ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
-                     _run.info["test"], t), 'full_log')
+                     _run.info["test"], t), 'full_log.json')
         ex.add_artifact(
             save_log(_config, "sacred_cfg", ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
                      _run.info["test"], t),
-            'sacred_cfg')
+            'sacred_cfg.json')
     except pyarrow.lib.ArrowIOError:
-        return "Experiment Terminated, was this you?"
+        raise Exception("Experiment Terminated - was this you?")
 
     return test_acc

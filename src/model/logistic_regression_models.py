@@ -182,14 +182,14 @@ class LogisticRegressionTorchModule(nn.Module):
         """
         self.set_parameters(parameters)
 
-        def compute_KL_qp(q_mean, q_var, p_mean, p_var):
+        def compute_KL_qp(q_mean, q_var, p_mean, p_var, q_log_var_diag):
             k = q_mean.shape[0]
             p_inv = torch.inverse(p_var)
             m1_m2 = p_mean - q_mean
+            # note that we a-priori know that q_var is a diagonal matrix
             KL = 0.5 * (torch.trace(torch.mm(p_inv, q_var)) + torch.dot(m1_m2, torch.mv(p_inv, m1_m2)) - k + np.log(
-                torch.det(p_var)) - torch.log(torch.det(q_var)))
+                torch.det(p_var)) - torch.sum(q_log_var_diag))
             return KL
-
         activation_mat = y
 
         N_samples = activation_mat.shape[1]
@@ -199,7 +199,7 @@ class LogisticRegressionTorchModule(nn.Module):
         # compute the KL term
         # scale by the TOTAL number of data points!
         KL_term = -1 / self.N_full * compute_KL_qp(self.w_mu, torch.diag(torch.exp(self.w_log_var)), self.prior_mu,
-                                                   torch.diag(torch.exp(self.prior_log_var)))
+                                                   torch.diag(torch.exp(self.prior_log_var)), self.w_log_var)
 
         likelihood = self.act(activation_mat * mask)
 
@@ -341,14 +341,9 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         """
         super().fit(data, t_i, parameters, hyperparameters)
 
-        mini_batch_indices = np.random.choice(data["x"].shape[0], self.hyperparameters["batch_size"], replace=False)
         x_full = data["x"]
         y_full = data["y"]
         N_full = x_full.shape[0]
-
-        # convert data into a tensor
-        x = torch.tensor(x_full[mini_batch_indices, :], dtype=torch.float32)
-        y_true = torch.tensor(y_full[mini_batch_indices], dtype=torch.float32)
 
         cav_nat_params = B.subtract_params(self.get_parameters(), t_i)
         # numpy dict for the effective prior
@@ -363,6 +358,12 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         self._derived_statistics_history = []
         # lets just do this for the time being
         for i in range(self.hyperparameters['N_steps']):
+            # sample minibatch at each step ...
+            mini_batch_indices = np.random.choice(data["x"].shape[0], self.hyperparameters["batch_size"], replace=False)
+            # convert data into a tensor
+            x = torch.tensor(x_full[mini_batch_indices, :], dtype=torch.float32)
+            y_true = torch.tensor(y_full[mini_batch_indices], dtype=torch.float32)
+
             current_loss = self.wrapped_optimizer.fit_batch(x, y_true)
             derived_statistics = self.wrapped_optimizer.get_logged_statistics()
             derived_statistics_history.append(derived_statistics)

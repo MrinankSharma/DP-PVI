@@ -61,7 +61,6 @@ class GaussianDPQuery(dp_query.SumAggregationDPQuery):
         l2_norm = torch.sqrt(nest.reduce_structure(lambda p: torch.norm(torch.flatten(p), p=2) ** 2,
                                                    torch.add,
                                                    record))
-
         self._record_l2_norm = l2_norm
         if l2_norm < l2_norm_clip:
             return record

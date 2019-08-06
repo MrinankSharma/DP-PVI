@@ -15,7 +15,7 @@ def add_parameters(*params):
         value = params[0][key]
         for i in range(len(params) - 1):
             value = value + params[i + 1][key]
-        return_dict[key] = value
+        return_dict[key] = np.array(value, dtype=np.float64)
 
     return return_dict
 
@@ -33,7 +33,7 @@ def subtract_params(*params):
         value = params[0][key]
         for i in range(len(params) - 1):
             value = value - params[i + 1][key]
-        return_dict[key] = value
+        return_dict[key] = np.array(value, dtype=np.float64)
 
     return return_dict
 
