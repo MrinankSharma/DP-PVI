@@ -203,7 +203,7 @@ class LinearRegressionTorchModule(nn.Module):
         prior_term = (prior_var_inv @ torch.exp(self.w_log_var) + (self.w_mu ** 2) @ prior_var_inv - 2 * (self.prior_mu * prior_var_inv) @ self.w_mu) / -2
 
         # compute loss per point
-        loss_per_point = likelihood_term + (diff_entropy + prior_term) / x.shape[0]
+        loss_per_point = likelihood_term + (diff_entropy + prior_term) / likelihood_term.shape[0]
 
         return -loss_per_point
 
@@ -312,8 +312,8 @@ class LinearRegressionMultiDimSGD(Model):
         super().fit(data, t_i, parameters, hyperparameters)
 
         # convert data into a tensor
-        x = torch.tensor(data["x"], dtype=torch.float32)
-        y = torch.tensor(data["y"], dtype=torch.float32)
+        x_full = torch.tensor(data["x"], dtype=torch.float32)
+        y_full = torch.tensor(data["y"], dtype=torch.float32)
 
         cav_nat_params = B.subtract_params(self.get_parameters(), t_i)
         # numpy dict for the effective prior
@@ -327,6 +327,11 @@ class LinearRegressionMultiDimSGD(Model):
         self._derived_statistics_history = []
         # lets just do this for the time being
         for i in range(self.hyperparameters['N_steps']):
+            # sample mini-batch at each step
+            indices = random.choice(x_full.shape[0], self.hyperparameters["batch_size"], replace=False)
+            x = x_full[indices, :]
+            y = y_full[indices]
+
             current_loss = self.wrapped_optimizer.fit_batch(x, y)
             derived_statistics = self.wrapped_optimizer.get_logged_statistics()
             derived_statistics_history.append(derived_statistics)
