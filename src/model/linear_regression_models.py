@@ -356,8 +356,8 @@ class LinearRegressionMultiDimSGD(Model):
 
     def get_incremental_log_record(self):
         ret = {
-            "derived_statistics": self._derived_statistics_histories,
-            "training_curves": self._training_curves,
+            # "derived_statistics": self._derived_statistics_histories,
+            "training_curves": self._training_curves
         }
         self._training_curves = []
         self._derived_statistics_histories = []

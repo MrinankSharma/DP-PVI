@@ -273,7 +273,7 @@ class DPClient(StandardClient):
         for k, v in self.accountants.items():
             self.log[k].append(v.privacy_bound)
 
-        self.log['ledger'].append(self.dp_query.ledger.get_formatted_ledger())
+        # self.log['ledger'].append(self.dp_query.ledger.get_formatted_ledger())
 
     def log_sacred(self):
         log, times_updated = super().log_sacred()
