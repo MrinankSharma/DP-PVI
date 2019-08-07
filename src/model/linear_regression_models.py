@@ -130,6 +130,13 @@ class LinearRegressionTorchModule(nn.Module):
         # we make the assumption that the input parameters are actually a numpy array!
         self.set_parameters_from_numpy(parameters)
 
+    def set_N_full(self, N_full):
+        """
+        Note - input assumed to be an int type
+        :param N_full: int
+        """
+        self.N_full = N_full
+
     def set_parameters(self, parameters):
         if parameters is not None:
             self.w_mu.data = parameters["w_mu"]
@@ -203,7 +210,7 @@ class LinearRegressionTorchModule(nn.Module):
         prior_term = (prior_var_inv @ torch.exp(self.w_log_var) + (self.w_mu ** 2) @ prior_var_inv - 2 * (self.prior_mu * prior_var_inv) @ self.w_mu) / -2
 
         # compute loss per point
-        loss_per_point = likelihood_term + (diff_entropy + prior_term) / likelihood_term.shape[0]
+        loss_per_point = likelihood_term + (diff_entropy + prior_term) / self.N_full
 
         return -loss_per_point
 
@@ -314,10 +321,12 @@ class LinearRegressionMultiDimSGD(Model):
         # convert data into a tensor
         x_full = torch.tensor(data["x"], dtype=torch.float32)
         y_full = torch.tensor(data["y"], dtype=torch.float32)
+        N_full = x_full.shape[0]
 
         cav_nat_params = B.subtract_params(self.get_parameters(), t_i)
         # numpy dict for the effective prior
         self.torch_module.set_prior_parameters_from_numpy(cav_nat_params)
+        self.torch_module.set_N_full(N_full)
 
         print_interval = np.ceil(self.hyperparameters['N_steps'] / 20)
 
