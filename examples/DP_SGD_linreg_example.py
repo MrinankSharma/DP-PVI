@@ -32,8 +32,9 @@ ex = Experiment('Multi-dim Linear Regression Experiment')
 @ex.config
 def cfg():
     N = 1000
-    batch_size = 1000
+    batch_size = 100
     learning_rate = 0.001
+    N_steps = 50
     epochs = 500
     model_noise = 1
     privacy = {
@@ -45,7 +46,7 @@ def cfg():
 
 
 @ex.automain
-def main(N, batch_size, learning_rate, epochs, model_noise, privacy, _run):
+def main(N, batch_size, learning_rate, N_steps, epochs, model_noise, privacy, _run):
     true_params = np.array([-1, 2], dtype=np.float32)
     x = np.ones((N, 2))
     x[:, 1] = np.random.normal(0, 1, N)
@@ -90,7 +91,7 @@ def main(N, batch_size, learning_rate, epochs, model_noise, privacy, _run):
                 "wrapped_optimizer_class": DPOptimizer,
                 "base_optimizer_parameters": {'lr': learning_rate},
                 "wrapped_optimizer_parameters": {},
-                "N_steps": 5,
+                "N_steps": N_steps,
                 "n_in": 2,
                 "batch_size": batch_size,
                 "model_noise": model_noise
