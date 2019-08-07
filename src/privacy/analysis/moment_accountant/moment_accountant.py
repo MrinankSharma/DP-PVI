@@ -17,7 +17,6 @@ def _compute_eps(max_lambda, total_log_moments, target_delta):
         eps_bounds.append(lambda_i_eps_bound)
 
     max_index = np.argmin(eps_bounds)
-
     return eps_bounds[max_index], target_delta, max_index + 1
 
 

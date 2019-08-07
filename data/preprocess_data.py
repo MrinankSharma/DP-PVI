@@ -32,7 +32,7 @@ def process_dataset(data_folder, filename, config, one_hot=True, should_scale=Fa
     if one_hot:
         categorical_transformer = OneHotEncoder(sparse=False)
     else:
-        categorical_transformer = Pipeline([('labeler', OrdinalEncoder()), ('scaler', StandardScaler())])
+        categorical_transformer = Pipeline([('labeler', OrdinalEncoder()), ('scaler', StandardScaler())] )
         post_string = post_string + "_ordinal"
 
     y = config["label_generator"](data[:, config["target"]].reshape(-1, 1))
