@@ -104,24 +104,24 @@ def main(N, batch_size, learning_rate, N_steps, epochs, model_noise, privacy, _r
                 't_i_init_function': lambda x: np.zeros(x.shape)
             }
         )
-       # StandardClient.create_factory(
-       #     model_class=LinearRegressionMultiDimSGD,
-       #     data=dataset,
-       #     model_parameters=prior_params,
-       #     model_hyperparameters={
-       #         "base_optimizer_class": torch.optim.SGD,
-       #         "wrapped_optimizer_class": StandardOptimizer,
-       #         "base_optimizer_parameters": {'lr': 0.02},
-       #         "wrapped_optimizer_parameters": {},
-       #         "N_steps": 10,
-       #         "n_in": 2,
-       #         "batch_size": x.shape[0],
-       #         "model_noise": 1
-       #     },
-       #     hyperparameters={
-       #         't_i_init_function': lambda x: np.zeros(x.shape)
-       #     }
-       # )
+        # StandardClient.create_factory(
+        #     model_class=LinearRegressionMultiDimSGD,
+        #     data=dataset,
+        #     model_parameters=prior_params,
+        #     model_hyperparameters={
+        #        "base_optimizer_class": torch.optim.SGD,
+        #        "wrapped_optimizer_class": StandardOptimizer,
+        #        "base_optimizer_parameters": {'lr': learning_rate},
+        #        "wrapped_optimizer_parameters": {},
+        #        "N_steps": N_steps,
+        #        "n_in": 2,
+        #        "batch_size": batch_size,
+        #        "model_noise": model_noise
+        #     },
+        #     hyperparameters={
+        #        't_i_init_function': lambda x: np.zeros(x.shape)
+        #     }
+        # )
     ]
 
     server = SyncronousPVIParameterServer(
