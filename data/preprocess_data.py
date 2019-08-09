@@ -32,7 +32,7 @@ def process_dataset(data_folder, filename, config, one_hot=True, should_scale=Fa
     if one_hot:
         categorical_transformer = OneHotEncoder(sparse=False)
     else:
-        categorical_transformer = Pipeline([('labeler', OrdinalEncoder()), ('scaler', StandardScaler())] )
+        categorical_transformer = Pipeline([('labeler', OrdinalEncoder()), ('scaler', StandardScaler())])
         post_string = post_string + "_ordinal"
 
     y = config["label_generator"](data[:, config["target"]].reshape(-1, 1))
@@ -60,16 +60,22 @@ def process_dataset(data_folder, filename, config, one_hot=True, should_scale=Fa
 
 if __name__ == "__main__":
 
-    oe = OrdinalEncoder()
+    def adult_transformer(y):
+        oe = OrdinalEncoder()
+        y[y == " <=50K."] = " <=50K"
+        y[y == " >50K."] = " >50K"
+        y_all = oe.fit_transform(y)
+        return y_all
+
     adult_config = {
         "numerical_features": [0, 2, 4, 10, 11, 12],
         "categorical_features": [1, 3, 5, 6, 7, 8, 9, 13],
         "folder": "/abalone",
         "target": 14,
-        "label_generator": oe.fit_transform
+        "label_generator": adult_transformer
     }
 
-    be = Binarizer(threshold=10.0)
+    be = Binarizer(threshold=9.5)
     abalone_labeller = lambda z: be.fit_transform(as_float_array(z))
 
     abalone_config = {

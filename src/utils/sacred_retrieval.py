@@ -2,6 +2,7 @@ import json
 from collections import Iterable
 
 import gridfs
+from bson import ObjectId
 from pymongo import MongoClient
 
 
@@ -20,9 +21,8 @@ class SacredExperimentAccess(object):
                 sub_vals = SacredExperimentAccess.filter_from_nested_dict(v, f"{base_key}{k}.")
                 ret = {**ret, **sub_vals}
             else:
-                ret[base_key+k] = v
+                ret[base_key + k] = v
         return ret
-
 
     def get_experiments(self, name=None, complete=False, config=None, additional_filter=None):
         filter = {}
@@ -40,7 +40,7 @@ class SacredExperimentAccess(object):
 
     def load_artifacts(self, objects):
         '''
-        Return the artifacts associated with the objects.
+        Return the full experiment objects associated with the objects.
         :param objects: Can be one of: A single experiments dict. An iterable of experiments
         :returns The same objects, with the artifacts loaded in. Assumes all artifacts are JSON files
         '''
@@ -61,6 +61,33 @@ class SacredExperimentAccess(object):
         '''
 
         return [self.fs.get(id).read() for id in ids]
+
+    def get_metrics_by_exp(self, exp_objects, metric_names):
+        """
+        First layer: which experiment, second index: which metric.
+
+        :param exp_objects: dict of iterable of dicts
+        :param metric_names: metrics to get
+        :return:
+        """
+        def get_metrics_for_exp(exp, names):
+            metrics = []
+            for n in names:
+                metrics.extend(list(filter(lambda x: x["name"] ==n, exp["info"]["metrics"])))
+            metric_objects = [list(self.database.metrics.find({"_id": ObjectId(x["id"])}))[0] for x in metrics]
+            return metric_objects
+
+        if isinstance(metric_names, str):
+            metric_names = [metric_names]
+
+        if isinstance(exp_objects, dict):
+            return get_metrics_for_exp(exp_objects, metric_names)
+
+        elif isinstance(exp_objects, Iterable):
+            ret = []
+            for exp in exp_objects:
+                ret.append(get_metrics_for_exp(exp, metric_names))
+            return ret
 
 
 def get_dicts_key_subset(dicts, keys):

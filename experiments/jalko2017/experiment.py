@@ -44,6 +44,7 @@ def default_config(dataset):
         optimisation_settings = {
             "lr": 0.1,
             "N_steps": 1,
+            "lr_decay": 0,
         }
 
         N_iterations = 1000
@@ -59,6 +60,7 @@ def default_config(dataset):
         optimisation_settings = {
             "lr": 0.1,
             "N_steps": 1,
+            "lr_decay": 0,
         }
 
         N_iterations = 2000
@@ -130,7 +132,8 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
             model_hyperparameters={
                 "base_optimizer_class": torch.optim.Adagrad,
                 "wrapped_optimizer_class": DPOptimizer,
-                "base_optimizer_parameters": {'lr': optimisation_settings["lr"]},
+                "base_optimizer_parameters": {'lr': optimisation_settings["lr"],
+                                              'lr_decay': optimisation_settings["lr_decay"]},
                 "wrapped_optimizer_parameters": {},
                 "N_steps": optimisation_settings["N_steps"],
                 "N_samples": N_samples,

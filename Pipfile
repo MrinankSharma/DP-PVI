@@ -19,11 +19,11 @@ requests = "*"
 ruamel-yaml = "*"
 sacred = "*"
 gitpython = "*"
-pymongo = "*"
 pyyaml = "*"
 sklearn = "*"
 setproctitle = "*"
 pyarrow = "*"
+pymongo = "*"
 
 [requires]
 python_version = "3.7"
