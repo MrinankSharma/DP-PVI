@@ -106,7 +106,7 @@ class ParameterServer(ABC):
         """
         final_log = {}
         final_log['server'] = self.get_log()
-        client_logs = [client.get_log() for client in self.clients]
+        client_logs = [client.get_compiled_log() for client in self.clients]
         for i, log in enumerate(client_logs):
             final_log['client_' + str(i)] = log
 

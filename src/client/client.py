@@ -110,6 +110,9 @@ class Client(ABC):
         """
         pass
 
+    def get_compiled_log(self):
+        return self.get_log()
+
 
 # @ray.remote
 class StandardClient(Client):
@@ -250,10 +253,8 @@ class DPClient(StandardClient):
                            hyperparameters, metadata)
 
     def compute_update(self, model_parameters=None, model_hyperparameters=None):
-        logger.info("Computing Client Update")
         delta_lambda_i_tilde = super().compute_update(model_parameters=None, model_hyperparameters=None)
 
-        logger.info("Calculating Privacy Cost")
         formatted_ledger = self.dp_query.ledger.get_formatted_ledger()
         for _, accountant in self.accountants.items():
             accountant.update_privacy(formatted_ledger)
@@ -273,7 +274,7 @@ class DPClient(StandardClient):
         for k, v in self.accountants.items():
             self.log[k].append(v.privacy_bound)
 
-        self.log['ledger'].append(self.dp_query.ledger.get_formatted_ledger())
+        # self.log['ledger'].append(self.dp_query.ledger.get_formatted_ledger())
 
     def log_sacred(self):
         log, times_updated = super().log_sacred()
@@ -283,3 +284,7 @@ class DPClient(StandardClient):
             log[k + '.delta'] = v.privacy_bound[1]
 
         return log, times_updated
+
+    def get_compiled_log(self):
+        self.log['ledger'] = self.dp_query.ledger.get_formatted_ledger()
+        return self.log

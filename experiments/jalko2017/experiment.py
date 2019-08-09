@@ -206,13 +206,11 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
 
         final_log = ray.get(server.get_compiled_log.remote())
         t = datetime.datetime.now()
+
         ex.add_artifact(
             save_log(final_log, "full_log", ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
                      _run.info["test"], t), 'full_log.json')
-        ex.add_artifact(
-            save_log(_config, "sacred_cfg", ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
-                     _run.info["test"], t),
-            'sacred_cfg.json')
+
     except pyarrow.lib.ArrowIOError:
         raise Exception("Experiment Terminated - was this you?")
 

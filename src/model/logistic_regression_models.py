@@ -127,7 +127,7 @@ class LogisticRegressionTorchModule(nn.Module):
         cov_mat = torch.diag(torch.exp(self.w_log_var))
         cov_list = torch.diag(torch.mm(x, torch.mm(cov_mat, x.t())))
         mean_vars = list(zip(mean_1d, cov_list))
-        p_vals = torch.Tensor(len(mean_vars))
+        p_vals = torch.empty(len(mean_vars))
 
         if self.prediction_type == "exact":
             for ind, mean_var in enumerate(mean_vars):

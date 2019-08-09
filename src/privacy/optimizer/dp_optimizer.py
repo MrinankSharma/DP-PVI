@@ -1,7 +1,8 @@
 from collections import defaultdict
-
-import torch
 from math import ceil
+
+import numpy as np
+import torch
 
 import src.utils.torch_nest_utils as nest
 from src.privacy.analysis import QueryWithLedger
@@ -25,7 +26,7 @@ class DPOptimizer(WrapperOptimizer):
         self.num_microbatches = num_microbatches
 
         self._global_parameters = self.dp_sum_query.initial_global_state()
-        self._derived_records_data = []
+        self._derived_records_data = defaultdict(list)
 
     def fit_batch(self, x: torch.Tensor, y: torch.Tensor):
         loss = self.loss_per_example(self.model(x), y)
@@ -62,6 +63,10 @@ class DPOptimizer(WrapperOptimizer):
                 self._derived_records_data[k].append(v)
 
         self._derived_records_data = dict(self._derived_records_data)
+
+        for k, v in self._derived_records_data.items():
+            # summarise statistics instead
+            self._derived_records_data[k] = np.percentile(np.array(v), [10.0, 30.0, 50.0, 70.0, 90.0])
 
         final_grads, _ = self.dp_sum_query.get_noised_result(sample_state, self._global_parameters)
 
