@@ -64,6 +64,7 @@ class DPOptimizer(WrapperOptimizer):
         self._derived_records_data = dict(self._derived_records_data)
 
         final_grads, _ = self.dp_sum_query.get_noised_result(sample_state, self._global_parameters)
+        final_grads = [[(grad / x.shape[0]) for grad in group] for group in final_grads]
 
         self.apply_grads(param_groups, grads=final_grads)
 

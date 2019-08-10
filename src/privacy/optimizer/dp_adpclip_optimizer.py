@@ -65,7 +65,6 @@ class DPAdpClipOptimizer(WrapperOptimizer):
 
         sample_params = torch.tensor(np.percentile(norms, self.norm_percentile))
         self._global_parameters = self.dp_sum_query._query._GlobalState(l2_norm_clip=sample_params, noise_stddev=sample_params * self.noise_multiplier)
-        print(self._global_parameters)
 
 
         def process_microbatch(record, sample_state):
@@ -85,9 +84,7 @@ class DPAdpClipOptimizer(WrapperOptimizer):
         self._derived_records_data = dict(self._derived_records_data)
 
         final_grads, _ = self.dp_sum_query.get_noised_result(sample_state, self._global_parameters)
-        # print(final_grads)
-        # final_grads = [(grad / x.shape[0]) for group in final_grads for grad in group]
-        # print(final_grads)
+        final_grads = [[(grad / x.shape[0]) for grad in group] for group in final_grads]
 
         self.apply_grads(param_groups, grads=final_grads)
 
