@@ -32,16 +32,14 @@ ex = Experiment('Multi-dim Linear Regression Experiment')
 @ex.config
 def cfg():
     N = 1000
-    batch_size = 100
-    learning_rate = 0.001
+    batch_size = 30
+    learning_rate = 0.03
     N_steps = 50
-    epochs = 500
+    epochs = 1000
     model_noise = 1
     privacy = {
         "l2_norm_clip": 5,
-        "noise_multiplier": 4,
-        "max_delta": 0.00001,
-        "max_lambda": 32
+        "noise_stddev": 5
     }
 
 
@@ -54,7 +52,7 @@ def main(N, batch_size, learning_rate, N_steps, epochs, model_noise, privacy, _r
 
     dataset = {
         'x': x,
-        'y': y,
+        'y': y
     }
 
     target_delta = 1e-4
@@ -98,8 +96,8 @@ def main(N, batch_size, learning_rate, N_steps, epochs, model_noise, privacy, _r
             },
             hyperparameters={
                 'dp_query_parameters': {
-                    'l2_norm_clip': 5,
-                    'noise_stddev': 5
+                    'l2_norm_clip': privacy['l2_norm_clip'],
+                    'noise_stddev': privacy['noise_stddev']
                 },
                 't_i_init_function': lambda x: np.zeros(x.shape)
             }
@@ -155,6 +153,9 @@ def main(N, batch_size, learning_rate, N_steps, epochs, model_noise, privacy, _r
 
         for k, v in sacred_log.items():
             _run.log_scalar(k, v, server.iterations)
+
+        if sacred_log['client_0.MomentAccountant.epsilon'] > 100:
+            break
 
     final_log = server.get_compiled_log()
     final_log['exact_inference'] = numpy_nest.structured_ndarrays_to_lists(exact_infer_params)

@@ -32,14 +32,14 @@ ex = Experiment('Adaptive Clipping Bound Experiment')
 @ex.config
 def cfg():
     N = 1000
-    batch_size = 3
-    learning_rate = 0.001
-    N_steps = 1
-    epochs = 1
+    batch_size = 30
+    learning_rate = 0.03
+    N_steps = 50
+    epochs = 1000
     model_noise = 1
     privacy = {
         "norm_percentile": 20,
-        "noise_multiplier": 1,
+        "noise_multiplier": 1
     }
 
 
@@ -52,7 +52,7 @@ def main(N, batch_size, learning_rate, N_steps, epochs, model_noise, privacy, _r
 
     dataset = {
         'x': x,
-        'y': y,
+        'y': y
     }
 
     target_delta = 1e-4
@@ -138,6 +138,9 @@ def main(N, batch_size, learning_rate, N_steps, epochs, model_noise, privacy, _r
 
         for k, v in sacred_log.items():
             _run.log_scalar(k, v, server.iterations)
+
+        if sacred_log['client_0.MomentAccountant.epsilon'] > 100:
+            break
 
     final_log = server.get_compiled_log()
     final_log['exact_inference'] = numpy_nest.structured_ndarrays_to_lists(exact_infer_params)
