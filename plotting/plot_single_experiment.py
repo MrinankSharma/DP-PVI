@@ -55,6 +55,7 @@ for params in results['server']['params']:
     var = np.diag(1 / pres)
     kl.append(np.log(kl_mvn(mean, var, exact_mean, exact_var)))
 
+
 epsilon = []
 for privacy_params in results['client_0']['MomentAccountant']:
     epsilon.append(privacy_params[0])
