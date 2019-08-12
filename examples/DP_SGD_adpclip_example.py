@@ -34,18 +34,18 @@ def cfg():
     N = 1000
     batch_size = 30
     learning_rate = 0.03
-    N_steps = 50
+    N_steps = 100
     epochs = 1000
-    model_noise = 1
+    model_noise = 3
     privacy = {
-        "norm_percentile": 20,
+        "norm_percentile": 40,
         "noise_multiplier": 1
     }
 
 
 @ex.automain
 def main(N, batch_size, learning_rate, N_steps, epochs, model_noise, privacy, _run):
-    true_params = np.array([-1, 2], dtype=np.float32)
+    true_params = np.array([5, -2], dtype=np.float32)
     x = np.ones((N, 2))
     x[:, 1] = np.random.normal(0, 1, N)
     y = x @ true_params + np.random.normal(0, model_noise, N)
