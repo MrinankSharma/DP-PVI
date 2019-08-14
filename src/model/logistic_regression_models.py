@@ -192,18 +192,19 @@ class LogisticRegressionTorchModule(nn.Module):
             return KL
         activation_mat = y
 
+        L = activation_mat.shape[0]
         N_samples = activation_mat.shape[1]
 
         mask = y_true.repeat(N_samples, 1).t()
 
         # compute the KL term
         # scale by the TOTAL number of data points!
-        KL_term = -1 / self.N_full * compute_KL_qp(self.w_mu, torch.diag(torch.exp(self.w_log_var)), self.prior_mu,
+        KL_term = -1 / L * compute_KL_qp(self.w_mu, torch.diag(torch.exp(self.w_log_var)), self.prior_mu,
                                                    torch.diag(torch.exp(self.prior_log_var)), self.w_log_var)
 
         likelihood = self.act(activation_mat * mask)
 
-        likelihood_term = 1 / N_samples * torch.einsum('ij->i', likelihood)
+        likelihood_term = 1 / N_samples * torch.einsum('ij->i', likelihood) * self.N_full / L
         ELBO_per_point = likelihood_term + KL_term
 
         # we call the ELBO loss the negative of the elbo (we maximise the ELBO)

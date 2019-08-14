@@ -52,7 +52,7 @@ def default_config(dataset):
     elif dataset["name"] == "adult":
         privacy_settings = {
             "L": 195,
-            "C": 7.5,
+            "C": 75,
             "target_delta": 1e-3,
             "sigma_relative": 1.22
         }

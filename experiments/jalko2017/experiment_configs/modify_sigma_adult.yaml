@@ -1,5 +1,5 @@
 experiment_file: /scratch/DP-PVI/DP-PVI/experiments/jalko2017/experiment.py
-experiment_tag: reproduce_adult_plot_one_updated_lower_C
+experiment_tag: reproduce_adult_plot_one
 dataset:
   name:
     - adult
