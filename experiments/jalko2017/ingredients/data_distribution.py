@@ -45,7 +45,6 @@ def generate_dataset_distribution_func(M, rho, sample_rho_noise_scale, inhomo_sc
         for i in range(M):
             p_vals[p_vals > 0] = 1
             target_multiplier_mag = np.exp(np.random.uniform(-inhomo_scale, inhomo_scale))
-            print(target_multiplier_mag)
             p_vals[positive_indx] = p_vals[positive_indx] * target_multiplier_mag
 
             # renormalise!
@@ -54,9 +53,12 @@ def generate_dataset_distribution_func(M, rho, sample_rho_noise_scale, inhomo_sc
             p_vals[indx_i] = 0.0
             x_i = x[indx_i, :]
             y_i = y[indx_i]
-            clients_data.append((x_i, y_i))
+            clients_data.append(({
+                "x": x_i,
+                "y": y_i
+            }))
             prop_positive.append(np.mean(y_i > 0))
 
-        return clients_data, N_is, prop_positive
+        return clients_data, N_is, prop_positive, M
 
     return lambda x, y: dataset_distribution_function(x, y, M, rho, sample_rho_noise_scale, inhomo_scale)
