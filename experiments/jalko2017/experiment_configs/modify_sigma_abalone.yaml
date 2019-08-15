@@ -6,6 +6,7 @@ dataset:
 
 privacy_settings:
   sigma_relative:
+    - 1.22
     - 2.44
     - 4.16
     - 7.098
