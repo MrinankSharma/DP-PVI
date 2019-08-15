@@ -87,7 +87,7 @@ def default_config(dataset):
 
 @ex.automain
 def run_experiment(privacy_settings, optimisation_settings, logging_base_directory, N_samples, N_iterations, prior_pres,
-                   ray_cfg, prediction, M, experiment_tag, _run, _config, seed):
+                   ray_cfg, prediction, experiment_tag, _run, _config, seed):
     np.random.seed(seed)
     torch.manual_seed(seed)
     try:
