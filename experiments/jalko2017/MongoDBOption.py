@@ -37,7 +37,7 @@ class ExperimentOption(CommandLineOption):
     @classmethod
     def apply(cls, args, run):
         a = SacredExperimentAccess()
-        if len(a.get_experiments(config=run.config)) > 0:
+        if len(a.get_experiments(config=run.config, complete=True)) > 0:
             logger.info("Experiment has already been run - don't bother!")
             logger.info("Note that this will **not** show up in sacred")
             sys.exit()
