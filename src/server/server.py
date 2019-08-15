@@ -2,13 +2,13 @@ import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
 
+import numpy as np
 import ray
 
 import src.utils.numpy_utils as B
-from src.privacy.analysis import QueryWithLedger, OnlineAccountant
-from src.utils.yaml_string_dumper import YAMLStringDumper
-
+from src.privacy.analysis import QueryWithLedger, OnlineAccountant, QueryWithPerClientLedger
 from src.utils.numpy_nest_utils import structured_ndarrays_to_lists
+from src.utils.yaml_string_dumper import YAMLStringDumper
 
 pretty_dump = YAMLStringDumper()
 
@@ -243,3 +243,115 @@ class DPSyncronousPVIParameterServer(ParameterServer):
             log[k + '.delta'] = v.privacy_bound[1]
 
         return log, times_updated
+
+
+class DPSequentialIndividualPVIParameterServer(ParameterServer):
+
+    def __init__(self, model_class, dp_query_class, accounting_dict, prior, max_iterations=100, client_factories=None,
+                 hyperparameters=None, metadata=None, model_parameters=None, model_hyperparameters=None):
+
+        clients = [factory() for factory in client_factories]
+        super().__init__(model_class, prior, clients=clients, hyperparameters=hyperparameters, metadata=metadata,
+                         model_parameters=model_parameters, model_hyperparameters=model_hyperparameters, )
+        self.iterations = 0
+        self.max_iterations = max_iterations
+
+        num_clients = len(clients)
+        dp_query = dp_query_class(**hyperparameters['dp_query_parameters'])
+        # assume that we aren't benefiting from subsampling here
+        self.dp_query_with_ledgers = QueryWithPerClientLedger(dp_query, num_clients, 1.0)
+
+        self.query_global_state = self.dp_query_with_ledgers.initial_global_state()
+
+        self.accountants = []
+        # create accountants
+        for i in range(num_clients):
+            client_i_accountants = {}
+            for k, v in accounting_dict.items():
+                client_i_accountants[k] = OnlineAccountant(**v)
+            self.accountants.append(client_i_accountants)
+
+    def tick(self):
+        if self.should_stop():
+            return False
+
+        lambda_old = self.parameters
+        L = self.hyperparameters["L"]
+        M = len(self.clients)
+
+        # generate index
+        c = np.random.choice(M, L, replace=False)
+        logger.info(f"Selected clients {c}")
+        # delta_is = [client.compute_update.remote(lambda_old) for client in self.clients]
+
+        delta_is = []
+        for indx, client in enumerate(self.clients):
+            if indx in c:
+                # selected to be updated
+                delta_is.append(client.get_update(model_parameters=lambda_old))
+
+        sample_state = self.dp_query_with_ledgers.initial_sample_state(delta_is[0])
+        sample_params = self.dp_query_with_ledgers.derive_sample_params(self.query_global_state)
+
+        for delta_i in delta_is:
+            sample_state = self.dp_query_with_ledgers.accumulate_record(sample_params, sample_state, delta_i)
+
+        delta_i_tilde, _ = self.dp_query_with_ledgers.get_noised_result(sample_state)
+
+        lambda_new = B.add_parameters(lambda_old, delta_i_tilde)
+
+        self.parameters = lambda_new
+
+        formatted_ledgers = self.dp_query_with_ledgers.get_formatted_ledgers()
+        for i in range(M):
+            for k, v in self.accountants[i].items():
+                v.update_privacy(formatted_ledgers[i])
+
+        self.iterations += 1
+
+    def should_stop(self):
+        if self.iterations > self.max_iterations:
+            return True
+        else:
+            return False
+
+    def get_default_hyperparameters(self):
+        return {**super().get_default_hyperparameters(), "L": 1}
+
+    def get_default_metadata(self):
+        return super().get_default_metadata()
+
+    def log_update(self):
+        super().log_update()
+
+        for i in range(len(self.clients)):
+            for k, v in self.accountants[i].items():
+                self.log[f"client_{i}_{k}.epsilon"].append(v.privacy_bound[0])
+                self.log[f"client_{i}_{k}.delta"].append(v.privacy_bound[1])
+
+    def log_sacred(self):
+        log, times_updated = super().log_sacred()
+
+        for i in range(len(self.clients)):
+            for k, v in self.accountants[i].items():
+                self.log[f"client_{i}_{k}.epsilon"].append(v.privacy_bound[0])
+                self.log[f"client_{i}_{k}.delta"].append(v.privacy_bound[1])
+
+        return log, times_updated
+
+    def get_compiled_log(self):
+        """
+        Get full log, including logs from each client
+        :return: full log
+        """
+        final_log = {}
+        final_log['server'] = self.get_log()
+        client_logs = [client.get_compiled_log() for client in self.clients]
+        formatted_ledgers = self.dp_query_with_ledgers.get_formatted_ledgers()
+        for i in range(self.clients):
+            client_logs[i][f"ledger"] = formatted_ledgers[i]
+
+        for i, log in enumerate(client_logs):
+            final_log['client_' + str(i)] = log
+
+        return final_log

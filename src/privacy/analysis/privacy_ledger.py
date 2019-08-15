@@ -156,3 +156,71 @@ class QueryWithLedger(dp_query.DPQuery):
 
     def get_record_derived_data(self):
         return self._query.get_record_derived_data()
+
+
+class QueryWithPerClientLedger(dp_query.DPQuery):
+    """ A class for DPQueries that stores the queries in a privacy ledger.
+
+    Simple wrapper for a DQQuery-PrivacyLedger pair to ensure correct running.
+    """
+
+    def __init__(self,
+                 query,
+                 num_clients,
+                 selection_probability):
+
+        # note that this query ledger is not actually relevant here!!
+        self.M = num_clients
+        self._query = query
+        self.set_ledgers([PrivacyLedger(num_clients, selection_probability) for _ in range(num_clients)])
+
+    @property
+    def ledgers(self):
+        return self._ledgers
+
+    def set_ledgers(self, ledgers):
+        self._ledgers = ledgers
+
+    def initial_global_state(self):
+        """See base class."""
+        return self._query.initial_global_state()
+
+    def derive_sample_params(self, global_state):
+        """See base class."""
+        return self._query.derive_sample_params(global_state)
+
+    def initial_sample_state(self, template):
+        """See base class."""
+        return self._query.initial_sample_state(template)
+
+    def preprocess_record(self, params, record):
+        """See base class."""
+        return self._query.preprocess_record(params, record)
+
+    def accumulate_preprocessed_record(self, sample_state, preprocessed_record):
+        """See base class."""
+        return self._query.accumulate_preprocessed_record(
+            sample_state, preprocessed_record)
+
+    def merge_sample_states(self, sample_state_1, sample_state_2):
+        """See base class."""
+        return self._query.merge_sample_states(sample_state_1, sample_state_2)
+
+    def get_noised_result(self, sample_state, global_state, selected_indices):
+        """Ensures sample is recorded to the ledger and returns noised result."""
+        result, new_global_state = self._query.get_noised_result(sample_state, global_state)
+        # record sum queries for each client who was selected
+        for i in range(self.M):
+            if i in selected_indices:
+                self.ledgers[i].record_sum_query(global_state.l2_norm_clip, global_state.noise_stddev)
+                self.ledgers[i].finalise_sample()
+
+        op = lambda tensor: tensor.clone().detach()
+        return nest.map_structure(op, result), new_global_state
+
+    def get_record_derived_data(self):
+        return self._query.get_record_derived_data()
+
+    def get_formatted_ledgers(self):
+        """ Returns a formatted version of the ledger for use in privacy accounting """
+        return [x.get_formatted_ledger() for x in self.ledgers]
