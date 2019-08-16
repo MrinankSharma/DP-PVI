@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 argparser = argparse.ArgumentParser()
 argparser.add_argument("--num-cpus", dest="num_cpus", default=1, type=int)
 argparser.add_argument("--num-gpus", dest="num_gpus", default=0, type=int)
-argparser.add_argument("--exp-file", dest="exp_file", required=False, type=str)
+argparser.add_argument("--exp-file", action="append", dest="exp_file", required=False, type=str)
 argparser.add_argument("-t", "--test", dest="test", action="store_true")
 args = argparser.parse_args()
 
@@ -95,7 +95,9 @@ if __name__ == "__main__":
     logger.info(f"Subprocess console output stored in {os.devnull}")
 
     try:
-        commands = generate_commands_from_yaml(args.exp_file)
+        commands = []
+        for exp_file in args.exp_file:
+            commands.extend(generate_commands_from_yaml(exp_file))
     except FileNotFoundError:
         logger.error("Could not find experiment dispatcher yaml file!")
 
