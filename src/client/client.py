@@ -163,7 +163,7 @@ class StandardClient(Client):
                 'global_iteration': 0,
                 'log_params': False,
                 'log_t_i': True,
-                "log_model_info": True,
+                "log_model_info": False,
             }
         }
 

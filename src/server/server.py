@@ -317,6 +317,8 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
         self.model.set_parameters(self.parameters)
         logger.info(f"Iteration {self.iterations} complete.\nNew Parameters:\n {pretty_dump.dump(lambda_new)}\n")
 
+        self.log_update()
+
         self.iterations += 1
 
     def should_stop(self):
@@ -337,6 +339,7 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
         for i in range(len(self.clients)):
             for k, v in self.accountants[i].items():
                 self.log[f"client_{i}_{k}.epsilon"].append(v.privacy_bound[0])
+
 
     def log_sacred(self):
         log = defaultdict(list)
