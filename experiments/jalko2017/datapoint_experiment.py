@@ -6,6 +6,7 @@ import numpy as np
 import ray
 # ray must be imported before pyarrow
 import pyarrow
+
 import torch
 from sacred import Experiment
 
@@ -14,8 +15,8 @@ import src.privacy.analysis.pld_accountant as pld_accountant
 import src.utils.numpy_nest_utils as numpy_nest
 # noinspection PyUnresolvedReferences
 from experiments.jalko2017.MongoDBOption import TestOption, ExperimentOption
-from experiments.jalko2017.ingredients.dataset_ingredient import dataset_ingredient, load_data
 from experiments.jalko2017.ingredients.data_distribution import dataset_dist_ingred, generate_dataset_distribution_func
+from experiments.jalko2017.ingredients.dataset_ingredient import dataset_ingredient, load_data
 from experiments.jalko2017.measure_performance import compute_prediction_accuracy, compute_log_likelihood
 from experiments.utils import save_log
 from src.client.client import DPClient, ensure_positive_t_i_factory
@@ -33,38 +34,41 @@ pretty_dump = YAMLStringDumper()
 @ex.config
 def default_config(dataset, dataset_dist):
     # adapt settings based on the dataset ingredient
-    if dataset["name"] == "abalone":
-        # settings from antiis paper
-        privacy_settings = {
-            "L": 167,
-            "C": 5,
-            "sigma_relative": 1.22,
-            "target_delta": 1e-5
-        }
+    dataset.name = "adult"
 
-        optimisation_settings = {
-            "lr": 0.1,
-            "N_steps": 1,
-            "lr_decay": 0,
-        }
+    privacy_settings = {
+        "L": 140,
+        "C": 75,
+        "target_delta": 1e-4,
+        "sigma_relative": 1.22
+    }
 
-        N_iterations = 1000
+    optimisation_settings = {
+        "lr": 0.25,
+        "N_steps": 10,
+        "lr_decay": 0,
+    }
 
-    elif dataset["name"] == "adult":
-        privacy_settings = {
-            "L": 195,
-            "C": 75,
-            "target_delta": 1e-6,
-            "sigma_relative": 1.22
-        }
+    N_iterations = 150
 
-        optimisation_settings = {
-            "lr": 0.1,
-            "N_steps": 1,
-            "lr_decay": 0,
-        }
+    logging_base_directory = "/scratch/DP-PVI/logs"
 
-        N_iterations = 2000
+    ray_cfg = {
+        "redis_address": "None",
+        "num_cpus": 1,
+        "num_gpus": 0,
+    }
+
+    prior_pres = 1.0
+    N_samples = 50
+
+    prediction = {
+        "interval": 25,
+        "type": "prohibit"
+    }
+    experiment_tag = "datapoint_level_protection"
+
+    slack_json_file = "/scratch/DP-PVI/DP-PVI/slack.json"
 
     logging_base_directory = "/scratch/DP-PVI/logs"
 

@@ -1,0 +1,21 @@
+experiment_file: /scratch/DP-PVI/DP-PVI/experiments/jalko2017/datapoint_experiment.py
+experiment_tag: datapoint_homo_one
+dataset:
+  name:
+    - adult
+
+dataset_dist:
+  M:
+    - 10
+    - 15
+    - 20
+  rho:
+    - 1900
+
+privacy_settings:
+  sigma_relative:
+    - 1
+    - 3
+    - 7
+
+num_seeds: 5

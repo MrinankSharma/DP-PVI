@@ -14,9 +14,9 @@ logger = logging.getLogger("Dataset Distribution")
 @dataset_dist_ingred.config
 def cfg():
     M = 20
-    rho = 100
-    sample_rho_noise_scale = 10
-    inhomo_scale = 2
+    rho = 1900
+    sample_rho_noise_scale = 0
+    inhomo_scale = 0
 
 
 @dataset_dist_ingred.capture
@@ -59,6 +59,6 @@ def generate_dataset_distribution_func(M, rho, sample_rho_noise_scale, inhomo_sc
             }))
             prop_positive.append(np.mean(y_i > 0))
 
-        return clients_data, N_is, prop_positive, M
+        return clients_data, N_is.tolist() , prop_positive, M
 
     return lambda x, y: dataset_distribution_function(x, y, M, rho, sample_rho_noise_scale, inhomo_scale)
