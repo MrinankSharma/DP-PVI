@@ -1,0 +1,25 @@
+experiment_file: /scratch/DP-PVI/DP-PVI/experiments/jalko2017/client_level_experiment.py
+experiment_tag: client_homo_one
+dataset:
+  name:
+    - adult
+
+dataset_dist:
+  M:
+    - 50
+    - 75
+    - 100
+  rho:
+    - 380
+
+privacy_settings:
+  sigma_relative:
+    - 1
+    - 3
+    - 7
+  L:
+    - 10
+    - 30
+    - 50
+
+num_seeds: 5

@@ -176,6 +176,10 @@ class QueryWithPerClientLedger(dp_query.DPQuery):
 
     @property
     def ledgers(self):
+        return self._query
+
+    @property
+    def ledgers(self):
         return self._ledgers
 
     def set_ledgers(self, ledgers):

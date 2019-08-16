@@ -292,20 +292,28 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
                 delta_is.append(
                     client.get_update(model_parameters=lambda_old, model_hyperparameters=None, update_ti=False))
 
+        # print(delta_is)
         sample_state = self.dp_query_with_ledgers.initial_sample_state(delta_is[0])
         sample_params = self.dp_query_with_ledgers.derive_sample_params(self.query_global_state)
         self.query_global_state = self.dp_query_with_ledgers.initial_global_state()
 
-        for delta_i in delta_is:
+        derived_data = defaultdict(list)
+        for indx, delta_i in enumerate(delta_is):
             sample_state = self.dp_query_with_ledgers.accumulate_record(sample_params, sample_state, delta_i)
+            for k, v in self.dp_query_with_ledgers.get_record_derived_data().items():
+                derived_data[k].append(v)
 
         delta_i_tilde, _ = self.dp_query_with_ledgers.get_noised_result(sample_state, self.query_global_state, c)
-
-        lambda_new = B.add_parameters(lambda_old, delta_i_tilde)
+        lambda_new, delta_i_tilde = self.hyperparameters["lambda_postprocess_func"](lambda_old, delta_i_tilde)
 
         self.parameters = lambda_new
         t_i_update = np_nest.map_structure(lambda x: np.divide(x, L), delta_i_tilde)
         formatted_ledgers = self.dp_query_with_ledgers.get_formatted_ledgers()
+
+        logger.info(f"l2 clipping norms: {derived_data}")
+        for k, v in derived_data.items():
+            # summarise statistics instead
+            derived_data[k] = np.percentile(np.array(v), [10.0, 30.0, 50.0, 70.0, 90.0])
 
         for indx, client in enumerate(self.clients):
             client.set_metadata({"global_iteration": self.iterations})
@@ -318,6 +326,7 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
         logger.info(f"Iteration {self.iterations} complete.\nNew Parameters:\n {pretty_dump.dump(lambda_new)}\n")
 
         self.log_update()
+        self.log["derived_data"].append(structured_ndarrays_to_lists(derived_data))
 
         self.iterations += 1
 
@@ -328,7 +337,7 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
             return False
 
     def get_default_hyperparameters(self):
-        return {**super().get_default_hyperparameters(), "L": 1}
+        return {**super().get_default_hyperparameters(), "L": 1, "lambda_postprocess_func": lambda x: x}
 
     def get_default_metadata(self):
         return super().get_default_metadata()
@@ -339,7 +348,6 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
         for i in range(len(self.clients)):
             for k, v in self.accountants[i].items():
                 self.log[f"client_{i}_{k}.epsilon"].append(v.privacy_bound[0])
-
 
     def log_sacred(self):
         log = defaultdict(list)
