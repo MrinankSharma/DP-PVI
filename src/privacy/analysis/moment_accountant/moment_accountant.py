@@ -113,7 +113,11 @@ def compute_online_privacy_from_ledger(ledger, log_moments, target_delta=None, t
         :param target_delta: A target delta to aim for.
         :return: epsilon, delta
         """
-    if log_moments is None:
+    if not ledger and target_delta is None:
+        return (target_eps, 0), None
+    elif not ledger and target_eps is None:
+        return (0, target_delta), None
+    elif log_moments is None:
         log_moments = compute_log_moments_from_ledger(ledger, max_lambda=max_lambda)
     else:
         log_moments = log_moments + compute_log_moments_from_ledger(ledger, max_lambda=max_lambda)

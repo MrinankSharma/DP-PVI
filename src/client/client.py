@@ -64,7 +64,7 @@ class Client(ABC):
     def get_default_metadata(cls):
         return {}
 
-    def get_update(self, model_parameters=None, model_hyperparameters=None):
+    def get_update(self, model_parameters=None, model_hyperparameters=None, update_ti=True):
         """ Method to wrap the update and then logging process.
         :param model_parameters: New model parameters from the server
         :param model_hyperparameters: New model hyperparameters from the server.
@@ -76,7 +76,8 @@ class Client(ABC):
         # if model_hyperparameters is not None:
         #     self.model.set_hyperparameters(model_hyperparameters)
 
-        update = self.compute_update(model_parameters=model_parameters, model_hyperparameters=model_hyperparameters)
+        update = self.compute_update(model_parameters=model_parameters, model_hyperparameters=model_hyperparameters,
+                                     update_ti=update_ti)
 
         self.log_update()
 
@@ -128,6 +129,12 @@ class StandardClient(Client):
 
         self.lambda_i = self.model.get_parameters()
 
+    @classmethod
+    def create_factory(cls, model_class, data, model_parameters=None, model_hyperparameters=None, hyperparameters=None,
+                       metadata=None):
+
+        return lambda: cls(model_class, data, model_parameters, model_hyperparameters, hyperparameters, metadata)
+
     def set_hyperparameters(self, hyperparameters):
         super().set_hyperparameters(hyperparameters)
 
@@ -155,13 +162,13 @@ class StandardClient(Client):
             **{
                 'global_iteration': 0,
                 'log_params': False,
-                'log_t_i': False,
+                'log_t_i': True,
                 "log_model_info": True,
             }
         }
 
-    def compute_update(self, model_parameters=None, model_hyperparameters=None):
-        super().compute_update(model_parameters=None, model_hyperparameters=None)
+    def compute_update(self, model_parameters=None, model_hyperparameters=None, update_ti=True):
+        super().compute_update(model_parameters, model_hyperparameters)
 
         t_i_old = self.t_i
         lambda_old = self.model.get_parameters()
@@ -174,6 +181,9 @@ class StandardClient(Client):
 
         delta_lambda_i = np_utils.subtract_params(lambda_new,
                                                   lambda_old)
+
+        # logger.info(f"Old Params: {lambda_old}\n"
+        #             f"New Params: {lambda_new}\n")
 
         # apply the privacy function, specified by the server
         # delta_lambda_i_tilde, privacy_stats = self.privacy_function(delta_lambda_i)
@@ -192,12 +202,19 @@ class StandardClient(Client):
         t_i_new = self.t_i_postprocess_funtion(t_i_new)
         delta_lambda_i_tilde = np_utils.subtract_params(t_i_new, t_i_old)
 
-        self.t_i = t_i_new
-        logger.info(f"New t_i {self.t_i}")
-
-        self.times_updated += 1
+        if update_ti:
+            self.t_i = t_i_new
+            logger.debug(f"New t_i {self.t_i}")
+            self.times_updated += 1
 
         return delta_lambda_i_tilde
+
+    def update_ti(self, delta_ti):
+        t_i_new = np_utils.add_parameters(delta_ti, self.t_i)
+        t_i_new = self.t_i_postprocess_funtion(t_i_new)
+        self.t_i = t_i_new
+        logger.debug(f"New t_i {self.t_i}")
+        self.times_updated += 1
 
     def log_update(self):
         super().log_update()
@@ -252,8 +269,8 @@ class DPClient(StandardClient):
         return lambda: cls(model_class, dp_query_class, accounting_dict, data, model_parameters, model_hyperparameters,
                            hyperparameters, metadata)
 
-    def compute_update(self, model_parameters=None, model_hyperparameters=None):
-        delta_lambda_i_tilde = super().compute_update(model_parameters=None, model_hyperparameters=None)
+    def compute_update(self, model_parameters=None, model_hyperparameters=None, update_ti=True):
+        delta_lambda_i_tilde = super().compute_update(model_parameters, model_hyperparameters, update_ti)
 
         formatted_ledger = self.dp_query.ledger.get_formatted_ledger()
         for _, accountant in self.accountants.items():

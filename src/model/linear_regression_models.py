@@ -1,8 +1,12 @@
+import logging
+
 import numpy as np
 import numpy.random as random
 
 import src.utils.numpy_utils as B
 from src.model.model import Model
+
+logger = logging.getLogger(__name__)
 
 
 class LinearRegression1DAnalyticNumpy(Model):
@@ -17,13 +21,19 @@ class LinearRegression1DAnalyticNumpy(Model):
         x = data['x']
         y = data['y']
 
+        logger.debug(f"Computing Update:"
+                    f"  t_i: {t_i}\n"
+                    f"  lambda_old: {parameters}\n"
+                    f"  slope_eta_1: {(x.T @ x) / (self.noise ** 2)}\n"
+                    f"  slope_eta_2: {(x.T @ y) / (self.noise ** 2)}\n\n")
+
         return B.add_parameters(
             B.subtract_params(
                 self.parameters,
                 t_i),
             {
-                'slope_eta_1': (x.T @ x) / self.noise,
-                'slope_eta_2': (x.T @ y) / self.noise
+                'slope_eta_1': (x.T @ x) / (self.noise ** 2),
+                'slope_eta_2': (x.T @ y) / (self.noise ** 2)
             }
         )
 

@@ -25,7 +25,7 @@ class OnlineAccountant(object):
 
         if ledger is None:
             ledger = []
-        self._privacy_bound, self._tracking_parameters = self.update_privacy(ledger)
+        self._privacy_bound = self.update_privacy(ledger)
 
     def update_privacy(self, incremented_ledger):
         """ Update the current privacy bound using new additions to the ledger.
@@ -43,7 +43,6 @@ class OnlineAccountant(object):
             **self._accountancy_parameters
         )
         self._position = len(self._ledger)
-
         return self._privacy_bound
 
     @property

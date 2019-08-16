@@ -5,6 +5,7 @@ from collections import defaultdict
 import numpy as np
 import ray
 
+import src.utils.numpy_nest_utils as np_nest
 import src.utils.numpy_utils as B
 from src.privacy.analysis import QueryWithLedger, OnlineAccountant, QueryWithPerClientLedger
 from src.utils.numpy_nest_utils import structured_ndarrays_to_lists
@@ -37,6 +38,7 @@ class ParameterServer(ABC):
         self.parameters = prior
 
         self.log = defaultdict(list)
+        self.iterations = 0
 
     def set_hyperparameters(self, hyperparameters):
         self.hyperparameters = {**self.hyperparameters, **hyperparameters}
@@ -112,6 +114,15 @@ class ParameterServer(ABC):
 
         return final_log
 
+    def get_model_predictions(self, data):
+        return self.model.predict(data["x"])
+
+    def get_num_iterations(self):
+        return self.iterations
+
+    def get_parameters(self):
+        return self.parameters
+
 
 class SyncronousPVIParameterServer(ParameterServer):
 
@@ -121,7 +132,6 @@ class SyncronousPVIParameterServer(ParameterServer):
         clients = [factory() for factory in clients_factories]
         super().__init__(model_class, prior, clients=clients, hyperparameters=hyperparameters, metadata=metadata,
                          model_parameters=model_parameters, model_hyperparameters=model_hyperparameters)
-        self.iterations = 0
         self.max_iterations = max_iterations
 
     def tick(self):
@@ -162,15 +172,6 @@ class SyncronousPVIParameterServer(ParameterServer):
 
     def log_sacred(self):
         return {}, self.iterations
-
-    def get_model_predictions(self, data):
-        return self.model.predict(data["x"])
-
-    def get_num_iterations(self):
-        return self.iterations
-
-    def get_parameters(self):
-        return self.parameters
 
 
 class DPSyncronousPVIParameterServer(ParameterServer):
@@ -288,24 +289,33 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
         for indx, client in enumerate(self.clients):
             if indx in c:
                 # selected to be updated
-                delta_is.append(client.get_update(model_parameters=lambda_old))
+                delta_is.append(
+                    client.get_update(model_parameters=lambda_old, model_hyperparameters=None, update_ti=False))
 
         sample_state = self.dp_query_with_ledgers.initial_sample_state(delta_is[0])
         sample_params = self.dp_query_with_ledgers.derive_sample_params(self.query_global_state)
+        self.query_global_state = self.dp_query_with_ledgers.initial_global_state()
 
         for delta_i in delta_is:
             sample_state = self.dp_query_with_ledgers.accumulate_record(sample_params, sample_state, delta_i)
 
-        delta_i_tilde, _ = self.dp_query_with_ledgers.get_noised_result(sample_state)
+        delta_i_tilde, _ = self.dp_query_with_ledgers.get_noised_result(sample_state, self.query_global_state, c)
 
         lambda_new = B.add_parameters(lambda_old, delta_i_tilde)
 
         self.parameters = lambda_new
-
+        t_i_update = np_nest.map_structure(lambda x: np.divide(x, L), delta_i_tilde)
         formatted_ledgers = self.dp_query_with_ledgers.get_formatted_ledgers()
-        for i in range(M):
-            for k, v in self.accountants[i].items():
-                v.update_privacy(formatted_ledgers[i])
+
+        for indx, client in enumerate(self.clients):
+            client.set_metadata({"global_iteration": self.iterations})
+            if indx in c:
+                client.update_ti(t_i_update)
+                for k, v in self.accountants[indx].items():
+                    v.update_privacy(formatted_ledgers[indx])
+
+        self.model.set_parameters(self.parameters)
+        logger.info(f"Iteration {self.iterations} complete.\nNew Parameters:\n {pretty_dump.dump(lambda_new)}\n")
 
         self.iterations += 1
 
@@ -327,17 +337,14 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
         for i in range(len(self.clients)):
             for k, v in self.accountants[i].items():
                 self.log[f"client_{i}_{k}.epsilon"].append(v.privacy_bound[0])
-                self.log[f"client_{i}_{k}.delta"].append(v.privacy_bound[1])
 
     def log_sacred(self):
-        log, times_updated = super().log_sacred()
-
+        log = defaultdict(list)
         for i in range(len(self.clients)):
             for k, v in self.accountants[i].items():
-                self.log[f"client_{i}_{k}.epsilon"].append(v.privacy_bound[0])
-                self.log[f"client_{i}_{k}.delta"].append(v.privacy_bound[1])
+                log[f"client_{i}_{k}.epsilon"].append(v.privacy_bound[0])
 
-        return log, times_updated
+        return log, self.iterations
 
     def get_compiled_log(self):
         """
@@ -345,13 +352,15 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
         :return: full log
         """
         final_log = {}
-        final_log['server'] = self.get_log()
+        server_log = self.get_log()
         client_logs = [client.get_compiled_log() for client in self.clients]
         formatted_ledgers = self.dp_query_with_ledgers.get_formatted_ledgers()
-        for i in range(self.clients):
-            client_logs[i][f"ledger"] = formatted_ledgers[i]
 
-        for i, log in enumerate(client_logs):
-            final_log['client_' + str(i)] = log
+        for i in range(len(self.clients)):
+            for k, v in self.accountants[i].items():
+                server_log[f"client_{i}_{k}.delta"].append(v.privacy_bound[1])
+            client_logs[i][f"ledger"] = formatted_ledgers[i]
+            final_log['client_' + str(i)] = client_logs[i]
+        final_log['server'] = server_log
 
         return final_log

@@ -215,8 +215,11 @@ class QueryWithPerClientLedger(dp_query.DPQuery):
                 self.ledgers[i].record_sum_query(global_state.l2_norm_clip, global_state.noise_stddev)
                 self.ledgers[i].finalise_sample()
 
-        op = lambda tensor: tensor.clone().detach()
-        return nest.map_structure(op, result), new_global_state
+        if isinstance(result, torch.Tensor):
+            op = lambda tensor: tensor.clone().detach()
+            return nest.map_structure(op, result), new_global_state
+        else:
+            return result, new_global_state
 
     def get_record_derived_data(self):
         return self._query.get_record_derived_data()

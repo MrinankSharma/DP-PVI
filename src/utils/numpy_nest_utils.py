@@ -48,3 +48,24 @@ def structured_ndarrays_to_lists(d):
             ret[k] = structured_lists_to_lists(v)
 
     return ret
+
+
+def map_structure(op, *param_dicts):
+    ret = {}
+    for k in param_dicts[0].keys():
+        ret[k] = op(*[param_dicts[i][k] for i in range(len(param_dicts))])
+
+    return ret
+
+
+def reduce_structure(reduce, accumulate, *param_dicts):
+    result = None
+
+    for d in param_dicts:
+        for key, value in d.items():
+            if result:
+                result = accumulate(reduce(value), result)
+            else:
+                result = reduce(value)
+
+    return result
