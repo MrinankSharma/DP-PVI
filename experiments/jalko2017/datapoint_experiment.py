@@ -37,7 +37,7 @@ def default_config(dataset, dataset_dist):
     dataset.name = "adult"
 
     privacy_settings = {
-        "L": 140,
+        "L": 40,
         "C": 75,
         "target_delta": 1e-4,
         "sigma_relative": 1.22
@@ -82,7 +82,7 @@ def default_config(dataset, dataset_dist):
     N_samples = 50
 
     prediction = {
-        "interval": 25,
+        "interval": 10,
         "type": "prohibit"
     }
     experiment_tag = "test_tag"
