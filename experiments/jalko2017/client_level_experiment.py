@@ -137,13 +137,18 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
             # this avoids issues when the ti_s become out of sync with the central parameter values - perhaps it would
             # be best to role back to the prior value
             # pres[pres < prior_pres_in] = pres_old[pres < prior_pres_in]
-            non_selected_params = [all_params[i] for i in range(len(all_params)) if i not in c]
-            logger.debug(f"{len(non_selected_params)} clients were not selected")
-            excluded_params = B.add_parameters(*non_selected_params)
-            pres_min = excluded_params["w_pres"] + prior_pres_in
+            if len(c) != len(all_params):
+                non_selected_params = [all_params[i] for i in range(len(all_params)) if i not in c]
+                logger.debug(f"{len(non_selected_params)} clients were not selected")
+                excluded_params = B.add_parameters(*non_selected_params)
+                pres_min = excluded_params["w_pres"] + prior_pres_in
 
-            pres[pres < pres_min] = pres_old[pres < pres_min]
-            lambda_new_temp["w_pres"] = pres
+                pres[pres < pres_min] = pres_old[pres < pres_min]
+                lambda_new_temp["w_pres"] = pres
+            else:
+                pres[pres < prior_pres_in] = pres_old[pres < prior_pres_in]
+                lambda_new_temp["w_pres"] = pres
+
             new_delta = B.subtract_params(lambda_new_temp, lambda_old)
             logger.debug(f"updated_delta: {new_delta}")
             logger.debug(f"new lambda: {lambda_new_temp}")

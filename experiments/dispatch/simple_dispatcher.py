@@ -1,11 +1,9 @@
 import argparse
-import itertools
 import logging
-import os
-import subprocess
-import time
+import subprocess import call
 
-import ray
+from functools import partial
+from multiprocessing.dummy import Pool
 from ruamel.yaml import YAML
 
 from experiments.dispatch.ray_dispatcher import generate_commands_from_yaml
@@ -26,18 +24,11 @@ yaml = YAML()
 def dispatch_command_strings(commands, num_cpus, cpus_per_command=1):
     at_once = int(float(num_cpus) / cpus_per_command)
     logger.info(f"Running {at_once} commands at a time")
-    subcommand_lists = [commands[i:i + at_once] for i in range(0, len(commands), at_once)]
 
-    for subcommands in subcommand_lists:
-        processes = [
-            subprocess.call(subcommand + f" ray_cfg.num_cpus={cpus_per_command}", shell=True)
-            for subcommand in subcommands]
-
-        print(processes)
-
-        for p in processes:
-            p.wait()
-
+    pool = Pool(at_once)  # two concurrent commands at a time
+    for i, returncode in enumerate(pool.imap(partial(call, shell=True), commands)):
+        if returncode != 0:
+            print(f"{i} command failed: {returncode}")
 
 if __name__ == "__main__":
     logger.info("Using Simple Dispatcher")
