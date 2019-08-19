@@ -86,7 +86,7 @@ def default_config(dataset, dataset_dist):
     }
 
     prediction = {
-        "interval": 11,
+        "interval": 1,
         "type": "prohibit"
     }
 
