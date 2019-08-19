@@ -34,7 +34,7 @@ from src.server import DPSequentialIndividualPVIParameterServer
 from src.utils.yaml_string_dumper import YAMLStringDumper
 import src.utils.numpy_utils as B
 
-ex = Experiment("jalko2017_client_exp", [dataset_ingredient, dataset_dist_ingred])
+ex = Experiment("jalko2017_client_exp_updated", [dataset_ingredient, dataset_dist_ingred])
 logger = logging.getLogger(__name__)
 pretty_dump = YAMLStringDumper()
 

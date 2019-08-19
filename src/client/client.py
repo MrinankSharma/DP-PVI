@@ -233,12 +233,6 @@ class StandardClient(Client):
 
     def log_sacred(self):
         log = {}
-
-        if self.metadata['log_params']:
-            log['params'] = np_nest.structured_ndarrays_to_lists(self.model.get_parameters())
-        if self.metadata['log_t_i']:
-            log['t_i'] = np_nest.structured_ndarrays_to_lists(self.t_i)
-
         log['model'] = self.model.get_incremental_sacred_record()
 
         return log, self.times_updated
