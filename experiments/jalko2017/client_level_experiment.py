@@ -73,10 +73,6 @@ def default_config(dataset, dataset_dist):
     prior_pres = 1.0
     N_samples = 50
 
-    prediction = {
-        "interval": 1,
-        "type": "prohibit"
-    }
     experiment_tag = "client_bad_q_protection"
 
     slack_json_file = "/scratch/DP-PVI/DP-PVI/slack.json"
@@ -89,16 +85,11 @@ def default_config(dataset, dataset_dist):
         "num_gpus": 0,
     }
 
-    prior_pres = 1.0
-    N_samples = 50
-
     prediction = {
-        "interval": 10,
+        "interval": 11,
         "type": "prohibit"
     }
-    experiment_tag = "test_tag"
 
-    slack_json_file = "/scratch/DP-PVI/DP-PVI/slack.json"
 
 
 @ex.automain
