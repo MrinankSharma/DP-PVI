@@ -286,9 +286,11 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
         # delta_is = [client.compute_update.remote(lambda_old) for client in self.clients]
 
         delta_is = []
+        client_params = []
         for indx, client in enumerate(self.clients):
             if indx in c:
                 # selected to be updated
+                client_params.append(client.parameters)
                 delta_is.append(
                     client.get_update(model_parameters=lambda_old, model_hyperparameters=None, update_ti=False))
 
@@ -304,7 +306,8 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
                 derived_data[k].append(v)
 
         delta_i_tilde, _ = self.dp_query_with_ledgers.get_noised_result(sample_state, self.query_global_state, c)
-        lambda_new, delta_i_tilde = self.hyperparameters["lambda_postprocess_func"](lambda_old, delta_i_tilde)
+        lambda_new, delta_i_tilde = self.hyperparameters["lambda_postprocess_func"](lambda_old, delta_i_tilde,
+                                                                                    client_params, c)
 
         self.parameters = lambda_new
         t_i_update = np_nest.map_structure(lambda x: np.divide(x, L), delta_i_tilde)

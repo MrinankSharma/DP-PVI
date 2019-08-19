@@ -127,20 +127,29 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
 
         logger.info(f"Prior Parameters:\n\n{pretty_dump.dump(prior_params)}\n")
 
-        def param_postprocess_function(lambda_old, delta_param, prior_pres_in):
+        def param_postprocess_function(lambda_old, delta_param, all_params, c, prior_pres_in):
             lambda_new_temp = B.add_parameters(lambda_old, delta_param)
             pres_old = lambda_old["w_pres"]
             pres = lambda_new_temp["w_pres"]
-            # enforce that the precision must be bigger than that of the prior
+
+            # enforce that the precision must be bigger than that of the prior + those which were not selected
             # fix this by simply not applying the precision update if it results in a negative precision
             # this avoids issues when the ti_s become out of sync with the central parameter values - perhaps it would
             # be best to role back to the prior value
-            pres[pres < prior_pres_in] = pres_old[pres < prior_pres_in]
+            # pres[pres < prior_pres_in] = pres_old[pres < prior_pres_in]
+            non_selected_params = [all_params[i] for i in range(len(all_params)) if i not in c]
+            logger.debug(f"{len(non_selected_params)} clients were not selected")
+            excluded_params = B.add_parameters(*non_selected_params)
+            pres_min = excluded_params["w_pres"] + prior_pres_in
+
+            pres[pres < pres_min] = pres_old[pres < pres_min]
             lambda_new_temp["w_pres"] = pres
             new_delta = B.subtract_params(lambda_new_temp, lambda_old)
+            logger.debug(f"updated_delta: {new_delta}")
+            logger.debug(f"new lambda: {lambda_new_temp}")
             return lambda_new_temp, new_delta
 
-        param_postprocess_handle = lambda old, delta: param_postprocess_function(old, delta, prior_pres)
+        param_postprocess_handle = lambda old, delta, all, c: param_postprocess_function(old, delta, all, c, prior_pres)
 
         # client factories for each client - this avoids pickling of the client object for ray internals
         client_factories = [StandardClient.create_factory(

@@ -237,6 +237,10 @@ class StandardClient(Client):
 
         return log, self.times_updated
 
+    @property
+    def parameters(self):
+        return self.model.get_parameters()
+
 
 class DPClient(StandardClient):
     """ Wrapper class to add privacy tracking to a client, and DP based optimisation."""

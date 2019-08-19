@@ -357,7 +357,7 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         self.torch_module.set_prior_parameters_from_numpy(cav_nat_params)
         self.torch_module.set_N_full(N_full)
 
-        print_interval = np.ceil(self.hyperparameters['N_steps'] / 100)
+        print_interval = np.ceil(self.hyperparameters['N_steps'] / 20)
 
         training_curve = np.empty(self.hyperparameters['N_steps'])
         derived_statistics_history = []
