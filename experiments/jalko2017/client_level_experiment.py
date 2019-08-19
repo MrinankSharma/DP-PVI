@@ -1,3 +1,11 @@
+import os
+# set numpy environment variables
+os.environ["OMP_NUM_THREADS"] = "1" # export OMP_NUM_THREADS=4
+os.environ["OPENBLAS_NUM_THREADS"] = "1" # export OPENBLAS_NUM_THREADS=4
+os.environ["MKL_NUM_THREADS"] = "1" # export MKL_NUM_THREADS=6
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1" # export VECLIB_MAXIMUM_THREADS=4
+os.environ["NUMEXPR_NUM_THREADS"] = "1" # export NUMEXPR_NUM_THREADS=6
+
 import datetime
 import logging
 import time
@@ -97,6 +105,7 @@ def default_config(dataset, dataset_dist):
 def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings, N_samples, N_iterations, prediction,
                    experiment_tag, logging_base_directory,
                    _run, _config, seed):
+    torch.set_num_threads(ray_cfg["num_cpus"])
     np.random.seed(seed)
     torch.manual_seed(seed)
     try:
