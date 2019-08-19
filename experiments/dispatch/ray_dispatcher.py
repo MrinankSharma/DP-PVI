@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 argparser = argparse.ArgumentParser()
 argparser.add_argument("--num-cpus", dest="num_cpus", default=1, type=int)
+argparser.add_argument("--cpus-per-command", dest="cpu_per_com", default=1, type=int)
 argparser.add_argument("--num-gpus", dest="num_gpus", default=0, type=int)
 argparser.add_argument("--exp-file", action="append", dest="exp_file", required=False, type=str)
 argparser.add_argument("-t", "--test", dest="test", action="store_true")
@@ -101,7 +102,7 @@ if __name__ == "__main__":
     except FileNotFoundError:
         logger.error("Could not find experiment dispatcher yaml file!")
 
-    dispatch_command_strings(commands, cpus_per_command=1, pause_time=2.0)
+    dispatch_command_strings(commands, cpus_per_command=args.cpu_per_com, pause_time=2.0)
     # if we have unavailable resources - right at the end (e.g. imagine sending off two commands - we don't want ray to
     # shutdown immediately!)
     while not init_resources == ray.available_resources():
