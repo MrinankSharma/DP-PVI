@@ -60,7 +60,7 @@ def default_config(dataset, dataset_dist):
         "L": 380
     }
 
-    N_iterations = 100
+    N_iterations = 30
 
     logging_base_directory = "/scratch/DP-PVI/logs"
 
@@ -145,7 +145,7 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
             logger.debug(f"new lambda: {lambda_new_temp}")
             return lambda_new_temp, new_delta
 
-        param_postprocess_handle = lambda old, delta, all, c: param_postprocess_function(old, delta, all, c, prior_pres)
+        param_postprocess_handle = lambda old, delta, all_params, c: param_postprocess_function(old, delta, all_params, c, prior_pres)
 
         # client factories for each client - this avoids pickling of the client object for ray internals
         client_factories = [StandardClient.create_factory(
@@ -185,7 +185,7 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
                 },
                 "lambda_postprocess_func": param_postprocess_handle
             },
-            max_iterations=50,
+            max_iterations=N_iterations,
             client_factories=client_factories,
             prior=prior_params,
             accounting_dict={

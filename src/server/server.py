@@ -288,9 +288,9 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
         delta_is = []
         client_params = []
         for indx, client in enumerate(self.clients):
+            client_params.append(client.parameters)
             if indx in c:
                 # selected to be updated
-                client_params.append(client.parameters)
                 delta_is.append(
                     client.get_update(model_parameters=lambda_old, model_hyperparameters=None, update_ti=False))
 

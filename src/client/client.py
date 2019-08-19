@@ -20,6 +20,8 @@ def ensure_positive_t_i_factory(key):
     def inner_function(params):
         ret = dict(params)
         val = ret[key]
+        if np.sum(val<0)>0:
+            logger.error("Having to do precision clipping - this is not good!")
         val[val < 0] = 0.0
         ret[key] = val
 
