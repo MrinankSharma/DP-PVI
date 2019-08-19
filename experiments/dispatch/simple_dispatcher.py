@@ -30,8 +30,10 @@ def dispatch_command_strings(commands, num_cpus, cpus_per_command=1):
 
     for subcommands in subcommand_lists:
         processes = [
-            subprocess.call(subcommand + f" ray_cfg.num_cpus={cpus_per_command}")
+            subprocess.call(subcommand + f" ray_cfg.num_cpus={cpus_per_command}", shell=True)
             for subcommand in subcommands]
+
+        print(processes)
 
         for p in processes:
             p.wait()
