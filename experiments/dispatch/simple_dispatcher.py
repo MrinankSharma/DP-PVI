@@ -1,6 +1,6 @@
 import argparse
 import logging
-import subprocess import call
+from subprocess import call
 
 from functools import partial
 from multiprocessing.dummy import Pool
