@@ -105,12 +105,12 @@ def default_config(dataset, dataset_dist):
 def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings, N_samples, N_iterations, prediction,
                    experiment_tag, logging_base_directory,
                    _run, _config, seed):
-    torch.set_num_threads(ray_cfg["num_cpus"])
+    torch.set_num_threads(int(ray_cfg["num_cpus"]))
     np.random.seed(seed)
     torch.manual_seed(seed)
     try:
         if ray_cfg["redis_address"] == "None":
-            logger.info("Creating new ray server")
+            logger.info("Running Locally")
             ray.init(num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"], logging_level=logging.INFO,
                      local_mode=True)
         else:
