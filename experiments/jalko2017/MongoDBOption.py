@@ -20,6 +20,8 @@ class TestOption(CommandLineOption):
     @classmethod
     def apply(cls, args, run):
         mongo = MongoObserver.create(url="localhost:9001", db_name='test')
+        logging.basicConfig()
+        logging.getLogger().setLevel(logging.DEBUG)
         run.observers.append(mongo)
         logger.info("Saving to database test WITHOUT slack notifications")
         run.info = {

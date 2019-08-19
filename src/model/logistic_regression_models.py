@@ -86,6 +86,7 @@ class LogisticRegressionTorchModule(nn.Module):
             self.w_log_var.data = torch.tensor(parameters_numpy["w_log_var"], dtype=torch.float32)
 
     def set_prior_parameters_from_numpy(self, prior_nat_params_numpy):
+        logger.debug("setting prior params")
         if prior_nat_params_numpy is not None:
             prior_params = nat_params_to_params_dict(prior_nat_params_numpy)
             self.prior_mu = torch.tensor(prior_params["w_mu"], dtype=torch.float32)
@@ -136,6 +137,7 @@ class LogisticRegressionTorchModule(nn.Module):
                 p_val = torch.tensor(self._prediction_func(mu, var), dtype=torch.float32)
                 p_vals[ind] = p_val
         elif self.prediction_type == "prohibit":
+            logger.info("Using prohibit debug")
             p_vals = self.sigmoid(mean_1d * (1 + cov_list / 8 * np.pi) ** -0.5).detach()
         else:
             raise ValueError("Invalid prediction type supplied")
@@ -235,6 +237,7 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
     def __init__(self, parameters, hyperparameters):
         super(MeanFieldMultiDimensionalLogisticRegression, self).__init__(parameters, hyperparameters)
 
+        logger.debug("New logistic regression module")
         self.torch_module = LogisticRegressionTorchModule(nat_params_to_params_dict(parameters), self.hyperparameters)
 
         if self.hyperparameters['wrapped_optimizer_class'] is not None:
@@ -348,6 +351,9 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
 
         cav_nat_params = B.subtract_params(self.get_parameters(), t_i)
         # numpy dict for the effective prior
+        logger.debug(f"current parameters {self.get_parameters()}")
+        logger.debug(f"current t_i {t_i}")
+        logger.debug(f"cavity natural parameters {cav_nat_params}")
         self.torch_module.set_prior_parameters_from_numpy(cav_nat_params)
         self.torch_module.set_N_full(N_full)
 

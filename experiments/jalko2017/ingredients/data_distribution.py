@@ -59,6 +59,6 @@ def generate_dataset_distribution_func(M, rho, sample_rho_noise_scale, inhomo_sc
             }))
             prop_positive.append(np.mean(y_i > 0))
 
-        return clients_data, N_is.tolist() , prop_positive, M
+        return clients_data, N_is.tolist(), prop_positive, M
 
     return lambda x, y: dataset_distribution_function(x, y, M, rho, sample_rho_noise_scale, inhomo_scale)

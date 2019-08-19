@@ -118,11 +118,15 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
 
         logger.info(f"Prior Parameters:\n\n{pretty_dump.dump(prior_params)}\n")
 
-        def param_postprocess_function(lambda_old, delta_param, prior_pres):
+        def param_postprocess_function(lambda_old, delta_param, prior_pres_in):
             lambda_new_temp = B.add_parameters(lambda_old, delta_param)
+            pres_old = lambda_old["w_pres"]
             pres = lambda_new_temp["w_pres"]
             # enforce that the precision must be bigger than that of the prior
-            pres[pres < prior_pres] = prior_pres
+            # fix this by simply not applying the precision update if it results in a negative precision
+            # this avoids issues when the ti_s become out of sync with the central parameter values - perhaps it would
+            # be best to role back to the prior value
+            pres[pres < prior_pres_in] = pres_old[pres < prior_pres_in]
             lambda_new_temp["w_pres"] = pres
             new_delta = B.subtract_params(lambda_new_temp, lambda_old)
             return lambda_new_temp, new_delta
@@ -150,6 +154,8 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
                 "t_i_postprocess_function": ensure_positive_t_i_factory("w_pres")
             }
         ) for i in range(M)]
+
+        logger.info(f"Making M={M} Clients")
 
         # custom decorator based on passed in resources!
         remote_decorator = ray.remote(num_cpus=int(ray_cfg["num_cpus"]), num_gpus=int(ray_cfg["num_gpus"]))
