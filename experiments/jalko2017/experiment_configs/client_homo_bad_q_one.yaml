@@ -1,5 +1,5 @@
 experiment_file: /scratch/DP-PVI/DP-PVI/experiments/jalko2017/client_level_experiment.py
-experiment_tag: client_homo_one
+experiment_tag: client_homo_one_fixed
 dataset:
   name:
     - adult
