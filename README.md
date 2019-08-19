@@ -16,6 +16,9 @@ Deleting database entries can be done as follows, in the mongo shell:
 ```angular2
 use sacred # use the correct database name
 db.runs.remove({'config.experiment_tag':'....'}) # apply the correct filter
+db.metrics.remove({run_id: {$gt: 333, $lt: 600}}) # remove metrics, linked by run id
 ```
+
+
 **Beware**: whilst this removes runs from the omniboard view window, it will not actually delete the log files!!
   

@@ -26,7 +26,7 @@ from src.privacy.optimizer import DPOptimizer
 from src.server import SyncronousPVIParameterServer
 from src.utils.yaml_string_dumper import YAMLStringDumper
 
-ex = Experiment('jalko2017_datapoint_exp_updated', [dataset_ingredient, dataset_dist_ingred])
+ex = Experiment('jalko2017_datapoint_exp', [dataset_ingredient, dataset_dist_ingred])
 logger = logging.getLogger(__name__)
 pretty_dump = YAMLStringDumper()
 
