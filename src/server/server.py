@@ -141,17 +141,17 @@ class SyncronousPVIParameterServer(ParameterServer):
         lambda_old = self.parameters
 
         # delta_is = [client.compute_update.remote(lambda_old) for client in self.clients]
-        logger.info("Getting Client Updates")
+        logger.debug("Getting Client Updates")
         delta_is = [client.get_update(model_parameters=lambda_old) for client in self.clients]
 
-        logger.info("Received client updates")
+        logger.debug("Received client updates")
         # print(delta_is)
         lambda_new = B.add_parameters(lambda_old, *delta_is)
 
         self.parameters = lambda_new
         # update the model parameters
         self.model.set_parameters(self.parameters)
-        logger.info(f"Iteration {self.iterations} complete.\nNew Parameters:\n {pretty_dump.dump(lambda_new)}\n")
+        logger.debug(f"Iteration {self.iterations} complete.\nNew Parameters:\n {pretty_dump.dump(lambda_new)}\n")
         [client.set_metadata({"global_iteration": self.iterations}) for client in self.clients]
 
         self.log_update()
@@ -282,7 +282,7 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
 
         # generate index
         c = np.random.choice(M, L, replace=False)
-        logger.info(f"Selected clients {c}")
+        logger.debug(f"Selected clients {c}")
         # delta_is = [client.compute_update.remote(lambda_old) for client in self.clients]
 
         delta_is = []
@@ -313,7 +313,7 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
         t_i_update = np_nest.map_structure(lambda x: np.divide(x, L), delta_i_tilde)
         formatted_ledgers = self.dp_query_with_ledgers.get_formatted_ledgers()
 
-        logger.info(f"l2 clipping norms: {derived_data}")
+        logger.debug(f"l2 clipping norms: {derived_data}")
         for k, v in derived_data.items():
             # summarise statistics instead
             derived_data[k] = np.percentile(np.array(v), [10.0, 30.0, 50.0, 70.0, 90.0])
@@ -326,7 +326,7 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
                     v.update_privacy(formatted_ledgers[indx])
 
         self.model.set_parameters(self.parameters)
-        logger.info(f"Iteration {self.iterations} complete.\nNew Parameters:\n {pretty_dump.dump(lambda_new)}\n")
+        logger.debug(f"Iteration {self.iterations} complete.\nNew Parameters:\n {pretty_dump.dump(lambda_new)}\n")
 
         self.log_update()
         self.log["derived_data"].append(structured_ndarrays_to_lists(derived_data))
