@@ -1,5 +1,6 @@
 experiment_file: /scratch/DP-PVI/DP-PVI/experiments/jalko2017/datapoint_experiment.py
 experiment_tag: datapoint_homo_one
+collection: investigating_algortihms
 dataset:
   name:
     - adult

@@ -21,7 +21,7 @@ from sacred import Experiment
 import src.privacy.analysis.moment_accountant as moment_accountant
 import src.utils.numpy_nest_utils as numpy_nest
 # noinspection PyUnresolvedReferences
-from experiments.jalko2017.MongoDBOption import TestOption, ExperimentOption
+from experiments.jalko2017.MongoDBOption import TestOption, ExperimentOption, CollectionOption
 from experiments.jalko2017.ingredients.data_distribution import dataset_dist_ingred, generate_dataset_distribution_func
 from experiments.jalko2017.ingredients.dataset_ingredient import dataset_ingredient, load_data
 from experiments.jalko2017.measure_performance import compute_prediction_accuracy, compute_log_likelihood
@@ -93,9 +93,19 @@ def default_config(dataset, dataset_dist):
 
 
 @ex.automain
-def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings, N_samples, N_iterations, prediction,
-                   experiment_tag, logging_base_directory,
-                   _run, _config, seed):
+def run_experiment(ray_cfg,
+                   prior_pres,
+                   privacy_settings,
+                   optimisation_settings,
+                   N_samples,
+                   N_iterations,
+                   prediction,
+                   experiment_tag,
+                   logging_base_directory,
+                   _run,
+                   _config,
+                   seed):
+
     torch.set_num_threads(int(ray_cfg["num_cpus"]))
     np.random.seed(seed)
     torch.manual_seed(seed)

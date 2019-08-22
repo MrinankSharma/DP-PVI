@@ -21,10 +21,10 @@ sacred = "*"
 gitpython = "*"
 pyyaml = "*"
 sklearn = "*"
-setproctitle = "*"
+#setproctitle = "*"
 pyarrow = "*"
 pymongo = "*"
-psutil = "*"
+#psutil = "*"
 
 [requires]
 python_version = "3.7"

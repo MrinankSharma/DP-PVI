@@ -62,12 +62,21 @@ def generate_commands_from_yaml(yaml_filepath):
         exp_config = yaml.load(yaml_file.read())
 
     exp_file = exp_config.pop("experiment_file")
+    if 'collection' in exp_config:
+        collection = exp_config.pop("collection")
+    else:
+        collection = None
+
     seed_values = [("seed", i) for i in range(1, exp_config.pop("num_seeds") + 1)]
     all_options = nested_dict_to_option_strings(exp_config)
     all_options.append(seed_values)
     product = itertools.product(*all_options)
 
-    run_flag = "--test" if args.test else "--experiment"
+    if collection is not None:
+        run_flag = f'--collection {collection}'
+    else:
+        run_flag = "--test" if args.test else "--experiment"
+
     command_strings = []
     for p in product:
         # the -r flag indicates that this is a proper run!
