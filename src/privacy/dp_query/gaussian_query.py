@@ -115,9 +115,6 @@ class NumpyGaussianDPQuery(dp_query.DPQuery):
     def derive_sample_params(self, global_state):
         return global_state.l2_norm_clip
 
-    def initial_sample_state(self, param_groups):
-        return np_nest.map_structure(np.zeros_like, param_groups)
-
     def get_record_derived_data(self):
         return {
             "l2_norm:": self._record_l2_norm

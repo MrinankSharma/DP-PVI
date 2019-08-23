@@ -1,5 +1,5 @@
-experiment_file: experiments/jalko2017/client_level_experiment.py
-experiment_tag: client_homo_q_one
+experiment_file: experiments/jalko2017/PVI_experiment.py
+experiment_tag: pure_pvi
 database: method_comparison
 
 dataset:
@@ -18,8 +18,11 @@ dataset:
 dataset_dist:
   M:
     - 1
+    - 10
     - 20
+    - 30
     - 50
+    - 100
   rho:
     - 380
   sample_rho_noise_scale:
@@ -36,19 +39,6 @@ optimisation_settings:
     - 0
   L:
     - 380
-
-
-privacy_settings:
-  sigma_relative:
-    - 1
-  C:
-    - 30
-    - 50
-    - 100
-  L:
-    - 10
-    - 30
-    - 50
 
 ray_cfg:
   redis_address:

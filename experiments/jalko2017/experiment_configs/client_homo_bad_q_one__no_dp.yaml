@@ -1,0 +1,20 @@
+experiment_file: /scratch/DP-PVI/DP-PVI/experiments/jalko2017/client_level_experiment.py
+experiment_tag: client_homo_q_one_no_dp
+collection: investigating_algortihms
+dataset:
+  name:
+    - adult
+
+dataset_dist:
+  M:
+    - 50
+    - 75
+    - 100
+  rho:
+    - 380
+
+privacy_settings:
+  C:
+    - 0
+
+num_seeds: 5

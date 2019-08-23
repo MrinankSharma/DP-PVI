@@ -27,14 +27,14 @@ from sacred import Experiment
 import src.privacy.analysis.moment_accountant as moment_accountant
 import src.utils.numpy_nest_utils as numpy_nest
 # noinspection PyUnresolvedReferences
-from experiments.jalko2017.MongoDBOption import TestOption, ExperimentOption, CollectionOption
+from experiments.jalko2017.MongoDBOption import TestOption, ExperimentOption, DatabaseOption
 from experiments.jalko2017.ingredients.data_distribution import dataset_dist_ingred, generate_dataset_distribution_func
 from experiments.jalko2017.ingredients.dataset_ingredient import dataset_ingredient, load_data
 from experiments.jalko2017.measure_performance import compute_prediction_accuracy, compute_log_likelihood
 from experiments.utils import save_log
 from src.client.client import StandardClient, ensure_positive_t_i_factory
 from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression
-from src.privacy.dp_query import NumpyGaussianDPQuery
+from src.privacy.dp_query import NumpyGaussianDPQuery, NumpyNoDPSumQuery
 from src.privacy.optimizer import StandardOptimizer
 from src.server import DPSequentialIndividualPVIParameterServer
 from src.utils.yaml_string_dumper import YAMLStringDumper
@@ -189,30 +189,47 @@ def run_experiment(ray_cfg,
 
         # custom decorator based on passed in resources!
         remote_decorator = ray.remote(num_cpus=int(ray_cfg["num_cpus"]), num_gpus=int(ray_cfg["num_gpus"]))
-        server = remote_decorator(DPSequentialIndividualPVIParameterServer).remote(
-            model_class=MeanFieldMultiDimensionalLogisticRegression,
-            dp_query_class=NumpyGaussianDPQuery,
-            model_parameters=prior_params,
-            hyperparameters={
-                "L": privacy_settings["L"],
-                "dp_query_parameters": {
-                    "l2_norm_clip": privacy_settings["C"],
-                    "noise_stddev": privacy_settings["C"] * privacy_settings["sigma_relative"]
+        if privacy_settings['C'] is 0:
+            server = remote_decorator(DPSequentialIndividualPVIParameterServer).remote(
+                model_class=MeanFieldMultiDimensionalLogisticRegression,
+                dp_query_class=NumpyNoDPSumQuery,
+                model_parameters=prior_params,
+                hyperparameters={
+                    "L": M,
+                    "dp_query_parameters": {},
+                    "lambda_postprocess_func": param_postprocess_handle
                 },
-                "lambda_postprocess_func": param_postprocess_handle
-            },
-            max_iterations=N_iterations,
-            client_factories=client_factories,
-            prior=prior_params,
-            accounting_dict={
-                "MomentAccountant": {
-                    "accountancy_update_method": moment_accountant.compute_online_privacy_from_ledger,
-                    "accountancy_parameters": {
-                        "target_delta": privacy_settings["target_delta"]
+                max_iterations=N_iterations,
+                client_factories=client_factories,
+                prior=prior_params,
+                accounting_dict={}
+            )
+
+        else:
+            server = remote_decorator(DPSequentialIndividualPVIParameterServer).remote(
+                model_class=MeanFieldMultiDimensionalLogisticRegression,
+                dp_query_class=NumpyGaussianDPQuery,
+                model_parameters=prior_params,
+                hyperparameters={
+                    "L": privacy_settings["L"],
+                    "dp_query_parameters": {
+                        "l2_norm_clip": privacy_settings["C"],
+                        "noise_stddev": privacy_settings["C"] * privacy_settings["sigma_relative"]
+                    },
+                    "lambda_postprocess_func": param_postprocess_handle
+                },
+                max_iterations=N_iterations,
+                client_factories=client_factories,
+                prior=prior_params,
+                accounting_dict={
+                    "MomentAccountant": {
+                        "accountancy_update_method": moment_accountant.compute_online_privacy_from_ledger,
+                        "accountancy_parameters": {
+                            "target_delta": privacy_settings["target_delta"]
+                        }
                     }
                 }
-            }
-        )
+            )
 
         while not ray.get(server.should_stop.remote()):
             # dispatch work to ray and grab the log

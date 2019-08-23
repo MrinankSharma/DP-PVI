@@ -8,6 +8,8 @@ import time
 import ray
 from ruamel.yaml import YAML
 
+from experiments.dispatch.dispatch_utils import *
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -40,40 +42,23 @@ def dispatch_command_strings(commands, cpus_per_command=1, gpus_per_command=0, p
             time.sleep(60.0)
 
 
-def nested_dict_to_option_strings(d, base_key=None):
-    ret = []
-    base_key_to_use = "" if base_key is None else f"{base_key}."
-    for k, v in d.items():
-        # print(f"{k} has value {v}")
-        if isinstance(v, list):
-            list_values = []
-            for l in v:
-                list_values.append((base_key_to_use + k, l))
-            ret.append(list_values)
-        elif isinstance(v, dict):
-            ret.extend(nested_dict_to_option_strings(v, base_key_to_use + k))
-        else:
-            ret.append([(base_key_to_use + k, v)])
-    return ret
-
-
 def generate_commands_from_yaml(yaml_filepath):
     with open(yaml_filepath, "r") as yaml_file:
         exp_config = yaml.load(yaml_file.read())
 
     exp_file = exp_config.pop("experiment_file")
-    if 'collection' in exp_config:
-        collection = exp_config.pop("collection")
+    if 'database' in exp_config:
+        database = exp_config.pop("database")
     else:
-        collection = None
+        database = None
 
     seed_values = [("seed", i) for i in range(1, exp_config.pop("num_seeds") + 1)]
     all_options = nested_dict_to_option_strings(exp_config)
     all_options.append(seed_values)
     product = itertools.product(*all_options)
 
-    if collection is not None:
-        run_flag = f'--collection {collection}'
+    if database is not None:
+        run_flag = f'--database {database}'
     else:
         run_flag = "--test" if args.test else "--experiment"
 

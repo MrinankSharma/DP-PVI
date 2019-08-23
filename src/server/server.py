@@ -6,7 +6,6 @@ import numpy as np
 import ray
 
 import src.utils.numpy_nest_utils as np_nest
-import src.utils.numpy_utils as B
 from src.privacy.analysis import QueryWithLedger, OnlineAccountant, QueryWithPerClientLedger
 from src.utils.numpy_nest_utils import structured_ndarrays_to_lists
 from src.utils.yaml_string_dumper import YAMLStringDumper
@@ -126,10 +125,10 @@ class ParameterServer(ABC):
 
 class SyncronousPVIParameterServer(ParameterServer):
 
-    def __init__(self, model_class, prior, max_iterations=100, clients_factories=None, hyperparameters=None,
+    def __init__(self, model_class, prior, max_iterations=100, client_factories=None, hyperparameters=None,
                  metadata=None,
                  model_parameters=None, model_hyperparameters=None):
-        clients = [factory() for factory in clients_factories]
+        clients = [factory() for factory in client_factories]
         super().__init__(model_class, prior, clients=clients, hyperparameters=hyperparameters, metadata=metadata,
                          model_parameters=model_parameters, model_hyperparameters=model_hyperparameters)
         self.max_iterations = max_iterations
@@ -142,11 +141,16 @@ class SyncronousPVIParameterServer(ParameterServer):
 
         # delta_is = [client.compute_update.remote(lambda_old) for client in self.clients]
         logger.debug("Getting Client Updates")
-        delta_is = [client.get_update(model_parameters=lambda_old) for client in self.clients]
+        delta_is = []
+        for i, client in enumerate(self.clients):
+            print(f'On client {i+1} of {len(self.clients)}')
+            delta_is.append(client.get_update(model_parameters=lambda_old, model_hyperparameters=None, update_ti=True))
 
         logger.debug("Received client updates")
         # print(delta_is)
-        lambda_new = B.add_parameters(lambda_old, *delta_is)
+        lambda_new = lambda_old
+        for delta_i in delta_is:
+            lambda_new = np_nest.map_structure(np.add, *[lambda_new, delta_i])
 
         self.parameters = lambda_new
         # update the model parameters
@@ -288,6 +292,7 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
         delta_is = []
         client_params = []
         for indx, client in enumerate(self.clients):
+            logger.debug(f'On client {indx+1} of {len(self.clients)}')
             client_params.append(client.parameters)
             if indx in c:
                 # selected to be updated

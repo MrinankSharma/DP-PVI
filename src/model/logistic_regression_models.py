@@ -10,6 +10,7 @@ import src.utils.numpy_utils as B
 from src.model.model import Model
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 # note that these functions are all using NUMPY variables
@@ -366,6 +367,9 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         # lets just do this for the time being
         for i in range(self.hyperparameters['N_steps']):
             # sample minibatch at each step ...
+            if self.hyperparameters["batch_size"] > data["x"].shape[0]:
+                self.hyperparameters["batch_size"] = data["x"].shape[0]
+                logger.warning('Had to reduce minibach size to match data size. This is permanent for the run.')
             mini_batch_indices = np.random.choice(data["x"].shape[0], self.hyperparameters["batch_size"], replace=False)
             # convert data into a tensor
             x = torch.tensor(x_full[mini_batch_indices, :], dtype=torch.float32)

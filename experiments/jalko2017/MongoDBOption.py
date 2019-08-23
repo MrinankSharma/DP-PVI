@@ -60,7 +60,7 @@ class ExperimentOption(CommandLineOption):
         }
 
 
-class CollectionOption(CommandLineOption):
+class DatabaseOption(CommandLineOption):
     """
     Use the sacred database.
     """

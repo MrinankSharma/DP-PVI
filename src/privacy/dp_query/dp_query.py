@@ -1,8 +1,12 @@
 import abc
+import collections
 
 import torch
 
+import numpy as np
+
 import src.utils.torch_nest_utils as nest
+import src.utils.numpy_nest_utils as np_nest
 
 
 class DPQuery(abc.ABC):
@@ -42,7 +46,6 @@ class DPQuery(abc.ABC):
         :param param_groups: The param_groups to use as a template for the blank state.
         :return: An initial sample state.
         """
-        pass
 
     def preprocess_record(self, params, record):
         """ Preprocess a single record.
@@ -69,8 +72,6 @@ class DPQuery(abc.ABC):
         :return: The updated sample state.
         """
 
-        pass
-
     def accumulate_record(self, params, sample_state, record):
         """ Accumulate a new record into the sample state.
 
@@ -92,7 +93,6 @@ class DPQuery(abc.ABC):
         :param sample_state_2: The second sample state.
         :return:  The merged sample states.
         """
-        pass
 
     @abc.abstractmethod
     def get_noised_result(self, sample_state, global_parameters):
@@ -116,3 +116,28 @@ class SumAggregationDPQuery(DPQuery):
 
     def merge_sample_states(self, sample_state_1, sample_state_2):
         return nest.map_structure(torch.add, sample_state_1, sample_state_2)
+
+
+class NumpyNoDPSumQuery(DPQuery):
+    _GlobalState = collections.namedtuple(
+        '_GlobalState', ['l2_norm_clip', 'noise_stddev']
+    )
+
+    def initial_global_state(self):
+        return self._GlobalState(np.inf, 0)
+
+    def initial_sample_state(self, param_groups):
+        """ Return state of zeros the same shape as the parameter groups."""
+        return np_nest.map_structure(np.zeros_like, param_groups)
+
+    def accumulate_preprocessed_record(self, sample_state, record):
+        return np_nest.map_structure(np.add, sample_state, record)
+
+    def merge_sample_states(self, sample_state_1, sample_state_2):
+        return np_nest.map_structure(np.add, sample_state_1, sample_state_2)
+
+    def get_noised_result(self, sample_state, global_parameters):
+        return sample_state, self._GlobalState(np.inf, 0)
+
+    def get_record_derived_data(self):
+        return {}
