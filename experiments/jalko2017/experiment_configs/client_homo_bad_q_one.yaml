@@ -18,6 +18,8 @@ dataset:
 dataset_dist:
   M:
     - 1
+    - 3
+    - 10
     - 20
     - 50
   rho:
@@ -46,8 +48,10 @@ privacy_settings:
     - 50
     - 100
   L:
+    - 1
+    - 3
     - 10
-    - 30
+    - 20
     - 50
 
 ray_cfg:

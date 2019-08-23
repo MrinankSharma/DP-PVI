@@ -285,6 +285,8 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
         M = len(self.clients)
 
         # generate index
+        if L > M:
+            raise ValueError('Need more clients than mini batch number of clients')
         c = np.random.choice(M, L, replace=False)
         logger.debug(f"Selected clients {c}")
         # delta_is = [client.compute_update.remote(lambda_old) for client in self.clients]
