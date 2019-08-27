@@ -176,7 +176,8 @@ def run_experiment(ray_cfg,
             },
             hyperparameters={
                 "t_i_init_function": lambda x: np.zeros(x.shape),
-                "t_i_postprocess_function": ensure_positive_t_i_factory("w_pres")
+                "t_i_postprocess_function": ensure_positive_t_i_factory("w_pres"),
+                "damping_factor": PVI_settings['client_damping_factor'],
             }
         ) for i in range(M)]
 

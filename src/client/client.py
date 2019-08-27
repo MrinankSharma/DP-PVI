@@ -153,6 +153,7 @@ class StandardClient(Client):
             **{
                 't_i_init_function': lambda x: np.zeros(x.shape),
                 't_i_postprocess_function': lambda x: x,
+                "damping_factor": 1.,
             }
         }
         return default_hyperparameters
@@ -190,10 +191,10 @@ class StandardClient(Client):
         # apply the privacy function, specified by the server
         # delta_lambda_i_tilde, privacy_stats = self.privacy_function(delta_lambda_i)
 
-        delta_lambda_i_tilde = delta_lambda_i
+        delta_lambda_i = np_nest.apply_to_structure(lambda x: np.multiply(x, self.hyperparameters['damping_factor']), delta_lambda_i)
 
         # compute the new
-        lambda_new = np_utils.add_parameters(lambda_old, delta_lambda_i_tilde)
+        lambda_new = np_utils.add_parameters(lambda_old, delta_lambda_i)
 
         t_i_new = np_utils.add_parameters(
             np_utils.subtract_params(lambda_new,
