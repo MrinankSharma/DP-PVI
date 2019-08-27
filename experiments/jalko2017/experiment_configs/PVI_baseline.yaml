@@ -1,6 +1,6 @@
 experiment_file: experiments/jalko2017/PVI_experiment.py
 experiment_tag: pure_pvi
-database: method_comparison
+database: test_comparison
 
 dataset:
   name:
