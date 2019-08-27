@@ -52,6 +52,10 @@ def default_config(dataset, dataset_dist):
 
     dataset_dist.rho = 380
 
+    PVI_settings = {
+        'damping_factor': 1.
+    }
+
     optimisation_settings = {
         "lr": 0.2,
         "N_steps": 200,
@@ -92,6 +96,7 @@ def default_config(dataset, dataset_dist):
 @ex.automain
 def run_experiment(ray_cfg,
                    prior_pres,
+                   PVI_settings,
                    optimisation_settings,
                    N_samples,
                    N_iterations,
@@ -183,8 +188,7 @@ def run_experiment(ray_cfg,
             model_class=MeanFieldMultiDimensionalLogisticRegression,
             model_parameters=prior_params,
             hyperparameters={
-                "L": M,
-                "dp_query_parameters": {},
+                "damping_factor": PVI_settings['damping_factor'],
                 "lambda_postprocess_func": param_postprocess_handle
             },
             max_iterations=N_iterations,

@@ -58,6 +58,14 @@ def map_structure(op, *param_dicts):
     return ret
 
 
+def apply_to_structure(op, param_dict):
+    ret = {}
+    for k in param_dict.keys():
+        ret[k] = op(param_dict[k])
+
+    return ret
+
+
 def reduce_structure(reduce, accumulate, *param_dicts):
     result = None
 

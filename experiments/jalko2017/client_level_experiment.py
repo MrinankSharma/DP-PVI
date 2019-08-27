@@ -6,11 +6,11 @@ if module_path not in sys.path:
     sys.path.append(module_path)
 
 # set numpy environment variables
-os.environ["OMP_NUM_THREADS"] = "1" # export OMP_NUM_THREADS=4
-os.environ["OPENBLAS_NUM_THREADS"] = "1" # export OPENBLAS_NUM_THREADS=4
-os.environ["MKL_NUM_THREADS"] = "1" # export MKL_NUM_THREADS=6
-os.environ["VECLIB_MAXIMUM_THREADS"] = "1" # export VECLIB_MAXIMUM_THREADS=4
-os.environ["NUMEXPR_NUM_THREADS"] = "1" # export NUMEXPR_NUM_THREADS=6
+os.environ["OMP_NUM_THREADS"] = "1"  # export OMP_NUM_THREADS=4
+os.environ["OPENBLAS_NUM_THREADS"] = "1"  # export OPENBLAS_NUM_THREADS=4
+os.environ["MKL_NUM_THREADS"] = "1"  # export MKL_NUM_THREADS=6
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"  # export VECLIB_MAXIMUM_THREADS=4
+os.environ["NUMEXPR_NUM_THREADS"] = "1"  # export NUMEXPR_NUM_THREADS=6
 
 import datetime
 import logging
@@ -34,7 +34,7 @@ from experiments.jalko2017.measure_performance import compute_prediction_accurac
 from experiments.utils import save_log
 from src.client.client import StandardClient, ensure_positive_t_i_factory
 from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression
-from src.privacy.dp_query import NumpyGaussianDPQuery, NumpyNoDPSumQuery
+from src.privacy.dp_query import NumpyGaussianDPQuery
 from src.privacy.optimizer import StandardOptimizer
 from src.server import DPSequentialIndividualPVIParameterServer
 from src.utils.yaml_string_dumper import YAMLStringDumper
@@ -98,7 +98,6 @@ def default_config(dataset, dataset_dist):
     }
 
 
-
 @ex.automain
 def run_experiment(ray_cfg,
                    prior_pres,
@@ -112,7 +111,6 @@ def run_experiment(ray_cfg,
                    _run,
                    _config,
                    seed):
-
     torch.set_num_threads(int(ray_cfg["num_cpus"]))
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -162,7 +160,8 @@ def run_experiment(ray_cfg,
             logger.debug(f"new lambda: {lambda_new_temp}")
             return lambda_new_temp, new_delta
 
-        param_postprocess_handle = lambda old, delta, all_params, c: param_postprocess_function(old, delta, all_params, c, prior_pres)
+        param_postprocess_handle = lambda old, delta, all_params, c: param_postprocess_function(old, delta, all_params,
+                                                                                                c, prior_pres)
 
         # client factories for each client - this avoids pickling of the client object for ray internals
         client_factories = [StandardClient.create_factory(

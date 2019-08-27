@@ -152,7 +152,12 @@ class SyncronousPVIParameterServer(ParameterServer):
         for delta_i in delta_is:
             lambda_new = np_nest.map_structure(np.add, *[lambda_new, delta_i])
 
+        delta_lambda = np_nest.map_structure(np.subtract, lambda_new, lambda_old)
+        delta_lambda = np_nest.apply_to_structure(lambda x: np.multiply(x, self.hyperparameters['damping_factor']), delta_lambda)
+        lambda_new = np_nest.map_structure(np.add, lambda_old, delta_lambda)
+
         self.parameters = lambda_new
+
         # update the model parameters
         self.model.set_parameters(self.parameters)
         logger.debug(f"Iteration {self.iterations} complete.\nNew Parameters:\n {pretty_dump.dump(lambda_new)}\n")
@@ -169,7 +174,13 @@ class SyncronousPVIParameterServer(ParameterServer):
             return False
 
     def get_default_hyperparameters(self):
-        return super().get_default_hyperparameters()
+        return {
+            **super().get_default_hyperparameters(),
+            **{
+                'damping_factor': 1,
+                'lambda_postprocess_func': lambda x: x
+            }
+        }
 
     def get_default_metadata(self):
         return super().get_default_metadata()
