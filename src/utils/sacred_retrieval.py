@@ -1,5 +1,5 @@
 import json
-from collections import Iterable
+import collections
 
 import gridfs
 from bson import ObjectId
@@ -24,7 +24,7 @@ class SacredExperimentAccess(object):
                 ret[base_key + k] = v
         return ret
 
-    def get_experiments(self, name=None, complete=False, config=None, additional_filter=None):
+    def get_experiments(self, name=None, complete=False, config={}, additional_filter=None):
         filter = {}
         if name:
             filter['experiment.name'] = name
@@ -47,7 +47,7 @@ class SacredExperimentAccess(object):
         if isinstance(objects, dict):
             for i, artifact in enumerate(objects['artifacts']):
                 objects['artifacts'][i]['object'] = json.loads(self.fs.get(artifact['file_id']).read())
-        elif isinstance(objects, Iterable):
+        elif isinstance(objects, collections.Iterable):
             for object in objects:
                 for i, artifact in enumerate(object['artifacts']):
                     object['artifacts'][i]['object'] = json.loads(self.fs.get(artifact['file_id']).read())
@@ -83,7 +83,7 @@ class SacredExperimentAccess(object):
         if isinstance(exp_objects, dict):
             return get_metrics_for_exp(exp_objects, metric_names)
 
-        elif isinstance(exp_objects, Iterable):
+        elif isinstance(exp_objects, collections.Iterable):
             ret = []
             for exp in exp_objects:
                 ret.append(get_metrics_for_exp(exp, metric_names))
@@ -103,3 +103,14 @@ def get_unique_dicts(dicts):
         ret.append(json.dumps(dict, sort_keys=True))
     ret = list(set(ret))
     return [json.loads(r) for r in ret]
+
+
+def flatten_dict(d, parent_key='', sep='.'):
+    items = []
+    for k, v in d.items():
+        new_key = parent_key + sep + k if parent_key else k
+        if isinstance(v, collections.MutableMapping):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)

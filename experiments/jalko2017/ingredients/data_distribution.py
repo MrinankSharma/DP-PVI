@@ -34,7 +34,7 @@ def generate_dataset_distribution_func(M, rho, sample_rho_noise_scale, inhomo_sc
         prop_positive = []
         N = x.shape[0]
         if M * rho > N:
-            rho = np.floor(N / M)
+            raise ValueError(f'Cannot distribute {N} datapoints between {M} clients with {rho} on each. Aborting')
 
         indx = np.arange(0, N)
         logger.info(f"M={M}, rho={rho}")

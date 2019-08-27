@@ -10,7 +10,7 @@ import src.utils.numpy_utils as B
 from src.model.model import Model
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.ERROR)
 
 
 # note that these functions are all using NUMPY variables
@@ -138,7 +138,7 @@ class LogisticRegressionTorchModule(nn.Module):
                 p_val = torch.tensor(self._prediction_func(mu, var), dtype=torch.float32)
                 p_vals[ind] = p_val
         elif self.prediction_type == "prohibit":
-            logger.info("Using prohibit debug")
+            logger.debug("Using prohibit debug")
             p_vals = self.sigmoid(mean_1d * (1 + cov_list / 8 * np.pi) ** -0.5).detach()
         else:
             raise ValueError("Invalid prediction type supplied")

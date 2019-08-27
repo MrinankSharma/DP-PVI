@@ -42,6 +42,7 @@ import src.utils.numpy_utils as B
 
 ex = Experiment("jalko2017_client_exp", [dataset_ingredient, dataset_dist_ingred])
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 pretty_dump = YAMLStringDumper()
 
 
@@ -189,47 +190,31 @@ def run_experiment(ray_cfg,
 
         # custom decorator based on passed in resources!
         remote_decorator = ray.remote(num_cpus=int(ray_cfg["num_cpus"]), num_gpus=int(ray_cfg["num_gpus"]))
-        if privacy_settings['C'] is 0:
-            server = remote_decorator(DPSequentialIndividualPVIParameterServer).remote(
-                model_class=MeanFieldMultiDimensionalLogisticRegression,
-                dp_query_class=NumpyNoDPSumQuery,
-                model_parameters=prior_params,
-                hyperparameters={
-                    "L": M,
-                    "dp_query_parameters": {},
-                    "lambda_postprocess_func": param_postprocess_handle
-                },
-                max_iterations=N_iterations,
-                client_factories=client_factories,
-                prior=prior_params,
-                accounting_dict={}
-            )
 
-        else:
-            server = remote_decorator(DPSequentialIndividualPVIParameterServer).remote(
-                model_class=MeanFieldMultiDimensionalLogisticRegression,
-                dp_query_class=NumpyGaussianDPQuery,
-                model_parameters=prior_params,
-                hyperparameters={
-                    "L": privacy_settings["L"],
-                    "dp_query_parameters": {
-                        "l2_norm_clip": privacy_settings["C"],
-                        "noise_stddev": privacy_settings["C"] * privacy_settings["sigma_relative"]
-                    },
-                    "lambda_postprocess_func": param_postprocess_handle
+        server = remote_decorator(DPSequentialIndividualPVIParameterServer).remote(
+            model_class=MeanFieldMultiDimensionalLogisticRegression,
+            dp_query_class=NumpyGaussianDPQuery,
+            model_parameters=prior_params,
+            hyperparameters={
+                "L": privacy_settings["L"],
+                "dp_query_parameters": {
+                    "l2_norm_clip": privacy_settings["C"],
+                    "noise_stddev": privacy_settings["C"] * privacy_settings["sigma_relative"]
                 },
-                max_iterations=N_iterations,
-                client_factories=client_factories,
-                prior=prior_params,
-                accounting_dict={
-                    "MomentAccountant": {
-                        "accountancy_update_method": moment_accountant.compute_online_privacy_from_ledger,
-                        "accountancy_parameters": {
-                            "target_delta": privacy_settings["target_delta"]
-                        }
+                "lambda_postprocess_func": param_postprocess_handle
+            },
+            max_iterations=N_iterations,
+            client_factories=client_factories,
+            prior=prior_params,
+            accounting_dict={
+                "MomentAccountant": {
+                    "accountancy_update_method": moment_accountant.compute_online_privacy_from_ledger,
+                    "accountancy_parameters": {
+                        "target_delta": privacy_settings["target_delta"]
                     }
                 }
-            )
+            }
+        )
 
         while not ray.get(server.should_stop.remote()):
             # dispatch work to ray and grab the log
