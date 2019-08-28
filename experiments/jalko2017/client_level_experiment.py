@@ -31,7 +31,7 @@ from experiments.jalko2017.MongoDBOption import TestOption, ExperimentOption, Da
 from experiments.jalko2017.ingredients.data_distribution import dataset_dist_ingred, generate_dataset_distribution_func
 from experiments.jalko2017.ingredients.dataset_ingredient import dataset_ingredient, load_data
 from experiments.jalko2017.measure_performance import compute_prediction_accuracy, compute_log_likelihood
-from experiments.utils import save_log
+from experiments.utils import save_log, save_pickle
 from src.client.client import StandardClient, ensure_positive_t_i_factory
 from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression
 from src.privacy.dp_query import NumpyGaussianDPQuery
@@ -52,6 +52,10 @@ def default_config(dataset, dataset_dist):
     dataset.name = "adult"
 
     dataset_dist.rho = 380
+
+    PVI_settings = {
+        'damping_factor': 1.,
+    }
 
     privacy_settings = {
         "L": 2,
@@ -86,6 +90,8 @@ def default_config(dataset, dataset_dist):
 
     logging_base_directory = "/scratch/DP-PVI/logs"
 
+    save_t_is = False
+
     ray_cfg = {
         "redis_address": "None",
         "num_cpus": 1,
@@ -108,6 +114,7 @@ def run_experiment(ray_cfg,
                    prediction,
                    experiment_tag,
                    logging_base_directory,
+                   save_t_is,
                    _run,
                    _config,
                    seed):
@@ -202,7 +209,7 @@ def run_experiment(ray_cfg,
                 },
                 "lambda_postprocess_func": param_postprocess_handle
             },
-            max_iterations=N_iterations,
+            max_iterations=N_iterations * (M/privacy_settings["L"]), # ensure each client gets updated N_iterations times
             client_factories=client_factories,
             prior=prior_params,
             accounting_dict={
@@ -264,6 +271,14 @@ def run_experiment(ray_cfg,
         ex.add_artifact(
             save_log(final_log, "full_log", ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
                      _run.info["test"], t), "full_log.json")
+
+        if save_t_is:
+            t_is = [client.t_i for client in ray.get(server.get_clients.remote())]
+            ex.add_artifact(save_pickle(
+                t_is, 't_is', ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
+                _run.info["test"], t
+            ), 't_is.pkl')
+
 
     except pyarrow.lib.ArrowIOError:
         raise Exception("Experiment Terminated - was this you?")

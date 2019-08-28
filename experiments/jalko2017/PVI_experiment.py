@@ -31,7 +31,7 @@ from experiments.jalko2017.MongoDBOption import TestOption, ExperimentOption, Da
 from experiments.jalko2017.ingredients.data_distribution import dataset_dist_ingred, generate_dataset_distribution_func
 from experiments.jalko2017.ingredients.dataset_ingredient import dataset_ingredient, load_data
 from experiments.jalko2017.measure_performance import compute_prediction_accuracy, compute_log_likelihood
-from experiments.utils import save_log
+from experiments.utils import save_log, save_pickle
 from src.client.client import StandardClient, ensure_positive_t_i_factory
 from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression
 from src.privacy.dp_query import NumpyGaussianDPQuery, NumpyNoDPSumQuery
@@ -53,7 +53,7 @@ def default_config(dataset, dataset_dist):
     dataset_dist.rho = 380
 
     PVI_settings = {
-        'damping_factor': 1.
+        'damping_factor': 1.,
     }
 
     optimisation_settings = {
@@ -80,6 +80,8 @@ def default_config(dataset, dataset_dist):
 
     slack_json_file = "slack.json"
 
+    save_t_is = False
+
     ray_cfg = {
         "redis_address": "None",
         "num_cpus": 1,
@@ -103,6 +105,7 @@ def run_experiment(ray_cfg,
                    prediction,
                    experiment_tag,
                    logging_base_directory,
+                   save_t_is,
                    _run,
                    _config,
                    seed):
@@ -177,7 +180,7 @@ def run_experiment(ray_cfg,
             hyperparameters={
                 "t_i_init_function": lambda x: np.zeros(x.shape),
                 "t_i_postprocess_function": ensure_positive_t_i_factory("w_pres"),
-                "damping_factor": PVI_settings['client_damping_factor'],
+                "damping_factor": PVI_settings['damping_factor'],
             }
         ) for i in range(M)]
 
@@ -189,7 +192,6 @@ def run_experiment(ray_cfg,
             model_class=MeanFieldMultiDimensionalLogisticRegression,
             model_parameters=prior_params,
             hyperparameters={
-                "damping_factor": PVI_settings['damping_factor'],
                 "lambda_postprocess_func": param_postprocess_handle
             },
             max_iterations=N_iterations,
@@ -246,6 +248,12 @@ def run_experiment(ray_cfg,
         ex.add_artifact(
             save_log(final_log, "full_log", ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
                      _run.info["test"], t), "full_log.json")
+
+        if save_t_is:
+            t_is = [client.t_i for client in ray.get(server.get_clients.remote())]
+            ex.add_artifact(save_pickle(
+                t_is, 't_is',  ex.get_experiment_info()["name"], experiment_tag, logging_base_directory, _run.info["test"], t
+            ), 't_is.pkl')
 
     except pyarrow.lib.ArrowIOError:
         raise Exception("Experiment Terminated - was this you?")

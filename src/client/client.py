@@ -142,6 +142,7 @@ class StandardClient(Client):
 
         self.t_i_init_func = self.hyperparameters['t_i_init_function']
         self.t_i_postprocess_funtion = self.hyperparameters['t_i_postprocess_function']
+        self.damping_factor = self.hyperparameters['damping_factor']
 
     def set_metadata(self, metadata):
         super().set_metadata(metadata)
@@ -191,7 +192,7 @@ class StandardClient(Client):
         # apply the privacy function, specified by the server
         # delta_lambda_i_tilde, privacy_stats = self.privacy_function(delta_lambda_i)
 
-        delta_lambda_i = np_nest.apply_to_structure(lambda x: np.multiply(x, self.hyperparameters['damping_factor']), delta_lambda_i)
+        delta_lambda_i = np_nest.apply_to_structure(lambda x: np.multiply(x, self.damping_factor), delta_lambda_i)
 
         # compute the new
         lambda_new = np_utils.add_parameters(lambda_old, delta_lambda_i)
