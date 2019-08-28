@@ -299,13 +299,13 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
         if L > M:
             raise ValueError('Need more clients than mini batch number of clients')
         c = np.random.choice(M, L, replace=False)
-        logger.debug(f"Selected clients {c}")
+        logger.info(f"Selected clients {c}")
         # delta_is = [client.compute_update.remote(lambda_old) for client in self.clients]
 
         delta_is = []
         client_params = []
         for indx, client in enumerate(self.clients):
-            logger.debug(f'On client {indx+1} of {len(self.clients)}')
+            logger.info(f'On client {indx+1} of {len(self.clients)}')
             client_params.append(client.parameters)
             if indx in c:
                 # selected to be updated
