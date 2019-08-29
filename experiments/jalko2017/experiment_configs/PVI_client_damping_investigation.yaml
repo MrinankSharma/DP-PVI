@@ -5,7 +5,7 @@ database: PVI_client_damping_investigation
 dataset:
   name:
     - adult
-    - abalone
+#    - abalone
   scaled:
     - True
   ordinal_cat_encoding:
