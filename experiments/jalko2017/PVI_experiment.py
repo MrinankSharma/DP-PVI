@@ -86,7 +86,7 @@ def default_config(dataset, dataset_dist):
     log_level = 'info'
 
     ray_cfg = {
-        "redis_address": "None",
+        "redis_address": None,
         "num_cpus": 1,
         "num_gpus": 0,
     }
