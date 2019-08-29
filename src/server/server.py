@@ -323,6 +323,7 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
 
         delta_i_tilde, _ = self.dp_query_with_ledgers.get_noised_result(sample_state, self.query_global_state, c)
         client_updates = self.hyperparameters["lambda_postprocess_func"](delta_i_tilde, client_params, c)
+        logger.info(client_updates)
 
         lambda_new = lambda_old
         for update in client_updates:
