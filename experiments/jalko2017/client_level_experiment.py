@@ -121,9 +121,6 @@ def run_experiment(ray_cfg,
                    _run,
                    _config,
                    seed):
-    torch.set_num_threads(int(ray_cfg["num_cpus"]))
-    np.random.seed(seed)
-    torch.manual_seed(seed)
 
     if log_level == 'info':
         logger.setLevel(logging.INFO)
@@ -132,7 +129,17 @@ def run_experiment(ray_cfg,
     else:
         logger.setLevel(logging.INFO)
 
+    torch.set_num_threads(int(ray_cfg["num_cpus"]))
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
     try:
+
+        training_set, test_set, d_in = load_data()
+        clients_data, nis, prop_positive, M = generate_dataset_distribution_func()(training_set["x"], training_set["y"])
+
+        time.sleep(np.random.uniform(0, 10))
+
         if ray_cfg["redis_address"] == "None":
             logger.info("Running Locally")
             ray.init(num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"], logging_level=logging.INFO,
@@ -140,9 +147,6 @@ def run_experiment(ray_cfg,
         else:
             logger.info("Connecting to existing server")
             ray.init(redis_address=ray_cfg["redis_address"], logging_level=logging.INFO)
-
-        training_set, test_set, d_in = load_data()
-        clients_data, nis, prop_positive, M = generate_dataset_distribution_func()(training_set["x"], training_set["y"])
 
         prior_params = {
             "w_nat_mean": np.zeros(d_in, dtype=np.float32),
