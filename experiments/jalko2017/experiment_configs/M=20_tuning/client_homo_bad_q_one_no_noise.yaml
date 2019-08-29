@@ -1,6 +1,6 @@
 experiment_file: experiments/jalko2017/client_level_experiment.py
-experiment_tag: client_homo_q_one
-database: M_20_tuning_test
+experiment_tag: client_homo_q_one_no_noise
+database: M_20_tuning
 
 PVI_settings:
   damping_factor:
