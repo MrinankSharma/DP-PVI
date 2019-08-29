@@ -336,12 +336,11 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
             # summarise statistics instead
             derived_data[k] = np.percentile(np.array(v), [10.0, 30.0, 50.0, 70.0, 90.0])
 
-        for indx, (client, update) in enumerate(zip(self.clients, client_updates)):
-            client.set_metadata({"global_iteration": self.iterations})
-            if indx in c:
-                client.update_ti(update)
-                for k, v in self.accountants[indx].items():
-                    v.update_privacy(formatted_ledgers[indx])
+        for client_index, client_update in zip(c, client_updates):
+            self.clients[client_index].set_metadata({"global_iteration": self.iterations})
+            self.clients[client_index].update_ti(client_update)
+            for k, v in self.accountants[client_index].items():
+                v.update_privacy(formatted_ledgers[client_index])
 
         self.model.set_parameters(self.parameters)
         logger.debug(f"Iteration {self.iterations} complete.\nNew Parameters:\n {pretty_dump.dump(lambda_new)}\n")
