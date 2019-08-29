@@ -2,6 +2,10 @@ experiment_file: experiments/jalko2017/PVI_experiment.py
 experiment_tag: pure_pvi
 database: M_20_tuning_pres_clipping_fix
 
+PVI_settings:
+  damping_factor:
+    - 0.1
+
 dataset:
   name:
     - adult
@@ -14,10 +18,6 @@ dataset:
     - 0.8
   data_base_dir:
     - data
-
-PVI_settings:
-  damping_factor:
-    - 0.1
 
 dataset_dist:
   M:

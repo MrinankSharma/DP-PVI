@@ -109,6 +109,7 @@ def default_config(dataset, dataset_dist):
 @ex.automain
 def run_experiment(ray_cfg,
                    prior_pres,
+                   PVI_settings,
                    privacy_settings,
                    optimisation_settings,
                    N_samples,
@@ -167,10 +168,10 @@ def run_experiment(ray_cfg,
                 new_client_params['w_pres'] = precisions
                 ti_update = np_nest.map_structure(np.subtract, new_client_params, all_params[client_index])
                 ti_updates.append(ti_update)
-                logger.debug('*** CLIENT ***')
-                logger.debug(new_client_params)
-                logger.debug(ti_update)
-                logger.debug(all_params[client_index])
+                # logger.debug('*** CLIENT ***')
+                # logger.debug(new_client_params)
+                # logger.debug(ti_update)
+                # logger.debug(all_params[client_index])
             return ti_updates
 
 
@@ -196,7 +197,8 @@ def run_experiment(ray_cfg,
             },
             hyperparameters={
                 "t_i_init_function": lambda x: np.zeros(x.shape),
-                "t_i_postprocess_function": ensure_positive_t_i_factory("w_pres")
+                "t_i_postprocess_function": ensure_positive_t_i_factory("w_pres"),
+                "damping_factor": PVI_settings['damping_factor'],
             },
             metadata={
                 'client_index': i,
