@@ -165,9 +165,14 @@ def run_experiment(ray_cfg,
                 precisions = new_client_params['w_pres']
                 precisions[precisions < 0] = 1e-5
                 new_client_params['w_pres'] = precisions
-                ti_updates.append(np_nest.map_structure(np.subtract, new_client_params, all_params[client_index]))
-
+                ti_update = np_nest.map_structure(np.subtract, new_client_params, all_params[client_index])
+                ti_updates.append(ti_update)
+                logger.info('*** CLIENT ***')
+                logger.info(new_client_params)
+                logger.info(ti_update)
+                logger.info(all_params[client_index])
             return ti_updates
+
 
 
         param_postprocess_handle = lambda delta, all_params, c: param_postprocess_function(delta, all_params, c)
