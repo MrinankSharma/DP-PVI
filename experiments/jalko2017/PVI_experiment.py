@@ -131,7 +131,7 @@ def run_experiment(ray_cfg,
 
         time.sleep(np.random.uniform(0, 10))
 
-        if ray_cfg["redis_address"] == "None":
+        if ray_cfg["redis_address"] == None:
             logger.info("Running Locally")
             ray.init(num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"], logging_level=logging.INFO,
                      local_mode=True)
