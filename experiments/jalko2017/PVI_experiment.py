@@ -39,6 +39,7 @@ from src.privacy.optimizer import StandardOptimizer
 from src.server import SyncronousPVIParameterServer
 from src.utils.yaml_string_dumper import YAMLStringDumper
 import src.utils.numpy_utils as B
+import src.utils.numpy_nest_utils as np_nest
 
 ex = Experiment("jalko2017_client_exp", [dataset_ingredient, dataset_dist_ingred])
 logger = logging.getLogger(__name__)
@@ -82,6 +83,8 @@ def default_config(dataset, dataset_dist):
 
     save_t_is = False
 
+    log_level = 'info'
+
     ray_cfg = {
         "redis_address": "None",
         "num_cpus": 1,
@@ -106,6 +109,7 @@ def run_experiment(ray_cfg,
                    experiment_tag,
                    logging_base_directory,
                    save_t_is,
+                   log_level,
                    _run,
                    _config,
                    seed):
@@ -113,6 +117,14 @@ def run_experiment(ray_cfg,
     torch.set_num_threads(int(ray_cfg["num_cpus"]))
     np.random.seed(seed)
     torch.manual_seed(seed)
+
+    if log_level == 'info':
+        logger.setLevel(logging.INFO)
+    elif log_level == 'debug':
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+
     try:
         if ray_cfg["redis_address"] == "None":
             logger.info("Running Locally")
@@ -132,34 +144,20 @@ def run_experiment(ray_cfg,
 
         logger.info(f"Prior Parameters:\n\n{pretty_dump.dump(prior_params)}\n")
 
-        def param_postprocess_function(lambda_old, delta_param, all_params, c, prior_pres_in):
-            lambda_new_temp = B.add_parameters(lambda_old, delta_param)
-            pres_old = lambda_old["w_pres"]
-            pres = lambda_new_temp["w_pres"]
+        def param_postprocess_function(delta_param, all_params, c):
+            delta_ti = np_nest.apply_to_structure(lambda x: np.divide(x, len(c)), delta_param)
 
-            # enforce that the precision must be bigger than that of the prior + those which were not selected
-            # fix this by simply not applying the precision update if it results in a negative precision
-            # this avoids issues when the ti_s become out of sync with the central parameter values - perhaps it would
-            # be best to role back to the prior value
-            # pres[pres < prior_pres_in] = pres_old[pres < prior_pres_in]
-            if len(c) != len(all_params):
-                non_selected_params = [all_params[i] for i in range(len(all_params)) if i not in c]
-                logger.debug(f"{len(non_selected_params)} clients were not selected")
-                excluded_params = B.add_parameters(*non_selected_params)
-                pres_min = excluded_params["w_pres"] + prior_pres_in
+            ti_updates = []
+            for client_index in c:
+                new_client_params = np_nest.map_structure(np.add, all_params[client_index], delta_ti)
+                precisions = new_client_params['w_pres']
+                precisions[precisions < 0] = 1e-5
+                new_client_params['w_pres'] = precisions
+                ti_updates.append(np_nest.map_structure(np.subtract, new_client_params, all_params[client_index]))
 
-                pres[pres < pres_min] = pres_old[pres < pres_min]
-                lambda_new_temp["w_pres"] = pres
-            else:
-                pres[pres < prior_pres_in] = pres_old[pres < prior_pres_in]
-                lambda_new_temp["w_pres"] = pres
+            return ti_updates
 
-            new_delta = B.subtract_params(lambda_new_temp, lambda_old)
-            logger.debug(f"updated_delta: {new_delta}")
-            logger.debug(f"new lambda: {lambda_new_temp}")
-            return lambda_new_temp, new_delta
-
-        param_postprocess_handle = lambda old, delta, all_params, c: param_postprocess_function(old, delta, all_params, c, prior_pres)
+        param_postprocess_handle = lambda delta, all_params, c: param_postprocess_function(delta, all_params, c)
 
         # client factories for each client - this avoids pickling of the client object for ray internals
         client_factories = [StandardClient.create_factory(
@@ -181,6 +179,13 @@ def run_experiment(ray_cfg,
                 "t_i_init_function": lambda x: np.zeros(x.shape),
                 "t_i_postprocess_function": ensure_positive_t_i_factory("w_pres"),
                 "damping_factor": PVI_settings['damping_factor'],
+            },
+            metadata={
+                'client_index': i,
+                'test_self': {
+                    'accuracy': compute_prediction_accuracy,
+                    'log_lik': compute_log_likelihood
+                }
             }
         ) for i in range(M)]
 

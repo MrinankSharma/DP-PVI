@@ -183,6 +183,13 @@ class StandardClient(Client):
                                     model_parameters,
                                     model_hyperparameters)
 
+        # print(self.metadata['test_self'])
+        # if self.metadata['test_self'] is not None:
+        #     print(f'client  {self.metadata["client_index"]} \n{lambda_new}')
+        #     preds = self.model.predict(self.data['x'])
+        #     for key, test in self.metadata['test_self'].items():
+        #         print(f'    {key}: {test(preds, self.data["y"])}')
+
         delta_lambda_i = np_utils.subtract_params(lambda_new,
                                                   lambda_old)
 
