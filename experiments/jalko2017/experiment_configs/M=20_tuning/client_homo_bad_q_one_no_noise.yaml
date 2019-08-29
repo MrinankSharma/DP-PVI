@@ -1,6 +1,6 @@
 experiment_file: experiments/jalko2017/client_level_experiment.py
 experiment_tag: client_homo_q_one
-database: M_20_tuning
+database: M_20_tuning_test
 
 PVI_settings:
   damping_factor:
@@ -42,7 +42,7 @@ optimisation_settings:
 
 privacy_settings:
   sigma_relative:
-    - 1
+    - 1E-5
   target_delta:
     - 1e-3
   C:
