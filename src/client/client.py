@@ -29,7 +29,6 @@ def ensure_positive_t_i_factory(key):
 
     return inner_function
 
-
 # @ray.remote
 class Client(ABC):
 
@@ -182,6 +181,7 @@ class StandardClient(Client):
                                     t_i_old,
                                     model_parameters,
                                     model_hyperparameters)
+        logger.debug("Client New Lamdba")
 
         # print(self.metadata['test_self'])
         # if self.metadata['test_self'] is not None:
@@ -307,7 +307,7 @@ class DPClient(StandardClient):
 
         for k, v in self.accountants.items():
             log[k + '.epsilon'] = v.privacy_bound[0]
-            log[k + '.delta'] = v.privacy_bound[1]
+            # log[k + '.delta'] = v.privacy_bound[1]
 
         return log, times_updated
 

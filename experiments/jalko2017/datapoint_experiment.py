@@ -1,3 +1,17 @@
+import os
+import sys
+
+module_path = os.path.abspath(os.path.join('.'))
+if module_path not in sys.path:
+    sys.path.append(module_path)
+
+# set numpy environment variables
+os.environ["OMP_NUM_THREADS"] = "1"  # export OMP_NUM_THREADS=4
+os.environ["OPENBLAS_NUM_THREADS"] = "1"  # export OPENBLAS_NUM_THREADS=4
+os.environ["MKL_NUM_THREADS"] = "1"  # export MKL_NUM_THREADS=6
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"  # export VECLIB_MAXIMUM_THREADS=4
+os.environ["NUMEXPR_NUM_THREADS"] = "1"  # export NUMEXPR_NUM_THREADS=6
+
 import datetime
 import logging
 import time
@@ -18,7 +32,7 @@ from experiments.jalko2017.MongoDBOption import TestOption, ExperimentOption, Da
 from experiments.jalko2017.ingredients.data_distribution import dataset_dist_ingred, generate_dataset_distribution_func
 from experiments.jalko2017.ingredients.dataset_ingredient import dataset_ingredient, load_data
 from experiments.jalko2017.measure_performance import compute_prediction_accuracy, compute_log_likelihood
-from experiments.utils import save_log
+from experiments.utils import save_log, save_pickle
 from src.client.client import DPClient, ensure_positive_t_i_factory
 from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression
 from src.privacy.dp_query import GaussianDPQuery
@@ -35,6 +49,10 @@ pretty_dump = YAMLStringDumper()
 def default_config(dataset, dataset_dist):
     # adapt settings based on the dataset ingredient
     dataset.name = "adult"
+
+    PVI_settings = {
+        'damping_factor': 0.1,
+    }
 
     privacy_settings = {
         "L": 40,
@@ -54,7 +72,7 @@ def default_config(dataset, dataset_dist):
     logging_base_directory = "/scratch/DP-PVI/logs"
 
     ray_cfg = {
-        "redis_address": "None",
+        "redis_address": None,
         "num_cpus": 1,
         "num_gpus": 0,
     }
@@ -63,50 +81,44 @@ def default_config(dataset, dataset_dist):
     N_samples = 50
 
     prediction = {
-        "interval": 25,
+        "interval": 1,
         "type": "prohibit"
     }
     experiment_tag = "datapoint_level_protection"
 
     slack_json_file = "/scratch/DP-PVI/DP-PVI/slack.json"
 
-    logging_base_directory = "/scratch/DP-PVI/logs"
+    save_t_is = False
 
-    ray_cfg = {
-        "redis_address": "None",
-        "num_cpus": 1,
-        "num_gpus": 0,
-    }
-
-    prior_pres = 1.0
-    N_samples = 50
-
-    prediction = {
-        "interval": 10,
-        "type": "prohibit"
-    }
-    experiment_tag = "test_tag"
-
-    slack_json_file = "/scratch/DP-PVI/DP-PVI/slack.json"
+    log_level = 'info'
 
 
 @ex.automain
-def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings, N_samples, N_iterations, prediction,
-                   experiment_tag, logging_base_directory,
+def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings, PVI_settings, N_samples, N_iterations, prediction,
+                   experiment_tag, logging_base_directory, log_level, save_t_is,
                    _run, _config, seed):
+    if log_level == 'info':
+        logger.setLevel(logging.INFO)
+    elif log_level == 'debug':
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+
+    torch.set_num_threads(int(ray_cfg["num_cpus"]))
     np.random.seed(seed)
     torch.manual_seed(seed)
+
     try:
-        if ray_cfg["redis_address"] == "None":
+        training_set, test_set, d_in = load_data()
+        clients_data, nis, prop_positive, M = generate_dataset_distribution_func()(training_set["x"], training_set["y"])
+
+        if ray_cfg["redis_address"] is None:
             logger.info("Creating new ray server")
             ray.init(num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"], logging_level=logging.INFO,
                      local_mode=True)
         else:
             logger.info("Connecting to existing server")
             ray.init(redis_address=ray_cfg["redis_address"], logging_level=logging.INFO)
-
-        training_set, test_set, d_in = load_data()
-        clients_data, nis, prop_positive, M = generate_dataset_distribution_func()(training_set['x'], training_set['y'])
 
         prior_params = {
             "w_nat_mean": np.zeros(d_in, dtype=np.float32),
@@ -125,13 +137,6 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
                     'accountancy_update_method': moment_accountant.compute_online_privacy_from_ledger,
                     'accountancy_parameters': {
                         'target_delta': privacy_settings["target_delta"]
-                    }
-                },
-                'PLDAccountant': {
-                    'accountancy_update_method': pld_accountant.compute_online_privacy_from_ledger,
-                    'accountancy_parameters': {
-                        'target_delta': privacy_settings["target_delta"],
-                        'L': 50
                     }
                 }
             },
@@ -153,7 +158,8 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
                     'noise_stddev': privacy_settings["C"] * privacy_settings["sigma_relative"]
                 },
                 't_i_init_function': lambda x: np.zeros(x.shape),
-                't_i_postprocess_function': ensure_positive_t_i_factory("w_pres")
+                't_i_postprocess_function': ensure_positive_t_i_factory("w_pres"),
+                "damping_factor": PVI_settings['damping_factor'],
             }
         ) for i in range(M)]
 
@@ -166,7 +172,7 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
                 "prediction": prediction["type"],
             },
             prior=prior_params,
-            clients_factories=client_factories,
+            client_factories=client_factories,
             max_iterations=N_iterations
         )
 
@@ -219,6 +225,13 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
         ex.add_artifact(
             save_log(final_log, "full_log", ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
                      _run.info["test"], t), 'full_log.json')
+
+        if save_t_is:
+            t_is = [client.t_i for client in ray.get(server.get_clients.remote())]
+            ex.add_artifact(save_pickle(
+                t_is, 't_is', ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
+                _run.info["test"], t
+            ), 't_is.pkl')
 
     except pyarrow.lib.ArrowIOError:
         raise Exception("Experiment Terminated - was this you?")
