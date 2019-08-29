@@ -258,9 +258,9 @@ def run_experiment(ray_cfg,
                 test_acc = compute_prediction_accuracy(y_pred_test, test_set["y"])
                 sacred_log["test_accuracy"] = test_acc
 
-                logger.debug('server server')
-                logger.debug(f'    acc: {sacred_log["train_accuracy"]}')
-                logger.debug(f'    acc: {sacred_log["train_all"]}')
+                # logger.debug('server server')
+                # logger.debug(f'    acc: {sacred_log["train_accuracy"]}')
+                # logger.debug(f'    acc: {sacred_log["train_all"]}')
             end_pred = time.time()
 
             for k, v in sacred_log.items():

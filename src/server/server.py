@@ -143,11 +143,10 @@ class SyncronousPVIParameterServer(ParameterServer):
         logger.debug("Getting Client Updates")
         delta_is = []
         for i, client in enumerate(self.clients):
-            print(f'On client {i+1} of {len(self.clients)}')
+            logger.info(f'On client {i+1} of {len(self.clients)}')
             delta_is.append(client.get_update(model_parameters=lambda_old, model_hyperparameters=None, update_ti=True))
 
         logger.debug("Received client updates")
-        # print(delta_is)
         lambda_new = lambda_old
         for delta_i in delta_is:
             lambda_new = np_nest.map_structure(np.add, *[lambda_new, delta_i])
@@ -312,8 +311,6 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
                 delta_is.append(
                     client.get_update(model_parameters=lambda_old, model_hyperparameters=None, update_ti=False))
 
-        print('delta_is', delta_is)
-        # print(delta_is)
         sample_state = self.dp_query_with_ledgers.initial_sample_state(delta_is[0])
         sample_params = self.dp_query_with_ledgers.derive_sample_params(self.query_global_state)
         self.query_global_state = self.dp_query_with_ledgers.initial_global_state()
@@ -324,9 +321,7 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
             for k, v in self.dp_query_with_ledgers.get_record_derived_data().items():
                 derived_data[k].append(v)
 
-        print('sample state', sample_state)
         delta_i_tilde, _ = self.dp_query_with_ledgers.get_noised_result(sample_state, self.query_global_state, c)
-        print('delta_i_tilde', delta_i_tilde)
         client_updates = self.hyperparameters["lambda_postprocess_func"](delta_i_tilde, client_params, c)
 
         lambda_new = lambda_old
