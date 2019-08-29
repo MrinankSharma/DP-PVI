@@ -305,7 +305,7 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
         client_params = []
         for indx, client in enumerate(self.clients):
             logger.info(f'On client {indx+1} of {len(self.clients)}')
-            client_params.append(client.parameters)
+            client_params.append(client.t_i)
             if indx in c:
                 # selected to be updated
                 delta_is.append(

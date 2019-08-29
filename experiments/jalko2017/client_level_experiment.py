@@ -138,7 +138,7 @@ def run_experiment(ray_cfg,
         training_set, test_set, d_in = load_data()
         clients_data, nis, prop_positive, M = generate_dataset_distribution_func()(training_set["x"], training_set["y"])
 
-        time.sleep(np.random.uniform(0, 10))
+        # time.sleep(np.random.uniform(0, 10))
 
         print(type(ray_cfg["redis_address"]), ray_cfg["redis_address"])
         if ray_cfg["redis_address"] == None:
@@ -167,21 +167,22 @@ def run_experiment(ray_cfg,
                 new_client_params['w_pres'] = precisions
                 ti_update = np_nest.map_structure(np.subtract, new_client_params, all_params[client_index])
                 ti_updates.append(ti_update)
-                logger.info('*** CLIENT ***')
-                logger.info(new_client_params)
-                logger.info(ti_update)
-                logger.info(all_params[client_index])
+                logger.debug('*** CLIENT ***')
+                logger.debug(new_client_params)
+                logger.debug(ti_update)
+                logger.debug(all_params[client_index])
             return ti_updates
 
 
 
         param_postprocess_handle = lambda delta, all_params, c: param_postprocess_function(delta, all_params, c)
 
+        ti_init = np_nest.map_structure(np.zeros_like, prior_params)
         # client factories for each client - this avoids pickling of the client object for ray internals
         client_factories = [StandardClient.create_factory(
             model_class=MeanFieldMultiDimensionalLogisticRegression,
             data=clients_data[i],
-            model_parameters=prior_params,
+            model_parameters=ti_init,
             model_hyperparameters={
                 "base_optimizer_class": torch.optim.Adagrad,
                 "wrapped_optimizer_class": StandardOptimizer,
