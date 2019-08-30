@@ -1,6 +1,6 @@
 experiment_file: experiments/jalko2017/datapoint_experiment.py
 experiment_tag: datapoint_homo_damping
-database: test_comparison
+database: datapoint_homo_damping_T
 
 dataset:
   name:
@@ -34,8 +34,6 @@ optimisation_settings:
     - 200
   lr_decay:
     - 0
-  L:
-    - 3800
 
 ray_cfg:
   redis_address:
