@@ -76,7 +76,7 @@ def default_config(dataset, dataset_dist):
     logging_base_directory = "/scratch/DP-PVI/logs"
 
     ray_cfg = {
-        "redis_address": "None",
+        "redis_address": None,
         "num_cpus": 1,
         "num_gpus": 0,
     }
@@ -114,6 +114,7 @@ def run_experiment(ray_cfg,
                    optimisation_settings,
                    N_samples,
                    N_iterations,
+                   PVI_settings,
                    prediction,
                    experiment_tag,
                    logging_base_directory,
@@ -122,7 +123,6 @@ def run_experiment(ray_cfg,
                    _run,
                    _config,
                    seed):
-
     if log_level == 'info':
         logger.setLevel(logging.INFO)
     elif log_level == 'debug':
@@ -174,8 +174,6 @@ def run_experiment(ray_cfg,
                 # logger.debug(all_params[client_index])
             return ti_updates
 
-
-
         param_postprocess_handle = lambda delta, all_params, c: param_postprocess_function(delta, all_params, c)
 
         ti_init = np_nest.map_structure(np.zeros_like, prior_params)
@@ -226,7 +224,8 @@ def run_experiment(ray_cfg,
                 },
                 "lambda_postprocess_func": param_postprocess_handle
             },
-            max_iterations=N_iterations * (M/privacy_settings["L"]), # ensure each client gets updated N_iterations times
+            max_iterations=N_iterations * (M / privacy_settings["L"]),
+            # ensure each client gets updated N_iterations times
             client_factories=client_factories,
             prior=prior_params,
             accounting_dict={
