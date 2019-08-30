@@ -25,7 +25,6 @@ import torch
 from sacred import Experiment
 
 import src.privacy.analysis.moment_accountant as moment_accountant
-import src.privacy.analysis.pld_accountant as pld_accountant
 import src.utils.numpy_nest_utils as numpy_nest
 # noinspection PyUnresolvedReferences
 from experiments.jalko2017.MongoDBOption import TestOption, ExperimentOption, DatabaseOption

@@ -145,6 +145,7 @@ class SyncronousPVIParameterServer(ParameterServer):
         for i, client in enumerate(self.clients):
             logger.info(f'On client {i+1} of {len(self.clients)}')
             delta_is.append(client.get_update(model_parameters=lambda_old, model_hyperparameters=None, update_ti=True))
+            logger.info(f'Finished Client {i + 1} of {len(self.clients)}\n\n')
 
         logger.debug("Received client updates")
         lambda_new = lambda_old

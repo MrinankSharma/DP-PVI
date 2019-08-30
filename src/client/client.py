@@ -279,8 +279,10 @@ class DPClient(StandardClient):
                            hyperparameters, metadata)
 
     def compute_update(self, model_parameters=None, model_hyperparameters=None, update_ti=True):
+        logger.info("Computing Update")
         delta_lambda_i_tilde = super().compute_update(model_parameters, model_hyperparameters, update_ti)
 
+        logger.info("Computing Privacy Cost")
         formatted_ledger = self.dp_query.ledger.get_formatted_ledger()
         for _, accountant in self.accountants.items():
             accountant.update_privacy(formatted_ledger)

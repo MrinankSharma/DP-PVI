@@ -185,7 +185,7 @@ class DPPercentileClippingGaussianOptimizer(DPOptimizer):
         else:
             norm_clip = np.percentile(norms, self.percentile)
 
-        logger.debug(f"Using clipping bound as {norm_clip:.2f}")
+        # logger.debug(f"Using clipping bound as {norm_clip:.2f}")
         self._global_parameters = self.dp_sum_query.query.make_global_state(norm_clip, norm_clip * self.noise_multiplier)
         sample_params = self.dp_sum_query.derive_sample_params(self._global_parameters)
 

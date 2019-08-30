@@ -10,7 +10,7 @@ import src.utils.numpy_utils as B
 from src.model.model import Model
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.DEBUG)
 
 
 # note that these functions are all using NUMPY variables
@@ -238,7 +238,7 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
     def __init__(self, parameters, hyperparameters):
         super(MeanFieldMultiDimensionalLogisticRegression, self).__init__(parameters, hyperparameters)
 
-        logger.debug("New logistic regression module")
+        # logger.debug("New logistic regression module")
         self.torch_module = LogisticRegressionTorchModule(nat_params_to_params_dict(parameters), self.hyperparameters)
 
         if self.hyperparameters['wrapped_optimizer_class'] is not None:
