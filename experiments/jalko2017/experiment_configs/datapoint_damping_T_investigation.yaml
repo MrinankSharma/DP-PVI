@@ -18,7 +18,7 @@ dataset_dist:
   M:
     - 10
   rho:
-    - 380
+    - 3800
   sample_rho_noise_scale:
     - 0
   inhomo_scale:
