@@ -1,11 +1,15 @@
 import collections
+import logging
 
-import torch
 import numpy as np
+import torch
 
-import src.utils.torch_nest_utils as nest
 import src.utils.numpy_nest_utils as np_nest
+import src.utils.torch_nest_utils as nest
 from src.privacy.dp_query import dp_query
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class GaussianDPQuery(dp_query.SumAggregationDPQuery):
@@ -60,6 +64,7 @@ class GaussianDPQuery(dp_query.SumAggregationDPQuery):
         :return:
         """
         l2_norm_clip = params
+        # logger.debug(f"clipping bound {l2_norm_clip}")
         l2_norm = torch.sqrt(nest.reduce_structure(lambda p: torch.norm(torch.flatten(p), p=2) ** 2,
                                                    torch.add,
                                                    record))
@@ -129,6 +134,7 @@ class NumpyGaussianDPQuery(dp_query.DPQuery):
         :return:
         """
         l2_norm_clip = params
+        logger.debug(f"Using {l2_norm_clip}")
         l2_norm = np.sqrt(np_nest.reduce_structure(lambda p: np.linalg.norm(p) ** 2,
                                                    np.add,
                                                    record))

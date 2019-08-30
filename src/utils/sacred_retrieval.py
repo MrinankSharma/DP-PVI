@@ -62,7 +62,7 @@ class SacredExperimentAccess(object):
 
         return [self.fs.get(id).read() for id in ids]
 
-    def get_metrics_by_exp(self, exp_objects, metric_names):
+    def get_metrics_by_exp(self, exp_objects, metric_names, filter_type="equals"):
         """
         First layer: which experiment, second index: which metric.
 
@@ -70,10 +70,13 @@ class SacredExperimentAccess(object):
         :param metric_names: metrics to get
         :return:
         """
-        def get_metrics_for_exp(exp, names):
+        def get_metrics_for_exp(exp, names, filter_type=filter_type):
             metrics = []
             for n in names:
-                metrics.extend(list(filter(lambda x: x["name"] ==n, exp["info"]["metrics"])))
+                if filter_type == "equals":
+                    metrics.extend(list(filter(lambda x: x["name"] == n, exp["info"]["metrics"])))
+                elif filter_type == "in":
+                    metrics.extend(list(filter(lambda x: n in x["name"], exp["info"]["metrics"])))
             metric_objects = [list(self.database.metrics.find({"_id": ObjectId(x["id"])}))[0] for x in metrics]
             return metric_objects
 

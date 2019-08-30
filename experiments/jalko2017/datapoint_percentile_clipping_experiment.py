@@ -112,8 +112,8 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
         clients_data, nis, prop_positive, M = generate_dataset_distribution_func()(training_set["x"], training_set["y"])
 
         if ray_cfg["redis_address"] is None:
-            logger.info("Creating new ray server")
-            ray.init(num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"], logging_level=logging.INFO,
+            logger.info("Running locally")
+            ray.init(num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"], logging_level=logging.DEBUG,
                      local_mode=True)
         else:
             logger.info("Connecting to existing server")

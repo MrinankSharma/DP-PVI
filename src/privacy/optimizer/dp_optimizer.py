@@ -8,6 +8,10 @@ import src.utils.torch_nest_utils as nest
 from src.privacy.analysis import QueryWithLedger
 from src.privacy.dp_query import GaussianDPQuery
 from .wrapper_optimizer import WrapperOptimizer
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class DPOptimizer(WrapperOptimizer):
@@ -161,24 +165,34 @@ class DPPercentileClippingGaussianOptimizer(DPOptimizer):
         self._derived_records_data = defaultdict(list)
 
         gradients = []
-        norms = np.zeros(len(microbatch_size))
+        norms = np.zeros(len(microbatches_losses))
         for ind, losses in enumerate(microbatches_losses):
             # note that this gradient is actually a nested list
             gradient = microbatch_gradient(losses)
-            print(gradient)
+            # logger.debug(f"gradient {gradient}")
             gradients.append(gradient)
-            norms[ind] = np.norm(np.array(gradient))
+            grad_t = torch.empty(0)
+            for param_group_gradients in gradient:
+                for grad in param_group_gradients:
+                    grad_t = torch.cat((grad, grad_t))
+
+            # logger.debug(f"concat grad {grad_t}")
+            norms[ind] = torch.norm(grad_t).numpy()
+            # logger.debug(f"record norm {norms[ind]}")
 
         if percentile is not None:
             norm_clip = np.percentile(norms, percentile)
         else:
             norm_clip = np.percentile(norms, self.percentile)
 
+        logger.debug(f"Using clipping bound as {norm_clip:.2f}")
         self._global_parameters = self.dp_sum_query.query.make_global_state(norm_clip, norm_clip * self.noise_multiplier)
         sample_params = self.dp_sum_query.derive_sample_params(self._global_parameters)
 
         for record, norm in zip(gradients, norms):
+            # logger.debug(f"norm {norm:.2f}")
             sample_state = self.dp_sum_query.accumulate_record(sample_params, sample_state, record)
+            # logger.debug(f"sample state new as {sample_state}")
             derived_record_data = {
                 "l2_norm": norm
             }
