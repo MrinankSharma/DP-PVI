@@ -132,6 +132,7 @@ class SyncronousPVIParameterServer(ParameterServer):
         super().__init__(model_class, prior, clients=clients, hyperparameters=hyperparameters, metadata=metadata,
                          model_parameters=model_parameters, model_hyperparameters=model_hyperparameters)
         self.max_iterations = max_iterations
+        self.current_damping_factor = 0
 
     def tick(self):
         if self.should_stop():
@@ -142,8 +143,12 @@ class SyncronousPVIParameterServer(ParameterServer):
         # delta_is = [client.compute_update.remote(lambda_old) for client in self.clients]
         logger.debug("Getting Client Updates")
         delta_is = []
+
+        self.current_damping_factor = self.hyperparameters["damping_factor"] * np.exp(
+            -self.iterations * self.hyperparameters["damping_decay"])
         for i, client in enumerate(self.clients):
-            logger.info(f'On client {i+1} of {len(self.clients)}')
+            logger.info(f'On client {i + 1} of {len(self.clients)}')
+            client.set_hyperparameters({"damping_factor": self.current_damping_factor})
             delta_is.append(client.get_update(model_parameters=lambda_old, model_hyperparameters=None, update_ti=True))
             logger.info(f'Finished Client {i + 1} of {len(self.clients)}\n\n')
 
@@ -153,7 +158,8 @@ class SyncronousPVIParameterServer(ParameterServer):
             lambda_new = np_nest.map_structure(np.add, *[lambda_new, delta_i])
 
         delta_lambda = np_nest.map_structure(np.subtract, lambda_new, lambda_old)
-        delta_lambda = np_nest.apply_to_structure(lambda x: np.multiply(x, self.hyperparameters['damping_factor']), delta_lambda)
+        delta_lambda = np_nest.apply_to_structure(lambda x: np.multiply(x, self.hyperparameters['damping_factor']),
+                                                  delta_lambda)
         lambda_new = np_nest.map_structure(np.add, lambda_old, delta_lambda)
 
         self.parameters = lambda_new
@@ -178,6 +184,7 @@ class SyncronousPVIParameterServer(ParameterServer):
             **super().get_default_hyperparameters(),
             **{
                 'damping_factor': 1,
+                'damping_decay': 0,
                 'lambda_postprocess_func': lambda x: x
             }
         }
@@ -186,7 +193,7 @@ class SyncronousPVIParameterServer(ParameterServer):
         return super().get_default_metadata()
 
     def log_sacred(self):
-        return {}, self.iterations
+        return {'applied_damping_factor': self.current_damping_factor}, self.iterations
 
 
 class DPSyncronousPVIParameterServer(ParameterServer):
@@ -305,7 +312,7 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
         delta_is = []
         client_params = []
         for indx, client in enumerate(self.clients):
-            logger.info(f'On client {indx+1} of {len(self.clients)}')
+            logger.info(f'On client {indx + 1} of {len(self.clients)}')
             client_params.append(client.t_i)
             if indx in c:
                 # selected to be updated
