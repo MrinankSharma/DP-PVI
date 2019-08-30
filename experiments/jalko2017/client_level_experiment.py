@@ -55,6 +55,7 @@ def default_config(dataset, dataset_dist):
 
     PVI_settings = {
         'damping_factor': 1.,
+        'damping_decay': 0.025,
     }
 
     privacy_settings = {
@@ -195,7 +196,6 @@ def run_experiment(ray_cfg,
             hyperparameters={
                 "t_i_init_function": lambda x: np.zeros(x.shape),
                 "t_i_postprocess_function": ensure_positive_t_i_factory("w_pres"),
-                "damping_factor": PVI_settings['damping_factor'],
             },
             metadata={
                 'client_index': i,
@@ -221,7 +221,9 @@ def run_experiment(ray_cfg,
                     "l2_norm_clip": privacy_settings["C"],
                     "noise_stddev": privacy_settings["C"] * privacy_settings["sigma_relative"]
                 },
-                "lambda_postprocess_func": param_postprocess_handle
+                "lambda_postprocess_func": param_postprocess_handle,
+                "damping_factor": PVI_settings["damping_factor"],
+                "damping_decay": PVI_settings["damping_decay"],
             },
             max_iterations=N_iterations * (M / privacy_settings["L"]),
             # ensure each client gets updated N_iterations times

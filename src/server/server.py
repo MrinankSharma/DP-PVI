@@ -294,6 +294,8 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
                 client_i_accountants[k] = OnlineAccountant(**v)
             self.accountants.append(client_i_accountants)
 
+        self.current_damping_factor = 1.0
+
     def tick(self):
         if self.should_stop():
             return False
@@ -311,8 +313,13 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
 
         delta_is = []
         client_params = []
+
+        # we want the da,ping factor to decay by one step when
+        self.current_damping_factor = self.hyperparameters["damping_factor"] * np.exp(
+            -self.iterations * L/M * self.hyperparameters["damping_decay"])
         for indx, client in enumerate(self.clients):
             logger.info(f'On client {indx + 1} of {len(self.clients)}')
+            client.set_hyperparameters({"damping_factor": self.current_damping_factor})
             client_params.append(client.t_i)
             if indx in c:
                 # selected to be updated
@@ -382,6 +389,8 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
         for i in range(len(self.clients)):
             for k, v in self.accountants[i].items():
                 log[f"client_{i}_{k}.epsilon"].append(v.privacy_bound[0])
+
+        log["current_damping_factor"] = self.current_damping_factor
 
         return log, self.iterations
 
