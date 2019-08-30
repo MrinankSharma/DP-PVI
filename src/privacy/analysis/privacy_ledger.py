@@ -122,6 +122,10 @@ class QueryWithLedger(dp_query.DPQuery):
         self._ledger = ledger
         self._query.set_ledger(ledger)
 
+    @property
+    def query(self):
+        return self._query
+
     def initial_global_state(self):
         """See base class."""
         return self._query.initial_global_state()
@@ -175,7 +179,7 @@ class QueryWithPerClientLedger(dp_query.DPQuery):
         self.set_ledgers([PrivacyLedger(num_clients, selection_probability) for _ in range(num_clients)])
 
     @property
-    def ledgers(self):
+    def query(self):
         return self._query
 
     @property
