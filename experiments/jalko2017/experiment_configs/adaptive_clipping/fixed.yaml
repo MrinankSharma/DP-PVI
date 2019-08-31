@@ -59,11 +59,9 @@ privacy_settings:
   sigma_relative: 3
   L: 100
   C:
-    - 5
     - 25
-    - 50
     - 75
-    - 95
+    - 125
 
 PVI_settings:
   damping_factor:
