@@ -1,4 +1,4 @@
-experiment_file: experiments/jalko2017/datapoint_experiment.py
+experiment_file: experiments/jalko2017/datapoint_percentile_clipping_experiment.py
 experiment_tag: datapoint_percentile_clipping_experiment
 database: adaptive_clipping
 
