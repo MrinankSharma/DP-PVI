@@ -47,7 +47,7 @@ prediction:
     - prohibit
 
 
-N_iterations: 100
+N_iterations: 125
 prior_pres: 1.0
 N_samples: 50
 
@@ -67,6 +67,6 @@ privacy_settings:
 
 PVI_settings:
   damping_factor:
-    - 0.1
+    - 0.2
 
 save_t_is: True
