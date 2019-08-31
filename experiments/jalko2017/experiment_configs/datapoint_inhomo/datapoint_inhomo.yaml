@@ -2,6 +2,12 @@ experiment_file: experiments/jalko2017/datapoint_experiment.py
 experiment_tag: datapoint_homo_damping
 database: datapoint_homo_damping_T
 
+PVI_settings:
+  damping_factor:
+    - 0.4
+  damping_decay:
+    - 0.025
+
 dataset:
   name:
     - adult
@@ -64,6 +70,4 @@ privacy_settings:
   L: 100
   C: 50
 
-PVI_settings:
-  damping_factor:
-    - 0.2
+save_t_is: True
