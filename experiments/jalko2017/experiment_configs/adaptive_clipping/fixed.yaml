@@ -58,7 +58,7 @@ logging_base_directory: logs
 privacy_settings:
   sigma_relative: 3
   L: 100
-  C_percentile:
+  C:
     - 5
     - 25
     - 50
