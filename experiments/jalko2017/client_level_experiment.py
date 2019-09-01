@@ -40,7 +40,7 @@ from src.server import DPSequentialIndividualPVIParameterServer
 from src.utils.yaml_string_dumper import YAMLStringDumper
 import src.utils.numpy_nest_utils as np_nest
 
-ex = Experiment("jalko2017_client_exp", [dataset_ingredient, dataset_dist_ingred])
+ex = Experiment("adult_client_exp", [dataset_ingredient, dataset_dist_ingred])
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 pretty_dump = YAMLStringDumper()

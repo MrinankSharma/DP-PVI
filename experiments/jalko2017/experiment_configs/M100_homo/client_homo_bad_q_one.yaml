@@ -1,5 +1,5 @@
 experiment_file: experiments/jalko2017/client_level_experiment.py
-experiment_tag: client_homo_q_one
+experiment_tag: client_homo_q_one_more_M
 database: M_100_homo
 
 PVI_settings:
