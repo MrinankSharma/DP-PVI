@@ -68,7 +68,7 @@ def default_config(dataset):
     logging_base_directory = "/scratch/DP-PVI/logs"
 
     ray_cfg = {
-        "redis_address": "None",
+        "redis_address": None,
         "num_cpus": 1,
         "num_gpus": 0,
     }
@@ -91,8 +91,8 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
     np.random.seed(seed)
     torch.manual_seed(seed)
     try:
-        if ray_cfg["redis_address"] == "None":
-            logger.info("Creating new ray server")
+        if ray_cfg["redis_address"] is None:
+            logger.info("Running Locally")
             ray.init(num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"], logging_level=logging.INFO,
                      local_mode=True)
         else:
@@ -159,7 +159,7 @@ def run_experiment(privacy_settings, optimisation_settings, logging_base_directo
                 "prediction": prediction["type"],
             },
             prior=prior_params,
-            clients_factories=client_factories,
+            client_factories=client_factories,
             max_iterations=N_iterations
         )
 

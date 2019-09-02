@@ -19,7 +19,6 @@ args = argparser.parse_args()
 
 def process_dataset(data_folder, filename, config, one_hot=True, should_scale=False):
     data = np.loadtxt(data_folder + "/" + filename, dtype=str, delimiter=',')
-
     post_string = ""
 
     # grab the numerical part of the array and convert to a float
@@ -51,6 +50,7 @@ def process_dataset(data_folder, filename, config, one_hot=True, should_scale=Fa
 
     x_transformed = preprocessor.fit_transform(x)
 
+    logger.info(f"Final shape: {x_transformed.shape}")
     np.savetxt(data_folder + "/y.csv", y, delimiter=",")
     np.savetxt(data_folder + "/x" + post_string + ".csv", x_transformed, delimiter=",")
 
@@ -70,9 +70,10 @@ if __name__ == "__main__":
     adult_config = {
         "numerical_features": [0, 2, 4, 10, 11, 12],
         "categorical_features": [1, 3, 5, 6, 7, 8, 9, 13],
-        "folder": "/abalone",
+        "folder": "/adult",
         "target": 14,
-        "label_generator": adult_transformer
+        "label_generator": adult_transformer,
+        "drop_cols": [],
     }
 
     be = Binarizer(threshold=9.5)
@@ -83,13 +84,27 @@ if __name__ == "__main__":
         "categorical_features": [0],
         "folder": "/abalone",
         "target": 8,
-        "label_generator": abalone_labeller
+        "label_generator": abalone_labeller,
+        "drop_cols": [],
+    }
+
+    oe = OrdinalEncoder()
+
+    bank_config = {
+        "label_generator": oe.fit_transform,
+        "numerical_features": [0, 11, 12, 13, 15, 16, 17, 18, 19],
+        "folder": "/bank",
+        "target": 20,
+        "categorical_features": [1, 2, 3, 4, 5, 6, 7, 8, 9, 14],
+        "drop_cols": [10],
     }
 
     should_scale = [True, False]
     one_hot = [True, False]
 
     for ss, oh in itertools.product(should_scale, one_hot):
+        logger.info("Processing Bank Dataset with Should Scale: {} One Hot: {}".format(ss, oh))
+        process_dataset(f"{args.data_dir}/bank", "bank.data", bank_config, oh, ss)
         logger.info("Processing Adult Dataset with Should Scale: {} One Hot: {}".format(ss, oh))
         process_dataset(f"{args.data_dir}/adult", "adult.data", adult_config, oh, ss)
         logger.info("Processing Abalone Dataset with Should Scale: {} One Hot: {}".format(ss, oh))

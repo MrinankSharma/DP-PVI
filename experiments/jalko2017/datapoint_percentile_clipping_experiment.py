@@ -174,6 +174,10 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
             model_hyperparameters={
                 "prediction": prediction["type"],
             },
+            hyperparameters={
+                "damping_factor": PVI_settings["damping_factor"],
+                "damping_decay": PVI_settings['damping_decay']
+            },
             prior=prior_params,
             client_factories=client_factories,
             max_iterations=N_iterations

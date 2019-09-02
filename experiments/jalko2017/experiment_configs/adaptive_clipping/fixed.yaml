@@ -47,7 +47,7 @@ prediction:
     - prohibit
 
 
-N_iterations: 100
+N_iterations: 125
 prior_pres: 1.0
 N_samples: 50
 
@@ -58,13 +58,13 @@ logging_base_directory: logs
 privacy_settings:
   sigma_relative: 3
   L: 100
-  C_percentile:
-    - 5
+  C:
     - 25
-    - 50
     - 75
-    - 95
+    - 125
 
 PVI_settings:
   damping_factor:
-    - 0.1
+    - 0.2
+
+save_t_is: True

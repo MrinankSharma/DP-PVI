@@ -262,4 +262,5 @@ logs/*
 
 /data/abalone
 /data/adult
+/data/bank
 accountant_tables

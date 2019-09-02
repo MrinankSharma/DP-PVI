@@ -51,6 +51,7 @@ def default_config(dataset, dataset_dist):
 
     PVI_settings = {
         'damping_factor': 0.1,
+        'damping_decay': 0,
     }
 
     privacy_settings = {
@@ -158,7 +159,6 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
                 },
                 't_i_init_function': lambda x: np.zeros(x.shape),
                 't_i_postprocess_function': ensure_positive_t_i_factory("w_pres"),
-                "damping_factor": PVI_settings['damping_factor'],
             }
         ) for i in range(M)]
 
@@ -172,7 +172,11 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
             },
             prior=prior_params,
             client_factories=client_factories,
-            max_iterations=N_iterations
+            max_iterations=N_iterations,
+            hyperparameters={
+                "damping_factor": PVI_settings['damping_factor'],
+                "damping_decay": PVI_settings['damping_decay']
+            }
         )
 
         while not ray.get(server.should_stop.remote()):

@@ -55,6 +55,7 @@ def default_config(dataset, dataset_dist):
 
     PVI_settings = {
         'damping_factor': 1.,
+        'damping_decay': 0.025,
     }
 
     optimisation_settings = {
@@ -180,7 +181,6 @@ def run_experiment(ray_cfg,
             hyperparameters={
                 "t_i_init_function": lambda x: np.zeros(x.shape),
                 "t_i_postprocess_function": ensure_positive_t_i_factory("w_pres"),
-                "damping_factor": PVI_settings['damping_factor'],
             },
             metadata={
                 'client_index': i,
@@ -199,7 +199,9 @@ def run_experiment(ray_cfg,
             model_class=MeanFieldMultiDimensionalLogisticRegression,
             model_parameters=prior_params,
             hyperparameters={
-                "lambda_postprocess_func": param_postprocess_handle
+                "lambda_postprocess_func": param_postprocess_handle,
+                "damping_factor": PVI_settings['damping_factor'],
+                "damping_decay": PVI_settings['damping_decay']
             },
             max_iterations=N_iterations,
             client_factories=client_factories,
