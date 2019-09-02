@@ -8,7 +8,7 @@ dataset:
   scaled:
     - True
   ordinal_cat_encoding:
-    - True
+    - False
   train_proportion:
     - 0.8
   data_base_dir:

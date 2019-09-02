@@ -1,17 +1,10 @@
-experiment_file: experiments/jalko2017/PVI_experiment.py
-experiment_tag: pure_pvi_two
-database: datapoint_inhomo
-
-PVI_settings:
-  damping_factor:
-    - 0.4
-  damping_decay:
-    - 0.025
+experiment_file: experiments/jalko2017/datapoint_experiment.py
+experiment_tag: datapoint_experiment_fixed_less_damping
+database: adaptive_clipping
 
 dataset:
   name:
     - adult
-#    - abalone
   scaled:
     - True
   ordinal_cat_encoding:
@@ -27,23 +20,17 @@ dataset_dist:
   rho:
     - 3800
   sample_rho_noise_scale:
-    - 350
+    - 0
   inhomo_scale:
     - 0
-    - 2
-    - 4
 
 optimisation_settings:
   lr:
     - 0.2
   N_steps:
     - 25
-    - 50
-    - 100
   lr_decay:
     - 0
-  L:
-    - 380
 
 ray_cfg:
   redis_address:
@@ -60,12 +47,26 @@ prediction:
     - prohibit
 
 
-N_iterations: 60
+N_iterations: 125
 prior_pres: 1.0
 N_samples: 50
-log_level: info
 
 num_seeds: 3
 slack_json_file: slack.json
 logging_base_directory: logs
+
+privacy_settings:
+  sigma_relative: 3
+  L: 100
+  C:
+    - 25
+    - 75
+    - 125
+
+PVI_settings:
+  damping_factor:
+    - 0.8
+    - 0.5
+    - 0.3
+
 save_t_is: True
