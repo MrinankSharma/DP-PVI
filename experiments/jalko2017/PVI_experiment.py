@@ -127,6 +127,12 @@ def run_experiment(ray_cfg,
         training_set, test_set, d_in = load_data()
         clients_data, nis, prop_positive, M = generate_dataset_distribution_func()(training_set["x"], training_set["y"])
 
+        _run.info = {
+            **_run.info,
+            "prop_positive": prop_positive,
+            "n_is": nis,
+        }
+
         # time.sleep(np.random.uniform(0, 10))
 
         if ray_cfg["redis_address"] == None:
