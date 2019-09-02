@@ -51,6 +51,7 @@ def default_config(dataset, dataset_dist):
 
     PVI_settings = {
         'damping_factor': 0.1,
+        'damping_decay': 0,
     }
 
     privacy_settings = {
