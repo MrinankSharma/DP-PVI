@@ -348,7 +348,10 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
 
         x_full = data["x"]
         y_full = data["y"]
-        N_full = x_full.shape[0]
+        if "N_full" in self.hyperparameters:
+            N_full = self.hyperparameters['N_full']
+        else:
+            N_full = x_full.shape[0]
 
         cav_nat_params = B.subtract_params(self.get_parameters(), t_i)
         # numpy dict for the effective prior

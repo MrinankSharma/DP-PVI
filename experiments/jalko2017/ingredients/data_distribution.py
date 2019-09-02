@@ -20,7 +20,7 @@ logger = logging.getLogger("Dataset Distribution")
 @dataset_dist_ingred.config
 def cfg():
     M = 20
-    rho = 1900
+    rho = 380
     sample_rho_noise_scale = 0
     inhomo_scale = 0
 

@@ -316,3 +316,139 @@ class DPClient(StandardClient):
     def get_compiled_log(self):
         self.log['ledger'] = self.dp_query.ledger.get_formatted_ledger()
         return self.log
+
+
+class VIClient(Client):
+    def __init__(self, model_class, data, model_parameters=None, model_hyperparameters=None,
+                 hyperparameters=None,
+                 metadata=None):
+
+        super().__init__(model_class, data, model_parameters, model_hyperparameters, hyperparameters, metadata)
+
+        self.t_i = {}
+        for key in model_parameters.keys():
+            self.t_i[key] = self.t_i_init_func(model_parameters[key])
+
+        self.lambda_i = self.model.get_parameters()
+
+    @classmethod
+    def create_factory(cls, model_class, data, model_parameters=None, model_hyperparameters=None, hyperparameters=None,
+                       metadata=None):
+
+        return lambda: cls(model_class, data, model_parameters, model_hyperparameters, hyperparameters, metadata)
+
+    def set_hyperparameters(self, hyperparameters):
+        super().set_hyperparameters(hyperparameters)
+
+        self.t_i_init_func = self.hyperparameters['t_i_init_function']
+        self.t_i_postprocess_funtion = self.hyperparameters['t_i_postprocess_function']
+        self.damping_factor = self.hyperparameters['damping_factor']
+
+    def set_metadata(self, metadata):
+        super().set_metadata(metadata)
+
+    @classmethod
+    def get_default_hyperparameters(cls):
+        default_hyperparameters = {
+            **super().get_default_hyperparameters(),
+            **{
+                't_i_init_function': lambda x: np.zeros(x.shape),
+                't_i_postprocess_function': lambda x: x,
+                "damping_factor": 1.,
+            }
+        }
+        return default_hyperparameters
+
+    @classmethod
+    def get_default_metadata(cls):
+        return {
+            **super().get_default_metadata(),
+            **{
+                'global_iteration': 0,
+                'log_params': False,
+                'log_t_i': True,
+                "log_model_info": False,
+            }
+        }
+
+    def compute_update(self, model_parameters=None, model_hyperparameters=None, update_ti=True):
+        super().compute_update(model_parameters, model_hyperparameters)
+
+        t_i_old = self.t_i
+        lambda_old = self.model.get_parameters()
+
+        # find the new optimal parameters for this clients data
+        lambda_new = self.model.fit(self.data,
+                                    t_i_old,
+                                    model_parameters,
+                                    model_hyperparameters)
+        logger.debug("Client New Lamdba")
+
+        # print(self.metadata['test_self'])
+        # if self.metadata['test_self'] is not None:
+        #     print(f'client  {self.metadata["client_index"]} \n{lambda_new}')
+        #     preds = self.model.predict(self.data['x'])
+        #     for key, test in self.metadata['test_self'].items():
+        #         print(f'    {key}: {test(preds, self.data["y"])}')
+
+        delta_lambda_i = np_utils.subtract_params(lambda_new,
+                                                  lambda_old)
+
+        # logger.info(f"Old Params: {lambda_old}\n"
+        #             f"New Params: {lambda_new}\n")
+
+        # apply the privacy function, specified by the server
+        # delta_lambda_i_tilde, privacy_stats = self.privacy_function(delta_lambda_i)
+
+        delta_lambda_i = np_nest.apply_to_structure(lambda x: np.multiply(x, self.damping_factor), delta_lambda_i)
+
+        # compute the new
+        lambda_new = np_utils.add_parameters(lambda_old, delta_lambda_i)
+
+        t_i_new = np_utils.add_parameters(
+            np_utils.subtract_params(lambda_new,
+                                     lambda_old),
+            t_i_old
+        )
+
+        t_i_new = self.t_i_postprocess_funtion(t_i_new)
+        delta_lambda_i_tilde = np_utils.subtract_params(t_i_new, t_i_old)
+
+        if update_ti:
+            self.t_i = t_i_new
+            logger.debug(f"New t_i {self.t_i}")
+            self.times_updated += 1
+
+        return delta_lambda_i_tilde
+
+    def update_ti(self, delta_ti):
+        t_i_new = np_utils.add_parameters(delta_ti, self.t_i)
+        t_i_new = self.t_i_postprocess_funtion(t_i_new)
+        self.t_i = t_i_new
+        logger.debug(f"New t_i {self.t_i}")
+        self.times_updated += 1
+
+    def log_update(self):
+        super().log_update()
+
+        if 'global_iteration' in list(self.metadata.keys()):
+            self.log['global_iteration'].append(self.metadata['global_iteration'])
+
+        self.log['times_updated'].append(self.times_updated)
+
+        if self.metadata['log_params']:
+            self.log['params'].append(np_nest.structured_ndarrays_to_lists(self.model.get_parameters()))
+        if self.metadata['log_t_i']:
+            self.log['t_i'].append(np_nest.structured_ndarrays_to_lists(self.t_i))
+        if self.metadata['log_model_info']:
+            self.log['model'].append(np_nest.structured_ndarrays_to_lists(self.model.get_incremental_log_record()))
+
+    def log_sacred(self):
+        log = {}
+        log['model'] = self.model.get_incremental_sacred_record()
+
+        return log, self.times_updated
+
+    @property
+    def parameters(self):
+        return self.model.get_parameters()
