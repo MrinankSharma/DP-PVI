@@ -10,7 +10,7 @@ import src.utils.numpy_utils as B
 from src.model.model import Model
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 
 # note that these functions are all using NUMPY variables
@@ -209,6 +209,8 @@ class LogisticRegressionTorchModule(nn.Module):
 
         likelihood_term = 1 / N_samples * torch.einsum('ij->i', likelihood) * self.N_full / L
         ELBO_per_point = likelihood_term + KL_term
+
+        logger.info(f"KL TERM {KL_term}, likelihood term {torch.sum(likelihood_term)}")
 
         # we call the ELBO loss the negative of the elbo (we maximise the ELBO)
         return -ELBO_per_point

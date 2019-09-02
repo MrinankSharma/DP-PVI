@@ -95,12 +95,6 @@ def default_config(dataset, dataset_dist):
 
     log_level = 'info'
 
-    ray_cfg = {
-        "redis_address": "None",
-        "num_cpus": 1,
-        "num_gpus": 0,
-    }
-
     prediction = {
         "interval": 1,
         "type": "prohibit"
@@ -142,7 +136,7 @@ def run_experiment(ray_cfg,
         # time.sleep(np.random.uniform(0, 10))
 
         print(type(ray_cfg["redis_address"]), ray_cfg["redis_address"])
-        if ray_cfg["redis_address"] == None:
+        if ray_cfg["redis_address"] is None:
             logger.info("Running Locally")
             ray.init(num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"], logging_level=logging.INFO,
                      local_mode=True)
