@@ -314,7 +314,7 @@ class DPClient(StandardClient):
         return log, times_updated
 
     def get_compiled_log(self):
-        self.log['ledger'] = self.dp_query.ledger.get_formatted_ledger()
+        # self.log['ledger'] = self.dp_query.ledger.get_formatted_ledger()
         return self.log
 
 

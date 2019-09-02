@@ -24,7 +24,6 @@ import pyarrow
 import torch
 from sacred import Experiment
 
-import src.privacy.analysis.moment_accountant as moment_accountant
 import src.utils.numpy_nest_utils as numpy_nest
 # noinspection PyUnresolvedReferences
 from experiments.jalko2017.MongoDBOption import TestOption, ExperimentOption, DatabaseOption
@@ -34,14 +33,12 @@ from experiments.jalko2017.measure_performance import compute_prediction_accurac
 from experiments.utils import save_log, save_pickle
 from src.client.client import StandardClient, ensure_positive_t_i_factory
 from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression
-from src.privacy.dp_query import NumpyGaussianDPQuery, NumpyNoDPSumQuery
 from src.privacy.optimizer import StandardOptimizer
 from src.server import SyncronousPVIParameterServer
 from src.utils.yaml_string_dumper import YAMLStringDumper
-import src.utils.numpy_utils as B
 import src.utils.numpy_nest_utils as np_nest
 
-ex = Experiment("jalko2017_client_exp", [dataset_ingredient, dataset_dist_ingred])
+ex = Experiment("jalko2017_pure_PVI", [dataset_ingredient, dataset_dist_ingred])
 logger = logging.getLogger(__name__)
 pretty_dump = YAMLStringDumper()
 

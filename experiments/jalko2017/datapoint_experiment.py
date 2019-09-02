@@ -112,6 +112,9 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
         training_set, test_set, d_in = load_data()
         clients_data, nis, prop_positive, M = generate_dataset_distribution_func()(training_set["x"], training_set["y"])
 
+        logger.info(f"Proportions Positive Are: {prop_positive}")
+        logger.info(f"Num datapoints are: {nis}")
+
         if ray_cfg["redis_address"] is None:
             logger.info("Creating new ray server")
             ray.init(num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"], logging_level=logging.INFO,

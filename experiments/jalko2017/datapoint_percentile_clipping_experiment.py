@@ -94,7 +94,8 @@ def default_config(dataset, dataset_dist):
 
 
 @ex.automain
-def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings, PVI_settings, N_samples, N_iterations, prediction,
+def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings, PVI_settings, N_samples, N_iterations,
+                   prediction,
                    experiment_tag, logging_base_directory, log_level, save_t_is,
                    _run, _config, seed):
     if log_level == 'info':
@@ -164,6 +165,9 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
                 't_i_init_function': lambda x: np.zeros(x.shape),
                 't_i_postprocess_function': ensure_positive_t_i_factory("w_pres"),
                 "damping_factor": PVI_settings['damping_factor'],
+            },
+            metadata={
+                "log_model_info": True
             }
         ) for i in range(M)]
 

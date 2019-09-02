@@ -1,5 +1,6 @@
 import json
 import collections
+import pickle
 
 import gridfs
 from bson import ObjectId
@@ -46,12 +47,17 @@ class SacredExperimentAccess(object):
         '''
         if isinstance(objects, dict):
             for i, artifact in enumerate(objects['artifacts']):
-                objects['artifacts'][i]['object'] = json.loads(self.fs.get(artifact['file_id']).read())
+                if ".json" in artifact["file_id"]:
+                    objects['artifacts'][i]['object'] = json.loads(self.fs.get(artifact['file_id']).read())
+                else:
+                    objects['artifacts'][i]['object'] = json.loads(self.fs.get(artifact['file_id']).read())
         elif isinstance(objects, collections.Iterable):
             for object in objects:
                 for i, artifact in enumerate(object['artifacts']):
-                    object['artifacts'][i]['object'] = json.loads(self.fs.get(artifact['file_id']).read())
-
+                    if ".json" in artifact["file_id"]:
+                        objects['artifacts'][i]['object'] = pickle.load(self.fs.get(artifact['file_id']).read())
+                    else:
+                        objects['artifacts'][i]['object'] = pickle.loads(self.fs.get(artifact['file_id']).read())
         return objects
 
     def get_artifacts_by_id(self, ids):
