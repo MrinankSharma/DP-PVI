@@ -185,14 +185,17 @@ class LogisticRegressionTorchModule(nn.Module):
         """
         self.set_parameters(parameters)
 
-        def compute_KL_qp(q_mean, q_var, p_mean, p_var, q_log_var_diag):
+        def compute_KL_qp(q_mean, q_log_var_diag, p_mean, p_log_var_diag):
+            q_var = torch.diag(torch.exp(q_log_var_diag))
+            p_var = torch.diag(torch.exp(p_log_var_diag))
             k = q_mean.shape[0]
             p_inv = torch.inverse(p_var)
             m1_m2 = p_mean - q_mean
             # note that we a-priori know that q_var is a diagonal matrix
-            KL = 0.5 * (torch.trace(torch.mm(p_inv, q_var)) + torch.dot(m1_m2, torch.mv(p_inv, m1_m2)) - k + np.log(
-                torch.det(p_var)) - torch.sum(q_log_var_diag))
+            KL = 0.5 * (torch.trace(torch.mm(p_inv, q_var)) + torch.dot(m1_m2, torch.mv(p_inv, m1_m2)) - k + torch.sum(
+                p_log_var_diag) - torch.sum(q_log_var_diag))
             return KL
+
         activation_mat = y
 
         L = activation_mat.shape[0]
@@ -202,15 +205,12 @@ class LogisticRegressionTorchModule(nn.Module):
 
         # compute the KL term
         # scale by the TOTAL number of data points!
-        KL_term = -1 / L * compute_KL_qp(self.w_mu, torch.diag(torch.exp(self.w_log_var)), self.prior_mu,
-                                                   torch.diag(torch.exp(self.prior_log_var)), self.w_log_var)
+        KL_term = -1 / L * compute_KL_qp(self.w_mu, self.w_log_var, self.prior_mu, self.prior_log_var)
 
         likelihood = self.act(activation_mat * mask)
 
         likelihood_term = 1 / N_samples * torch.einsum('ij->i', likelihood) * self.N_full / L
         ELBO_per_point = likelihood_term + KL_term
-
-        logger.info(f"KL TERM {KL_term}, likelihood term {torch.sum(likelihood_term)}")
 
         # we call the ELBO loss the negative of the elbo (we maximise the ELBO)
         return -ELBO_per_point
