@@ -1,10 +1,6 @@
-experiment_file: experiments/jalko2017/PVI_experiment.py
-experiment_tag: pure_pvi
-database: BatchVI_test
-
-PVI_settings:
-  damping_factor:
-    - 0.1
+experiment_file: experiments/jalko2017/BatchVI_experiment.py
+experiment_tag: batch_vi
+database: BatchVI_comparison
 
 dataset:
   name:
@@ -13,7 +9,7 @@ dataset:
   scaled:
     - True
   ordinal_cat_encoding:
-    - True
+    - False
   train_proportion:
     - 0.8
   data_base_dir:
@@ -21,19 +17,27 @@ dataset:
 
 dataset_dist:
   M:
-    - 1
+    - 20
   rho:
     - 380
   sample_rho_noise_scale:
     - 0
+    - 5
+    - 10
+    - 20
+    - 40
   inhomo_scale:
-    - 0
+    - 0.0
+    - 0.5
+    - 1.0
+    - 1.5
+    - 2.0
 
 optimisation_settings:
   lr:
     - 0.2
   N_steps:
-    - 200
+    - 1
   lr_decay:
     - 0
   L:
@@ -49,17 +53,15 @@ ray_cfg:
 
 prediction:
   interval:
-    - 1
+    - 100
   type:
     - prohibit
 
 
-N_iterations: 30
+N_iterations: 6000
 prior_pres: 1.0
 N_samples: 50
-log_level: info
 
 num_seeds: 5
 slack_json_file: slack.json
 logging_base_directory: logs
-save_t_is: True

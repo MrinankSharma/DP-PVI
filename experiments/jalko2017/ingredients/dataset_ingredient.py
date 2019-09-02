@@ -19,11 +19,11 @@ logger = logging.getLogger("Dataset Generation")
 
 @dataset_ingredient.config
 def cfg():
-    name = "abalone"
+    name = "adult"
     scaled = True
     ordinal_cat_encoding = True
     train_proportion = 0.8
-    data_base_dir = "/scratch/DP-PVI/DP-PVI/data"
+    data_base_dir = "data"
 
 
 def generate_filename(name, scaled, ordinal_cat_encoding, data_base_dir):

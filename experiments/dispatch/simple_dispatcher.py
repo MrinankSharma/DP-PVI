@@ -50,4 +50,6 @@ if __name__ == "__main__":
     except FileNotFoundError:
         logger.error("Could not find experiment dispatcher yaml file!")
 
+    print('Running:')
+    print(commands)
     dispatch_command_strings(commands, num_cpus=args.num_cpus, cpus_per_command=args.cpu_per_com)
