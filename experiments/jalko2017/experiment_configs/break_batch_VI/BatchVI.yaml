@@ -1,0 +1,77 @@
+experiment_file: experiments/jalko2017/BatchVI_experiment.py
+experiment_tag: batch_vi
+database: BatchVI_comparison
+
+dataset:
+  name:
+    - adult
+#    - abalone
+  scaled:
+    - True
+  ordinal_cat_encoding:
+    - False
+  train_proportion:
+    - 0.8
+  data_base_dir:
+    - data
+  dataset_seed:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+
+dataset_dist:
+  M:
+    - 10
+  rho:
+    - 3800
+  sample_rho_noise_scale:
+#    - 0
+#    - 5
+#    - 10
+#    - 20
+#    - 40
+    - 1500
+  inhomo_scale:
+#    - 0.0
+#    - 0.5
+#    - 1.0
+#    - 1.5
+#    - 2.0
+    - 5.0
+    - 10.0
+
+optimisation_settings:
+  lr:
+    - 0.2
+  N_steps:
+    - 1
+  lr_decay:
+    - 0
+  L:
+    - 380
+
+ray_cfg:
+  redis_address:
+    - None
+  num_cpus:
+    - 1
+  num_gpus:
+    - 0
+
+prediction:
+  interval:
+    - 100
+  type:
+    - prohibit
+
+
+N_iterations: 1000
+prior_pres: 1.0
+N_samples: 50
+
+num_seeds: 1
+slack_json_file: slack.json
+logging_base_directory: logs
