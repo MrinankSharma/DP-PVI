@@ -214,6 +214,8 @@ def run_experiment(ray_cfg,
                          f" {pretty_dump.dump(parameters)}\n")
         t = datetime.datetime.now()
 
+        time.sleep(np.random.uniform(0, 100))
+
         if save_q:
             ex.add_artifact(save_pickle(
                 parameters, 't_is', ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
@@ -222,7 +224,5 @@ def run_experiment(ray_cfg,
 
     except pyarrow.lib.ArrowIOError:
         raise Exception("Experiment Terminated - was this you?")
-
-    time.sleep(30)
 
     return test_acc
