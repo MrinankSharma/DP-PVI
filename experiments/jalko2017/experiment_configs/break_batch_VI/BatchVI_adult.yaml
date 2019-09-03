@@ -5,7 +5,6 @@ database: break_batch_vi
 dataset:
   name:
     - adult
-#    - abalone
   scaled:
     - True
   ordinal_cat_encoding:
@@ -26,22 +25,26 @@ dataset_dist:
 #    - 10
 #    - 20
 #    - 40
+    - 0
     - 1500
+    - 3000
+    - 4500
   inhomo_scale:
 #    - 0.0
 #    - 0.5
 #    - 1.0
 #    - 1.5
 #    - 2.0
+    - 0
     - 5.0
     - 10.0
+    - 20.0
   dataset_seed:
     - 1
     - 2
     - 3
     - 4
     - 5
-    - 6
 
 optimisation_settings:
   lr:

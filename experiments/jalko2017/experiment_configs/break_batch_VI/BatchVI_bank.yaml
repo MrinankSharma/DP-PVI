@@ -1,17 +1,10 @@
-experiment_file: experiments/jalko2017/PVI_experiment.py
-experiment_tag: pvi_baseline
+experiment_file: experiments/jalko2017/BatchVI_experiment.py
+experiment_tag: batch_vi
 database: break_batch_vi
-
-PVI_settings:
-  damping_factor:
-    - 0.1
-  async:
-    - True
 
 dataset:
   name:
-    - adult
-#    - abalone
+    - bank
   scaled:
     - True
   ordinal_cat_encoding:
@@ -25,25 +18,39 @@ dataset_dist:
   M:
     - 10
   rho:
-    - 3800
+    - 3500
   sample_rho_noise_scale:
+#    - 0
+#    - 5
+#    - 10
+#    - 20
+#    - 40
+    - 0
     - 1500
+    - 3000
+    - 4500
   inhomo_scale:
+#    - 0.0
+#    - 0.5
+#    - 1.0
+#    - 1.5
+#    - 2.0
+    - 0
     - 5.0
     - 10.0
+    - 20.0
   dataset_seed:
     - 1
     - 2
     - 3
     - 4
     - 5
-    - 6
 
 optimisation_settings:
   lr:
     - 0.2
   N_steps:
-    - 200
+    - 1
   lr_decay:
     - 0
   L:
@@ -59,18 +66,18 @@ ray_cfg:
 
 prediction:
   interval:
-    - 1
+    - 50
   type:
     - prohibit
 
 
-N_iterations: 1
+N_iterations: 50
 prior_pres: 1.0
 N_samples: 50
+save_q: True
 
 log_level: info
 
-save_t_is: True
 num_seeds: 1
 slack_json_file: slack.json
 logging_base_directory: logs
