@@ -109,6 +109,13 @@ def run_experiment(ray_cfg,
     np.random.seed(seed)
     torch.manual_seed(seed)
 
+    if log_level == 'info':
+        logging.getLogger().setLevel(logging.INFO)
+    elif log_level == 'debug':
+        logging.getLogger().setLevel(logging.DEBUG)
+    else:
+        logging.getLogger().setLevel(logging.INFO)
+
     try:
 
         training_set, test_set, d_in = load_data()
@@ -161,6 +168,10 @@ def run_experiment(ray_cfg,
         )
 
         parameters = prior_params
+
+        client_probs = 1 / np.array([data['x'].shape[0] for data in clients_data])
+        client_probs = client_probs / client_probs.sum()
+
 
         for epoch in range(N_iterations):
             # dispatch work to ray and grab the log

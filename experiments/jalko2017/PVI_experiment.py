@@ -113,11 +113,11 @@ def run_experiment(ray_cfg,
                    _config,
                    seed):
     if log_level == 'info':
-        logger.setLevel(logging.INFO)
+        logging.getLogger().setLevel(logging.INFO)
     elif log_level == 'debug':
-        logger.setLevel(logging.DEBUG)
+        logging.getLogger().setLevel(logging.DEBUG)
     else:
-        logger.setLevel(logging.INFO)
+        logging.getLogger().setLevel(logging.INFO)
 
     torch.set_num_threads(int(ray_cfg["num_cpus"]))
     np.random.seed(seed)
