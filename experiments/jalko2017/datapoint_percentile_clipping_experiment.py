@@ -126,7 +126,7 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
             "w_pres": prior_pres * np.ones(d_in, dtype=np.float32)
         }
 
-        logger.info(f"Prior Parameters:\n\n{pretty_dump.dump(prior_params)}\n")
+        logger.debug(f"Prior Parameters:\n\n{pretty_dump.dump(prior_params)}\n")
 
         # client factories for each client - this avoids pickling of the client object for ray internals
         client_factories = [DPClient.create_factory(

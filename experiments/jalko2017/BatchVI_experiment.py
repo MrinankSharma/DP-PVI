@@ -106,6 +106,13 @@ def run_experiment(ray_cfg,
     np.random.seed(seed)
     torch.manual_seed(seed)
 
+    if log_level == 'info':
+        logging.getLogger().setLevel(logging.INFO)
+    elif log_level == 'debug':
+        logging.getLogger().setLevel(logging.DEBUG)
+    else:
+        logging.getLogger().setLevel(logging.INFO)
+
     try:
 
         training_set, test_set, d_in = load_data()
@@ -135,7 +142,7 @@ def run_experiment(ray_cfg,
             "w_pres": prior_pres * np.ones(d_in, dtype=np.float32)
         }
 
-        logger.info(f"Prior Parameters:\n\n{pretty_dump.dump(prior_params)}\n")
+        logger.debug(f"Prior Parameters:\n\n{pretty_dump.dump(prior_params)}\n")
 
         # create the model to optimise in batch VI fashion
 
@@ -159,13 +166,20 @@ def run_experiment(ray_cfg,
 
         parameters = prior_params
 
+        client_probs = 1 / np.array([data['x'].shape[0] for data in clients_data])
+        client_probs = client_probs / client_probs.sum()
+
+
         for epoch in range(N_iterations):
             # dispatch work to ray and grab the log
             st_tick = time.time()
 
             # fit the model to each batch of data
-            for data in clients_data:
-                parameters = model.fit(data, parameters)
+            for i in range(len(clients_data)):
+
+                client_index = int(np.random.choice(len(clients_data), 1, replace=False, p=client_probs))
+
+                parameters = model.fit(clients_data[client_index], parameters)
                 parameters = np_nest.map_structure(np.subtract, parameters, prior_params)
 
             st_log = time.time()

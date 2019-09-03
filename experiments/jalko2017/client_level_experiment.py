@@ -143,7 +143,7 @@ def run_experiment(ray_cfg,
             "w_pres": prior_pres * np.ones(d_in, dtype=np.float32)
         }
 
-        logger.info(f"Prior Parameters:\n\n{pretty_dump.dump(prior_params)}\n")
+        logger.debug(f"Prior Parameters:\n\n{pretty_dump.dump(prior_params)}\n")
 
         def param_postprocess_function(delta_param, all_params, c):
             delta_ti = np_nest.apply_to_structure(lambda x: np.divide(x, len(c)), delta_param)

@@ -187,9 +187,10 @@ class LogisticRegressionTorchModule(nn.Module):
 
         def compute_KL_qp(q_mean, q_log_var_diag, p_mean, p_log_var_diag):
             q_var = torch.diag(torch.exp(q_log_var_diag))
-            p_var = torch.diag(torch.exp(p_log_var_diag))
             k = q_mean.shape[0]
-            p_inv = torch.inverse(p_var)
+            p_inv = torch.exp(p_log_var_diag)
+            p_inv = 1/ p_inv
+            p_inv = torch.diag(p_inv)
             m1_m2 = p_mean - q_mean
             # note that we a-priori know that q_var is a diagonal matrix
             KL = 0.5 * (torch.trace(torch.mm(p_inv, q_var)) + torch.dot(m1_m2, torch.mv(p_inv, m1_m2)) - k + torch.sum(
@@ -373,9 +374,9 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         for i in range(self.hyperparameters['N_steps']):
             # sample minibatch at each step ...
             if self.hyperparameters["batch_size"] > data["x"].shape[0]:
-                self.hyperparameters["batch_size"] = data["x"].shape[0]
-                logger.warning('Had to reduce minibatch size to match data size. This is permanent for the run.')
-            mini_batch_indices = np.random.choice(data["x"].shape[0], self.hyperparameters["batch_size"], replace=False)
+                logger.debug('Had to reduce minibatch size to match data size.')
+            batch_size = np.min([self.hyperparameters["batch_size"], data["x"].shape[0]])
+            mini_batch_indices = np.random.choice(data["x"].shape[0], batch_size, replace=False)
             # convert data into a tensor
             x = torch.tensor(x_full[mini_batch_indices, :], dtype=torch.float32)
             y_true = torch.tensor(y_full[mini_batch_indices], dtype=torch.float32)
@@ -391,6 +392,8 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         # if several fit batches are called, this puts all of their training curves into a list
         self._training_curves.append(training_curve)
         self._derived_statistics_histories.append(derived_statistics_history)
+
+        logger.debug(np.exp(self.torch_module.w_log_var.detach().numpy()))
 
         return self.get_parameters()
 

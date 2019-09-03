@@ -193,8 +193,8 @@ class StandardClient(Client):
         delta_lambda_i = np_utils.subtract_params(lambda_new,
                                                   lambda_old)
 
-        # logger.info(f"Old Params: {lambda_old}\n"
-        #             f"New Params: {lambda_new}\n")
+        logger.debug(f"Old Params: {lambda_old}\n"
+                    f"New Params: {lambda_new}\n")
 
         # apply the privacy function, specified by the server
         # delta_lambda_i_tilde, privacy_stats = self.privacy_function(delta_lambda_i)
