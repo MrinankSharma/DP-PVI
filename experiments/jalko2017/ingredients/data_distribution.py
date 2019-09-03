@@ -78,7 +78,7 @@ def generate_dataset_distribution_func(_run, M, rho, sample_rho_noise_scale, inh
         _run.info = {
             **_run.info,
             "prop_positive": prop_positive,
-            "n_is": N_is,
+            "n_is": N_is.tolist(),
         }
 
         np.random.set_state(np_random_state)
