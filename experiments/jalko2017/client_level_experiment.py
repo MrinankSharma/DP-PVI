@@ -115,7 +115,6 @@ def run_experiment(ray_cfg,
                    _run,
                    _config,
                    seed):
-
     torch.set_num_threads(int(ray_cfg["num_cpus"]))
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -131,9 +130,6 @@ def run_experiment(ray_cfg,
             "n_is": nis,
         }
 
-        # time.sleep(np.random.uniform(0, 10))
-
-        print(type(ray_cfg["redis_address"]), ray_cfg["redis_address"])
         if ray_cfg["redis_address"] is None:
             logger.info("Running Locally")
             ray.init(num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"], logging_level=logging.INFO,
