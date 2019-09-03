@@ -1,6 +1,6 @@
 experiment_file: experiments/jalko2017/BatchVI_experiment.py
 experiment_tag: batch_vi
-database: BatchVI_comparison
+database: break_batch_vi
 
 dataset:
   name:
@@ -14,13 +14,6 @@ dataset:
     - 0.8
   data_base_dir:
     - data
-  dataset_seed:
-    - 1
-    - 2
-    - 3
-    - 4
-    - 5
-    - 6
 
 dataset_dist:
   M:
@@ -42,6 +35,13 @@ dataset_dist:
 #    - 2.0
     - 5.0
     - 10.0
+  dataset_seed:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
 
 optimisation_settings:
   lr:
