@@ -72,7 +72,7 @@ N_iterations: 1000
 prior_pres: 1.0
 N_samples: 50
 
-log_level: info
+log_level: debug
 
 num_seeds: 1
 slack_json_file: slack.json

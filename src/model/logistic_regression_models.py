@@ -393,6 +393,8 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         self._training_curves.append(training_curve)
         self._derived_statistics_histories.append(derived_statistics_history)
 
+        logger.debug(np.exp(self.torch_module.w_log_var.detach().numpy()))
+
         return self.get_parameters()
 
     def get_incremental_log_record(self):
