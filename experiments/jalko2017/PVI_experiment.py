@@ -274,7 +274,7 @@ def run_experiment(ray_cfg,
         final_log["Proportion_positive"] = prop_positive
         t = datetime.datetime.now()
 
-        # time.sleep(np.random.uniform(0, 100))
+        time.sleep(30)
 
         ex.add_artifact(
             save_log(final_log, "full_log", ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,

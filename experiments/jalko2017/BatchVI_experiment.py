@@ -214,7 +214,7 @@ def run_experiment(ray_cfg,
                          f" {pretty_dump.dump(parameters)}\n")
         t = datetime.datetime.now()
 
-        # time.sleep(np.random.uniform(0, 100))
+        time.sleep(30)
 
         if save_q:
             ex.add_artifact(save_pickle(
