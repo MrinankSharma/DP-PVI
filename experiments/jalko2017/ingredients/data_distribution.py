@@ -28,8 +28,8 @@ def cfg():
 
 
 @dataset_dist_ingred.capture
-def generate_dataset_distribution_func(M, rho, sample_rho_noise_scale, inhomo_scale, dataset_seed):
-    def dataset_distribution_function(x, y, M, rho, sample_rho_noise_scale, inhomo_scale, dataset_seed):
+def generate_dataset_distribution_func(_run, M, rho, sample_rho_noise_scale, inhomo_scale, dataset_seed):
+    def dataset_distribution_function(_run, x, y, M, rho, sample_rho_noise_scale, inhomo_scale, dataset_seed):
         # this function ought to return a list of (x, y) tuples.
         # you need to set the seed in the main experiment file to ensure that this function becomes deterministic
 
@@ -75,8 +75,14 @@ def generate_dataset_distribution_func(M, rho, sample_rho_noise_scale, inhomo_sc
             }))
             prop_positive.append(np.mean(y_i > 0))
 
+        _run.info = {
+            **_run.info,
+            "prop_positive": prop_positive,
+            "n_is": N_is,
+        }
+
         np.random.set_state(np_random_state)
 
         return clients_data, N_is.tolist(), prop_positive, M
 
-    return lambda x, y: dataset_distribution_function(x, y, M, rho, sample_rho_noise_scale, inhomo_scale, dataset_seed)
+    return lambda x, y: dataset_distribution_function(_run, x, y, M, rho, sample_rho_noise_scale, inhomo_scale, dataset_seed)
