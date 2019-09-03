@@ -274,17 +274,20 @@ def run_experiment(ray_cfg,
         final_log["Proportion_positive"] = prop_positive
         t = datetime.datetime.now()
 
-        # time.sleep(30)
+        time.sleep(30)
 
         ex.add_artifact(
             save_log(final_log, "full_log", ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
                      _run.info["test"], t), "full_log.json")
 
         if save_t_is:
+            time.sleep(30)
             t_is = [client.t_i for client in ray.get(server.get_clients.remote())]
             ex.add_artifact(save_pickle(
                 t_is, 't_is',  ex.get_experiment_info()["name"], experiment_tag, logging_base_directory, _run.info["test"], t
             ), 't_is.pkl')
+
+        time.sleep(30)
 
         return test_acc
 
