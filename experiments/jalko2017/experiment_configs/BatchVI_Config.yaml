@@ -24,6 +24,8 @@ dataset_dist:
     - 0
   inhomo_scale:
     - 0
+  dataset_seed:
+    - 1
 
 optimisation_settings:
   lr:

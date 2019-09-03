@@ -29,13 +29,16 @@ def cfg():
 
 @dataset_dist_ingred.capture
 def generate_dataset_distribution_func(M, rho, sample_rho_noise_scale, inhomo_scale, dataset_seed):
-    def dataset_distribution_function(x, y, M, rho, sample_rho_noise_scale, inhomo_scale, dataset_seed, global_seed):
+    def dataset_distribution_function(x, y, M, rho, sample_rho_noise_scale, inhomo_scale, dataset_seed):
         # this function ought to return a list of (x, y) tuples.
         # you need to set the seed in the main experiment file to ensure that this function becomes deterministic
 
+        np_random_state = np.random.get_state()
+
         if dataset_seed is not None:
+            print(dataset_seed, type(dataset_seed))
             np.random.seed(dataset_seed)
-            torch.manual_seed(dataset_seed)
+            # torch.manual_seed(dataset_seed)
 
         clients_data = []
         prop_positive = []
@@ -72,10 +75,8 @@ def generate_dataset_distribution_func(M, rho, sample_rho_noise_scale, inhomo_sc
             }))
             prop_positive.append(np.mean(y_i > 0))
 
-        if dataset_seed is not None:
-            np.random.seed(global_seed)
-            torch.manual_seed(global_seed)
+        np.random.set_state(np_random_state)
 
         return clients_data, N_is.tolist(), prop_positive, M
 
-    return lambda x, y, seed: dataset_distribution_function(x, y, M, rho, sample_rho_noise_scale, inhomo_scale, dataset_seed, seed)
+    return lambda x, y: dataset_distribution_function(x, y, M, rho, sample_rho_noise_scale, inhomo_scale, dataset_seed)
