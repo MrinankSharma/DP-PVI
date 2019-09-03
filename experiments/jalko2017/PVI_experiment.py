@@ -34,7 +34,7 @@ from experiments.utils import save_log, save_pickle
 from src.client.client import StandardClient, ensure_positive_t_i_factory
 from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression
 from src.privacy.optimizer import StandardOptimizer
-from src.server import SyncronousPVIParameterServer
+from src.server import SyncronousPVIParameterServer, AsyncronousPVIParameterServer
 from src.utils.yaml_string_dumper import YAMLStringDumper
 import src.utils.numpy_nest_utils as np_nest
 
@@ -53,6 +53,7 @@ def default_config(dataset, dataset_dist):
     PVI_settings = {
         'damping_factor': 1.,
         'damping_decay': 0.025,
+        'async': False
     }
 
     optimisation_settings = {
@@ -149,7 +150,7 @@ def run_experiment(ray_cfg,
             "w_pres": prior_pres * np.ones(d_in, dtype=np.float32)
         }
 
-        logger.info(f"Prior Parameters:\n\n{pretty_dump.dump(prior_params)}\n")
+        logger.debug(f"Prior Parameters:\n\n{pretty_dump.dump(prior_params)}\n")
 
         def param_postprocess_function(delta_param, all_params, c):
             delta_ti = np_nest.apply_to_structure(lambda x: np.divide(x, len(c)), delta_param)
@@ -200,18 +201,32 @@ def run_experiment(ray_cfg,
 
         # custom decorator based on passed in resources!
         remote_decorator = ray.remote(num_cpus=int(ray_cfg["num_cpus"]), num_gpus=int(ray_cfg["num_gpus"]))
-        server = remote_decorator(SyncronousPVIParameterServer).remote(
-            model_class=MeanFieldMultiDimensionalLogisticRegression,
-            model_parameters=prior_params,
-            hyperparameters={
-                "lambda_postprocess_func": param_postprocess_handle,
-                "damping_factor": PVI_settings['damping_factor'],
-                "damping_decay": PVI_settings['damping_decay']
-            },
-            max_iterations=N_iterations,
-            client_factories=client_factories,
-            prior=prior_params,
-        )
+        if PVI_settings['async']:
+            server = remote_decorator(AsyncronousPVIParameterServer).remote(
+                model_class=MeanFieldMultiDimensionalLogisticRegression,
+                model_parameters=prior_params,
+                hyperparameters={
+                    "lambda_postprocess_func": param_postprocess_handle,
+                    "damping_factor": PVI_settings['damping_factor'],
+                    "damping_decay": PVI_settings['damping_decay']
+                },
+                max_iterations=N_iterations,
+                client_factories=client_factories,
+                prior=prior_params,
+            )
+        else:
+            server = remote_decorator(SyncronousPVIParameterServer).remote(
+                model_class=MeanFieldMultiDimensionalLogisticRegression,
+                model_parameters=prior_params,
+                hyperparameters={
+                    "lambda_postprocess_func": param_postprocess_handle,
+                    "damping_factor": PVI_settings['damping_factor'],
+                    "damping_decay": PVI_settings['damping_decay']
+                },
+                max_iterations=N_iterations,
+                client_factories=client_factories,
+                prior=prior_params,
+            )
 
         while not ray.get(server.should_stop.remote()):
             # dispatch work to ray and grab the log

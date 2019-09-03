@@ -5,6 +5,8 @@ database: break_batch_vi
 PVI_settings:
   damping_factor:
     - 0.1
+  async:
+    - True
 
 dataset:
   name:

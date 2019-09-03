@@ -191,6 +191,82 @@ class SyncronousPVIParameterServer(ParameterServer):
         return {'applied_damping_factor': self.current_damping_factor}, self.iterations
 
 
+class AsyncronousPVIParameterServer(ParameterServer):
+
+    def __init__(self, model_class, prior, max_iterations=100, client_factories=None, hyperparameters=None,
+                 metadata=None,
+                 model_parameters=None, model_hyperparameters=None):
+        clients = [factory() for factory in client_factories]
+        super().__init__(model_class, prior, clients=clients, hyperparameters=hyperparameters, metadata=metadata,
+                         model_parameters=model_parameters, model_hyperparameters=model_hyperparameters)
+        self.max_iterations = max_iterations
+        self.current_damping_factor = 0
+
+        client_probs = 1 / np.array([client.data['x'].shape[0] for client in clients])
+        client_probs = client_probs / client_probs.sum()
+        self.client_probs = client_probs
+
+    def tick(self):
+        if self.should_stop():
+            return False
+
+        lambda_old = self.parameters
+
+        # delta_is = [client.compute_update.remote(lambda_old) for client in self.clients]
+        logger.debug("Getting Client Updates")
+        delta_is = []
+
+        self.current_damping_factor = self.hyperparameters["damping_factor"] * np.exp(
+            -self.iterations * self.hyperparameters["damping_decay"])
+        for i in range(len(self.clients)):
+            client_index = int(np.random.choice(len(self.clients), 1, replace=False, p=self.client_probs))
+            client = self.clients[client_index]
+
+            logger.info(f'On client {i + 1} of {len(self.clients)}')
+            client.set_hyperparameters({"damping_factor": self.current_damping_factor})
+            delta_is.append(client.get_update(model_parameters=lambda_old, model_hyperparameters=None, update_ti=True))
+            logger.info(f'Finished Client {i + 1} of {len(self.clients)}\n\n')
+
+        logger.debug("Received client updates")
+        lambda_new = lambda_old
+        for delta_i in delta_is:
+            lambda_new = np_nest.map_structure(np.add, *[lambda_new, delta_i])
+
+        self.parameters = lambda_new
+
+        # update the model parameters
+        self.model.set_parameters(self.parameters)
+        logger.debug(f"Iteration {self.iterations} complete.\nNew Parameters:\n {pretty_dump.dump(lambda_new)}\n")
+        [client.set_metadata({"global_iteration": self.iterations}) for client in self.clients]
+
+        self.log_update()
+
+        self.iterations += 1
+
+    def should_stop(self):
+        if self.iterations > self.max_iterations - 1:
+            return True
+        else:
+            return False
+
+    def get_default_hyperparameters(self):
+        return {
+            **super().get_default_hyperparameters(),
+            **{
+                'damping_factor': 1,
+                'damping_decay': 0,
+                'lambda_postprocess_func': lambda x: x
+            }
+        }
+
+    def get_default_metadata(self):
+        return super().get_default_metadata()
+
+    def log_sacred(self):
+        return {'applied_damping_factor': self.current_damping_factor}, self.iterations
+
+
+
 class DPSyncronousPVIParameterServer(ParameterServer):
 
     def __init__(self, model_class, dp_query_class, accounting_dict, prior, max_iterations=100, clients=None,
