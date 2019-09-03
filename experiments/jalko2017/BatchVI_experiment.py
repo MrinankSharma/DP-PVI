@@ -214,15 +214,11 @@ def run_experiment(ray_cfg,
                          f" {pretty_dump.dump(parameters)}\n")
         t = datetime.datetime.now()
 
-        time.sleep(30)
-
         if save_q:
             ex.add_artifact(save_pickle(
                 parameters, 't_is', ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
                 _run.info["test"], t
             ), 't_is.pkl')
-
-        time.sleep(30)
 
         return test_acc
 
