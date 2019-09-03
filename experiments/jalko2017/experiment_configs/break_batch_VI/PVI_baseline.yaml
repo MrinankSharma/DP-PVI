@@ -64,7 +64,7 @@ prediction:
     - prohibit
 
 
-N_iterations: 30
+N_iterations: 3
 prior_pres: 1.0
 N_samples: 50
 
