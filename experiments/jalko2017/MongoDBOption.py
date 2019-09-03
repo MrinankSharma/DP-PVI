@@ -85,6 +85,14 @@ class DatabaseOption(CommandLineOption):
     @classmethod
     def apply(cls, args, run):
         a = SacredExperimentAccess()
+
+        if run.config["log_level"] == 'info':
+            logging.getLogger().setLevel(logging.INFO)
+        elif run.config["log_level"] == 'debug':
+            logging.getLogger().setLevel(logging.DEBUG)
+        else:
+            logging.getLogger().setLevel(logging.INFO)
+
         if len(a.get_experiments(config=run.config, complete=True)) > 0:
             logger.info("Experiment has already been run - don't bother!")
             logger.info("Note that this will **not** show up in sacred")
