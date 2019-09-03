@@ -222,7 +222,7 @@ class AsyncronousPVIParameterServer(ParameterServer):
             client_index = int(np.random.choice(len(self.clients), 1, replace=False, p=self.client_probs))
             client = self.clients[client_index]
 
-            logger.info(f'On client {i + 1} of {len(self.clients)}')
+            logger.info(f'On client {i + 1} of {len(self.clients)}, client index {client_index}')
             client.set_hyperparameters({"damping_factor": self.current_damping_factor})
             delta_is.append(client.get_update(model_parameters=lambda_old, model_hyperparameters=None, update_ti=True))
             logger.info(f'Finished Client {i + 1} of {len(self.clients)}\n\n')
