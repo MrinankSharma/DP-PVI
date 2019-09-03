@@ -375,9 +375,9 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         for i in range(self.hyperparameters['N_steps']):
             # sample minibatch at each step ...
             if self.hyperparameters["batch_size"] > data["x"].shape[0]:
-                self.hyperparameters["batch_size"] = data["x"].shape[0]
-                logger.warning('Had to reduce minibatch size to match data size. This is permanent for the run.')
-            mini_batch_indices = np.random.choice(data["x"].shape[0], self.hyperparameters["batch_size"], replace=False)
+                logger.debug('Had to reduce minibatch size to match data size.')
+            batch_size = np.min([self.hyperparameters["batch_size"], data["x"].shape[0]])
+            mini_batch_indices = np.random.choice(data["x"].shape[0], batch_size, replace=False)
             # convert data into a tensor
             x = torch.tensor(x_full[mini_batch_indices, :], dtype=torch.float32)
             y_true = torch.tensor(y_full[mini_batch_indices], dtype=torch.float32)
