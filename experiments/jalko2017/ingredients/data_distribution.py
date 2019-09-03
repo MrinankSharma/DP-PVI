@@ -49,7 +49,7 @@ def generate_dataset_distribution_func(M, rho, sample_rho_noise_scale, inhomo_sc
         indx = np.arange(0, N)
         logger.info(f"M={M}, rho={rho}")
 
-        N_is = np.floor(np.clip(np.random.laplace(loc=rho, scale=sample_rho_noise_scale, size=M), rho - 5*sample_rho_noise_scale, rho+5*sample_rho_noise_scale))
+        N_is = np.floor(np.clip(np.random.laplace(loc=rho, scale=sample_rho_noise_scale, size=M), rho - 3*sample_rho_noise_scale, rho+3*sample_rho_noise_scale))
         while np.sum(N_is) > N or np.min(N_is) < 1:
             logger.warning(f"Having to regenerate client dataset sizes - perhaps silly settings used?\n"
                            f"Note that rho is automatically scaled back if needed")
@@ -60,7 +60,7 @@ def generate_dataset_distribution_func(M, rho, sample_rho_noise_scale, inhomo_sc
         positive_indx = np.nonzero(y > 0)
         for i in range(M):
             p_vals[p_vals > 0] = 1
-            target_multiplier_mag = np.exp(np.random.uniform(-inhomo_scale, inhomo_scale))
+            target_multiplier_mag = np.exp(np.clip(np.random.laplace(loc=0, scale=inhomo_scale), -3, 3))
             p_vals[positive_indx] = p_vals[positive_indx] * target_multiplier_mag
 
             # renormalise!

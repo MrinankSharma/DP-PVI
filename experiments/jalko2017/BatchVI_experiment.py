@@ -6,11 +6,11 @@ if module_path not in sys.path:
     sys.path.append(module_path)
 
 # set numpy environment variables
-os.environ["OMP_NUM_THREADS"] = "1" # export OMP_NUM_THREADS=4
-os.environ["OPENBLAS_NUM_THREADS"] = "1" # export OPENBLAS_NUM_THREADS=4
-os.environ["MKL_NUM_THREADS"] = "1" # export MKL_NUM_THREADS=6
-os.environ["VECLIB_MAXIMUM_THREADS"] = "1" # export VECLIB_MAXIMUM_THREADS=4
-os.environ["NUMEXPR_NUM_THREADS"] = "1" # export NUMEXPR_NUM_THREADS=6
+os.environ["OMP_NUM_THREADS"] = "1"  # export OMP_NUM_THREADS=4
+os.environ["OPENBLAS_NUM_THREADS"] = "1"  # export OPENBLAS_NUM_THREADS=4
+os.environ["MKL_NUM_THREADS"] = "1"  # export MKL_NUM_THREADS=6
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"  # export VECLIB_MAXIMUM_THREADS=4
+os.environ["NUMEXPR_NUM_THREADS"] = "1"  # export NUMEXPR_NUM_THREADS=6
 
 import datetime
 import logging
@@ -89,7 +89,6 @@ def default_config(dataset, dataset_dist):
     }
 
 
-
 @ex.automain
 def run_experiment(ray_cfg,
                    prior_pres,
@@ -100,11 +99,9 @@ def run_experiment(ray_cfg,
                    experiment_tag,
                    logging_base_directory,
                    save_q,
-                   log_level,
                    _run,
                    _config,
                    seed):
-
     torch.set_num_threads(int(ray_cfg["num_cpus"]))
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -218,7 +215,8 @@ def run_experiment(ray_cfg,
 
         if save_q:
             ex.add_artifact(save_pickle(
-                parameters, 't_is',  ex.get_experiment_info()["name"], experiment_tag, logging_base_directory, _run.info["test"], t
+                parameters, 't_is', ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
+                _run.info["test"], t
             ), 't_is.pkl')
 
     except pyarrow.lib.ArrowIOError:
