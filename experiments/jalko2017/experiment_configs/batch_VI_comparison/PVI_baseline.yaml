@@ -2,6 +2,10 @@ experiment_file: experiments/jalko2017/PVI_experiment.py
 experiment_tag: pvi_baseline
 database: BatchVI_comparison
 
+PVI_settings:
+  damping_factor:
+    - 0.1
+
 dataset:
   name:
     - adult
