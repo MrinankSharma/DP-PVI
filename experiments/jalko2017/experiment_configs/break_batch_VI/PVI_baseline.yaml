@@ -21,7 +21,7 @@ dataset:
 
 dataset_dist:
   M:
-    - 20
+    - 10
   rho:
     - 3800
   sample_rho_noise_scale:
