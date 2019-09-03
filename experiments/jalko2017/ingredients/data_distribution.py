@@ -10,6 +10,7 @@ import logging
 import sys
 
 import numpy as np
+import torch
 from sacred import Ingredient
 
 dataset_dist_ingred = Ingredient('dataset_dist')
@@ -23,13 +24,19 @@ def cfg():
     rho = 380
     sample_rho_noise_scale = 0
     inhomo_scale = 0
+    dataset_seed = None
 
 
 @dataset_dist_ingred.capture
-def generate_dataset_distribution_func(M, rho, sample_rho_noise_scale, inhomo_scale):
-    def dataset_distribution_function(x, y, M, rho, sample_rho_noise_scale, inhomo_scale):
+def generate_dataset_distribution_func(M, rho, sample_rho_noise_scale, inhomo_scale, dataset_seed):
+    def dataset_distribution_function(x, y, M, rho, sample_rho_noise_scale, inhomo_scale, dataset_seed, global_seed):
         # this function ought to return a list of (x, y) tuples.
         # you need to set the seed in the main experiment file to ensure that this function becomes deterministic
+
+        if dataset_seed is not None:
+            np.random.seed(dataset_seed)
+            torch.manual_seed(dataset_seed)
+
         clients_data = []
         prop_positive = []
         N = x.shape[0]
@@ -65,6 +72,10 @@ def generate_dataset_distribution_func(M, rho, sample_rho_noise_scale, inhomo_sc
             }))
             prop_positive.append(np.mean(y_i > 0))
 
+        if dataset_seed is not None:
+            np.random.seed(global_seed)
+            torch.manual_seed(global_seed)
+
         return clients_data, N_is.tolist(), prop_positive, M
 
-    return lambda x, y: dataset_distribution_function(x, y, M, rho, sample_rho_noise_scale, inhomo_scale)
+    return lambda x, y, seed: dataset_distribution_function(x, y, M, rho, sample_rho_noise_scale, inhomo_scale, dataset_seed, seed)

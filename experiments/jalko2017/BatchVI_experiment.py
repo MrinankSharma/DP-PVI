@@ -112,7 +112,7 @@ def run_experiment(ray_cfg,
     try:
 
         training_set, test_set, d_in = load_data()
-        clients_data, nis, prop_positive, M = generate_dataset_distribution_func()(training_set["x"], training_set["y"])
+        clients_data, nis, prop_positive, M = generate_dataset_distribution_func()(training_set["x"], training_set["y"], seed)
 
         _run.info = {
             **_run.info,

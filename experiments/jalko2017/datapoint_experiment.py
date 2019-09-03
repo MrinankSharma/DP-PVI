@@ -94,17 +94,18 @@ def default_config(dataset, dataset_dist):
 
 
 @ex.automain
-def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings, PVI_settings, N_samples, N_iterations, prediction,
+def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings, PVI_settings, N_samples, N_iterations,
+                   prediction,
                    experiment_tag, logging_base_directory, log_level, save_t_is,
                    _run, _config, seed):
-
     torch.set_num_threads(int(ray_cfg["num_cpus"]))
     np.random.seed(seed)
     torch.manual_seed(seed)
 
     try:
         training_set, test_set, d_in = load_data()
-        clients_data, nis, prop_positive, M = generate_dataset_distribution_func()(training_set["x"], training_set["y"])
+        clients_data, nis, prop_positive, M = generate_dataset_distribution_func()(training_set["x"], training_set["y"],
+                                                                                   seed)
 
         _run.info = {
             **_run.info,
