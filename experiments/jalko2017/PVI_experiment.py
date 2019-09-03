@@ -52,7 +52,7 @@ def default_config(dataset, dataset_dist):
 
     PVI_settings = {
         'damping_factor': 1.,
-        'damping_decay': 0.025,
+        'damping_decay': 0.0,
         'async': False
     }
 
