@@ -203,9 +203,9 @@ def run_experiment(ray_cfg,
                         f"  Server Tick: {st_log - st_tick:.2f}s\n"
                         f"  Predictions: {end_pred - st_pred:.2f}s\n"
                         f"  Logging:     {end - end_pred + st_pred - st_log:.2f}s\n\n"
-                        f"Parameters:\n"
-                        f" {pretty_dump.dump(parameters)}\n"
                         f"Iteration Number:{epoch}\n")
+            logger.debug(f"Parameters:\n"
+                         f" {pretty_dump.dump(parameters)}\n")
         t = datetime.datetime.now()
 
         if save_q:
