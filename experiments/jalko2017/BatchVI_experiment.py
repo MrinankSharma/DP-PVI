@@ -126,8 +126,8 @@ def run_experiment(ray_cfg,
             "n_is": nis,
         }
 
-        logger.info(f'N_i\'s {pretty_dump.dump(nis)}')
-        logger.info(f'Class ratios\'s {pretty_dump.dump(prop_positive)}')
+        logger.info(f'N_i\'s {nis}')
+        logger.info(f'Class ratios\'s {prop_positive}')
 
         # time.sleep(np.random.uniform(0, 10))
 
