@@ -99,6 +99,7 @@ def run_experiment(ray_cfg,
                    experiment_tag,
                    logging_base_directory,
                    save_q,
+                   log_level,
                    _run,
                    _config,
                    seed):
