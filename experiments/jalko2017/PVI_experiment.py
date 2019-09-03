@@ -161,6 +161,7 @@ def run_experiment(ray_cfg,
                 precisions[precisions < 0] = 1e-5
                 new_client_params['w_pres'] = precisions
                 ti_updates.append(np_nest.map_structure(np.subtract, new_client_params, all_params[client_index]))
+                logger.debug()
 
             return ti_updates
 

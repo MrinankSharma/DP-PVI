@@ -157,11 +157,6 @@ class SyncronousPVIParameterServer(ParameterServer):
         for delta_i in delta_is:
             lambda_new = np_nest.map_structure(np.add, *[lambda_new, delta_i])
 
-        delta_lambda = np_nest.map_structure(np.subtract, lambda_new, lambda_old)
-        delta_lambda = np_nest.apply_to_structure(lambda x: np.multiply(x, self.hyperparameters['damping_factor']),
-                                                  delta_lambda)
-        lambda_new = np_nest.map_structure(np.add, lambda_old, delta_lambda)
-
         self.parameters = lambda_new
 
         # update the model parameters
