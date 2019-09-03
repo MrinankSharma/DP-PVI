@@ -1,3 +1,4 @@
+import copy
 import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -211,6 +212,7 @@ class AsyncronousPVIParameterServer(ParameterServer):
             return False
 
         lambda_old = self.parameters
+        lambda_new = copy.deepcopy(lambda_old)
 
         # delta_is = [client.compute_update.remote(lambda_old) for client in self.clients]
         logger.debug("Getting Client Updates")
@@ -224,13 +226,9 @@ class AsyncronousPVIParameterServer(ParameterServer):
 
             logger.info(f'On client {i + 1} of {len(self.clients)}, client index {client_index}')
             client.set_hyperparameters({"damping_factor": self.current_damping_factor})
-            delta_is.append(client.get_update(model_parameters=lambda_old, model_hyperparameters=None, update_ti=True))
+            delta_i = client.get_update(model_parameters=lambda_new, model_hyperparameters=None, update_ti=True)
+            lambda_new = np_nest.map_structure(np.add, lambda_new, delta_i)
             logger.info(f'Finished Client {i + 1} of {len(self.clients)}\n\n')
-
-        logger.debug("Received client updates")
-        lambda_new = lambda_old
-        for delta_i in delta_is:
-            lambda_new = np_nest.map_structure(np.add, *[lambda_new, delta_i])
 
         self.parameters = lambda_new
 
