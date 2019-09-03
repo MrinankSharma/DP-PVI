@@ -189,6 +189,7 @@ class LogisticRegressionTorchModule(nn.Module):
             q_var = torch.diag(torch.exp(q_log_var_diag))
             p_var = torch.diag(torch.exp(p_log_var_diag))
             k = q_mean.shape[0]
+            logger.debug(p_var)
             p_inv = torch.inverse(p_var)
             m1_m2 = p_mean - q_mean
             # note that we a-priori know that q_var is a diagonal matrix
