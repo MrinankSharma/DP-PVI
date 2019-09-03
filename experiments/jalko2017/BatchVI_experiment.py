@@ -119,11 +119,11 @@ def run_experiment(ray_cfg,
         training_set, test_set, d_in = load_data()
         clients_data, nis, prop_positive, M = generate_dataset_distribution_func()(training_set["x"], training_set["y"])
 
-        _run.info = {
-            **_run.info,
-            "prop_positive": prop_positive,
-            "n_is": nis,
-        }
+        # _run.info = {
+        #     **_run.info,
+        #     "prop_positive": prop_positive,
+        #     "n_is": nis,
+        # }
 
         logger.info(f'N_i\'s {nis}')
         logger.info(f'Class ratios\'s {prop_positive}')
