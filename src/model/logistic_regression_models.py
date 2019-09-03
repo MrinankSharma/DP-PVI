@@ -385,7 +385,7 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
             derived_statistics_history.append(derived_statistics)
             training_curve[i] = current_loss
             if i % print_interval == 0:
-                logger.info("Loss: {:.3f} after {} steps".format(current_loss, i))
+                logger.debug("Loss: {:.3f} after {} steps".format(current_loss, i))
 
         logger.debug(f"updated parameters {self.get_parameters()}")
         # if several fit batches are called, this puts all of their training curves into a list
