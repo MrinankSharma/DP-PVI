@@ -56,11 +56,11 @@ optimisation_settings:
   lr:
     - 0.2
   N_steps:
-    - 1
+    - 200
   lr_decay:
     - 0
   L:
-    - 200
+    - 100
 
 ray_cfg:
   redis_address:
