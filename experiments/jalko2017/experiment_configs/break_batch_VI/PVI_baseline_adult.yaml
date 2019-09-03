@@ -60,7 +60,7 @@ optimisation_settings:
   lr_decay:
     - 0
   L:
-    - 100
+    - 200
 
 ray_cfg:
   redis_address:
