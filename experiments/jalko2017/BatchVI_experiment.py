@@ -223,4 +223,6 @@ def run_experiment(ray_cfg,
     except pyarrow.lib.ArrowIOError:
         raise Exception("Experiment Terminated - was this you?")
 
+    time.sleep(30)
+
     return test_acc
