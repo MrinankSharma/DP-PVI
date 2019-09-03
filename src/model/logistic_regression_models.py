@@ -189,7 +189,6 @@ class LogisticRegressionTorchModule(nn.Module):
             q_var = torch.diag(torch.exp(q_log_var_diag))
             k = q_mean.shape[0]
             p_inv = torch.exp(p_log_var_diag)
-            print(p_inv.min())
             p_inv = 1/ p_inv
             p_inv = torch.diag(p_inv)
             m1_m2 = p_mean - q_mean
