@@ -187,10 +187,8 @@ class LogisticRegressionTorchModule(nn.Module):
 
         def compute_KL_qp(q_mean, q_log_var_diag, p_mean, p_log_var_diag):
             q_var = torch.diag(torch.exp(q_log_var_diag))
-            p_var = torch.diag(torch.exp(p_log_var_diag))
             k = q_mean.shape[0]
-            logger.debug(p_var)
-            p_inv = torch.inverse(p_var)
+            p_inv = torch.diag(1 / torch.exp(p_log_var_diag))
             m1_m2 = p_mean - q_mean
             # note that we a-priori know that q_var is a diagonal matrix
             KL = 0.5 * (torch.trace(torch.mm(p_inv, q_var)) + torch.dot(m1_m2, torch.mv(p_inv, m1_m2)) - k + torch.sum(
