@@ -274,7 +274,7 @@ def run_experiment(ray_cfg,
         final_log["Proportion_positive"] = prop_positive
         t = datetime.datetime.now()
 
-        time.sleep(30)
+        # time.sleep(30)
 
         ex.add_artifact(
             save_log(final_log, "full_log", ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
@@ -286,7 +286,7 @@ def run_experiment(ray_cfg,
                 t_is, 't_is',  ex.get_experiment_info()["name"], experiment_tag, logging_base_directory, _run.info["test"], t
             ), 't_is.pkl')
 
+        return test_acc
+
     except pyarrow.lib.ArrowIOError:
         raise Exception("Experiment Terminated - was this you?")
-
-    return test_acc

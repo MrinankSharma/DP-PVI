@@ -214,7 +214,7 @@ def run_experiment(ray_cfg,
                          f" {pretty_dump.dump(parameters)}\n")
         t = datetime.datetime.now()
 
-        time.sleep(30)
+        # time.sleep(30)
 
         if save_q:
             ex.add_artifact(save_pickle(
@@ -222,7 +222,7 @@ def run_experiment(ray_cfg,
                 _run.info["test"], t
             ), 't_is.pkl')
 
+        return test_acc
+
     except pyarrow.lib.ArrowIOError:
         raise Exception("Experiment Terminated - was this you?")
-
-    return test_acc
