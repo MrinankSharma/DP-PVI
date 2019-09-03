@@ -42,7 +42,6 @@ import src.utils.numpy_nest_utils as np_nest
 
 ex = Experiment("adult_client_exp", [dataset_ingredient, dataset_dist_ingred])
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 pretty_dump = YAMLStringDumper()
 
 
@@ -113,16 +112,9 @@ def run_experiment(ray_cfg,
                    experiment_tag,
                    logging_base_directory,
                    save_t_is,
-                   log_level,
                    _run,
                    _config,
                    seed):
-    if log_level == 'info':
-        logger.setLevel(logging.INFO)
-    elif log_level == 'debug':
-        logger.setLevel(logging.DEBUG)
-    else:
-        logger.setLevel(logging.INFO)
 
     torch.set_num_threads(int(ray_cfg["num_cpus"]))
     np.random.seed(seed)

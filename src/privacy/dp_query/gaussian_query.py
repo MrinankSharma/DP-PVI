@@ -9,8 +9,6 @@ import src.utils.torch_nest_utils as nest
 from src.privacy.dp_query import dp_query
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
 
 class GaussianDPQuery(dp_query.SumAggregationDPQuery):
     """ Implements the DPQuery interface for Gaussian noise sum queries

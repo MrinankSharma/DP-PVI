@@ -97,12 +97,6 @@ def default_config(dataset, dataset_dist):
 def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings, PVI_settings, N_samples, N_iterations, prediction,
                    experiment_tag, logging_base_directory, log_level, save_t_is,
                    _run, _config, seed):
-    if log_level == 'info':
-        logger.setLevel(logging.INFO)
-    elif log_level == 'debug':
-        logger.setLevel(logging.DEBUG)
-    else:
-        logger.setLevel(logging.INFO)
 
     torch.set_num_threads(int(ray_cfg["num_cpus"]))
     np.random.seed(seed)
