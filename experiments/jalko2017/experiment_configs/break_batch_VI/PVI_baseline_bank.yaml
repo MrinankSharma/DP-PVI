@@ -10,7 +10,7 @@ PVI_settings:
 
 dataset:
   name:
-    - adult
+    - bank
   scaled:
     - True
   ordinal_cat_encoding:
