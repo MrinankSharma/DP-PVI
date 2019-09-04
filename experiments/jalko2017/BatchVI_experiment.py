@@ -43,7 +43,7 @@ from src.utils.yaml_string_dumper import YAMLStringDumper
 import src.utils.numpy_utils as B
 import src.utils.numpy_nest_utils as np_nest
 
-ex = Experiment("BatchVI_test", [dataset_ingredient, dataset_dist_ingred])
+ex = Experiment("batch_vi", [dataset_ingredient, dataset_dist_ingred])
 logger = logging.getLogger(__name__)
 pretty_dump = YAMLStringDumper()
 

@@ -38,7 +38,7 @@ from src.server import SyncronousPVIParameterServer, AsyncronousPVIParameterServ
 from src.utils.yaml_string_dumper import YAMLStringDumper
 import src.utils.numpy_nest_utils as np_nest
 
-ex = Experiment("jalko2017_pure_PVI", [dataset_ingredient, dataset_dist_ingred])
+ex = Experiment("pvi", [dataset_ingredient, dataset_dist_ingred])
 logger = logging.getLogger(__name__)
 pretty_dump = YAMLStringDumper()
 
