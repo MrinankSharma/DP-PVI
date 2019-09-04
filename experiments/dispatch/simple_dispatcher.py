@@ -1,5 +1,6 @@
 import os
 import sys
+import glob
 
 module_path = os.path.abspath(os.path.join('.'))
 if module_path not in sys.path:
@@ -8,6 +9,7 @@ if module_path not in sys.path:
 print(module_path)
 print(sys.path)
 
+import itertools
 import argparse
 import logging
 from subprocess import call
@@ -16,7 +18,8 @@ from functools import partial
 from multiprocessing.dummy import Pool
 from ruamel.yaml import YAML
 
-from experiments.dispatch.ray_dispatcher import generate_commands_from_yaml
+# from experiments.dispatch.ray_dispatcher import generate_commands_from_yaml
+from experiments.dispatch.dispatch_utils import *
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -24,11 +27,12 @@ logger = logging.getLogger(__name__)
 argparser = argparse.ArgumentParser()
 argparser.add_argument("--num-cpus", dest="num_cpus", default=1, type=int)
 argparser.add_argument("--cpus-per-command", dest="cpu_per_com", default=1, type=int)
-argparser.add_argument("--exp-file", action="append", dest="exp_file", required=False, type=str)
 argparser.add_argument("-t", "--test", dest="test", action="store_true")
+argparser.add_argument('--exp-file', nargs='+')
 args = argparser.parse_args()
 
 yaml = YAML()
+
 
 
 def dispatch_command_strings(commands, num_cpus, cpus_per_command=1):
@@ -43,10 +47,16 @@ def dispatch_command_strings(commands, num_cpus, cpus_per_command=1):
 if __name__ == "__main__":
     logger.info("Using Simple Dispatcher")
 
+    exp_files = []
+    for exp_path in args.exp_file:
+        exp_files.extend(glob.glob(exp_path))
+
+    print(exp_files)
+
     try:
         commands = []
-        for exp_file in args.exp_file:
-            commands.extend(generate_commands_from_yaml(exp_file))
+        for exp_file in exp_files:
+            commands.extend(generate_commands_from_yaml(args, exp_file))
     except FileNotFoundError:
         logger.error("Could not find experiment dispatcher yaml file!")
 

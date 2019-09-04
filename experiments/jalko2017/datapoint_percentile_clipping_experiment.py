@@ -36,7 +36,7 @@ from src.client.client import DPClient, ensure_positive_t_i_factory
 from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression
 from src.privacy.dp_query import GaussianDPQuery
 from src.privacy.optimizer import DPPercentileClippingGaussianOptimizer
-from src.server import SyncronousPVIParameterServer
+from src.server import SynchronousParameterServer
 from src.utils.yaml_string_dumper import YAMLStringDumper
 
 ex = Experiment('jalko2017_percentile_clip_datapoint_exp', [dataset_ingredient, dataset_dist_ingred])
@@ -173,7 +173,7 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
 
         # custom decorator based on passed in resources!
         remote_decorator = ray.remote(num_cpus=int(ray_cfg["num_cpus"]), num_gpus=int(ray_cfg["num_gpus"]))
-        server = remote_decorator(SyncronousPVIParameterServer).remote(
+        server = remote_decorator(SynchronousParameterServer).remote(
             model_class=MeanFieldMultiDimensionalLogisticRegression,
             model_parameters=prior_params,
             model_hyperparameters={

@@ -34,7 +34,7 @@ from experiments.utils import save_log, save_pickle
 from src.client.client import StandardClient, ensure_positive_t_i_factory
 from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression
 from src.privacy.optimizer import StandardOptimizer
-from src.server import SyncronousPVIParameterServer, AsyncronousPVIParameterServer
+from src.server import SynchronousParameterServer, AsynchronousParameterServer
 from src.utils.yaml_string_dumper import YAMLStringDumper
 import src.utils.numpy_nest_utils as np_nest
 
@@ -45,57 +45,56 @@ pretty_dump = YAMLStringDumper()
 
 @ex.config
 def default_config(dataset, dataset_dist):
-    # adapt settings based on the dataset ingredient
-    dataset.name = "adult"
-
-    dataset_dist.rho = 380
+    experiment_tag = 'pvi'
 
     PVI_settings = {
-        'damping_factor': 1.,
-        'damping_decay': 0.0,
-        'async': False
+        'damping_factor': 0.1,
+        'damping_decay': 0,
+        'async': True
+    }
+
+    dataset = {
+        'name': 'adult',
+        'scaled': True,
+        'ordinal_cat_encoding': False,
+        'train_proportion': 0.8,
+        'data_base_dir': 'data',
+    }
+
+    dataset_dist = {
+        'M': 10,
+        'rho': 3800,
+        'sample_rho_noise_scale': 0,
+        'inhomo_scale': 0,
+        'dataset_seed': 0,
     }
 
     optimisation_settings = {
-        "lr": 0.2,
-        "N_steps": 200,
-        "lr_decay": 0,
-        "L": 380
+        'lr': 0.2,
+        'N_steps': 200,
+        'lr_decay': 0,
+        'L': 0,
     }
 
-    N_iterations = 30
-
-    logging_base_directory = "logs"
-
     ray_cfg = {
-        "redis_address": "None",
-        "num_cpus": 1,
-        "num_gpus": 0,
-    }
-
-    prior_pres = 1.0
-    N_samples = 50
-
-    experiment_tag = "client_bad_q_protection"
-
-    slack_json_file = "slack.json"
-
-    save_t_is = False
-
-    log_level = 'info'
-
-    ray_cfg = {
-        "redis_address": None,
-        "num_cpus": 1,
-        "num_gpus": 0,
+        'redis_address': None,
+        'num_cpus': 1,
+        'num_gpus': 0,
     }
 
     prediction = {
-        "interval": 1,
-        "type": "prohibit"
+        'interval': 1,
+        'type': 'prohibit',
     }
 
-    dataset_seed = 1
+    N_iterations = 50
+    prior_pres = 1.0
+    N_samples = 50
+
+    log_level = 'info'
+    save_t_is = False
+    logging_base_directory = 'logs'
+    slack_json_file = 'slack.json'
 
 
 @ex.automain
@@ -196,7 +195,7 @@ def run_experiment(ray_cfg,
         # custom decorator based on passed in resources!
         remote_decorator = ray.remote(num_cpus=int(ray_cfg["num_cpus"]), num_gpus=int(ray_cfg["num_gpus"]))
         if PVI_settings['async']:
-            server = remote_decorator(AsyncronousPVIParameterServer).remote(
+            server = remote_decorator(AsynchronousParameterServer).remote(
                 model_class=MeanFieldMultiDimensionalLogisticRegression,
                 model_parameters=prior_params,
                 hyperparameters={
@@ -209,7 +208,7 @@ def run_experiment(ray_cfg,
                 prior=prior_params,
             )
         else:
-            server = remote_decorator(SyncronousPVIParameterServer).remote(
+            server = remote_decorator(SynchronousParameterServer).remote(
                 model_class=MeanFieldMultiDimensionalLogisticRegression,
                 model_parameters=prior_params,
                 hyperparameters={
@@ -259,9 +258,9 @@ def run_experiment(ray_cfg,
                         f"  Server Tick: {st_log - st_tick:.2f}s\n"
                         f"  Predictions: {end_pred - st_pred:.2f}s\n"
                         f"  Logging:     {end - end_pred + st_pred - st_log:.2f}s\n\n"
-                        f"Parameters:\n"
-                        f" {pretty_dump.dump(params)}\n"
                         f"Iteration Number:{num_iterations}\n")
+            logger.debug(f"Parameters:\n"
+                         f" {pretty_dump.dump(params)}\n")
 
         final_log = ray.get(server.get_compiled_log.remote())
         final_log["N_i"] = nis

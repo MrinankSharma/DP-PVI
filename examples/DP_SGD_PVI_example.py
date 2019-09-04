@@ -14,7 +14,7 @@ from src.client import DPClient
 from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression
 from src.privacy.dp_query import GaussianDPQuery
 from src.privacy.optimizer import DPOptimizer
-from src.server import SyncronousPVIParameterServer
+from src.server import SynchronousParameterServer
 
 ex = Experiment('Full Experiment')
 
@@ -107,7 +107,7 @@ def main(N, batch_size, learning_rate, epochs, privacy, _run):
                  )
     ]
 
-    server = SyncronousPVIParameterServer(
+    server = SynchronousParameterServer(
         model_class=MeanFieldMultiDimensionalLogisticRegression,
         model_parameters=prior_params,
         model_hyperparameters={

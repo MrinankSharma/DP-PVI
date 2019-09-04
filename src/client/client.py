@@ -279,10 +279,10 @@ class DPClient(StandardClient):
                            hyperparameters, metadata)
 
     def compute_update(self, model_parameters=None, model_hyperparameters=None, update_ti=True):
-        logger.info("Computing Update")
+        logger.debug("Computing Update")
         delta_lambda_i_tilde = super().compute_update(model_parameters, model_hyperparameters, update_ti)
 
-        logger.info("Computing Privacy Cost")
+        logger.debug("Computing Privacy Cost")
         formatted_ledger = self.dp_query.ledger.get_formatted_ledger()
         for _, accountant in self.accountants.items():
             accountant.update_privacy(formatted_ledger)
@@ -309,7 +309,7 @@ class DPClient(StandardClient):
 
         for k, v in self.accountants.items():
             log[k + '.epsilon'] = v.privacy_bound[0]
-            # log[k + '.delta'] = v.privacy_bound[1]
+            log[k + '.delta'] = v.privacy_bound[1]
 
         return log, times_updated
 
@@ -318,16 +318,12 @@ class DPClient(StandardClient):
         return self.log
 
 
-class VIClient(Client):
+class GradientVIClient(Client):
     def __init__(self, model_class, data, model_parameters=None, model_hyperparameters=None,
                  hyperparameters=None,
                  metadata=None):
 
         super().__init__(model_class, data, model_parameters, model_hyperparameters, hyperparameters, metadata)
-
-        self.t_i = {}
-        for key in model_parameters.keys():
-            self.t_i[key] = self.t_i_init_func(model_parameters[key])
 
         self.lambda_i = self.model.get_parameters()
 
@@ -340,10 +336,6 @@ class VIClient(Client):
     def set_hyperparameters(self, hyperparameters):
         super().set_hyperparameters(hyperparameters)
 
-        self.t_i_init_func = self.hyperparameters['t_i_init_function']
-        self.t_i_postprocess_funtion = self.hyperparameters['t_i_postprocess_function']
-        self.damping_factor = self.hyperparameters['damping_factor']
-
     def set_metadata(self, metadata):
         super().set_metadata(metadata)
 
@@ -352,9 +344,7 @@ class VIClient(Client):
         default_hyperparameters = {
             **super().get_default_hyperparameters(),
             **{
-                't_i_init_function': lambda x: np.zeros(x.shape),
-                't_i_postprocess_function': lambda x: x,
-                "damping_factor": 1.,
+                'prior': None
             }
         }
         return default_hyperparameters
@@ -366,7 +356,6 @@ class VIClient(Client):
             **{
                 'global_iteration': 0,
                 'log_params': False,
-                'log_t_i': True,
                 "log_model_info": False,
             }
         }
@@ -374,59 +363,23 @@ class VIClient(Client):
     def compute_update(self, model_parameters=None, model_hyperparameters=None, update_ti=True):
         super().compute_update(model_parameters, model_hyperparameters)
 
-        t_i_old = self.t_i
-        lambda_old = self.model.get_parameters()
+        parameters_old = self.model.get_parameters()
+        t_i = np_nest.map_structure(np.subtract, parameters_old, self.hyperparameters['prior'])
 
-        # find the new optimal parameters for this clients data
-        lambda_new = self.model.fit(self.data,
-                                    t_i_old,
-                                    model_parameters,
-                                    model_hyperparameters)
-        logger.debug("Client New Lamdba")
+        parameters_new = self.model.fit(self.data, t_i)
 
-        # print(self.metadata['test_self'])
-        # if self.metadata['test_self'] is not None:
-        #     print(f'client  {self.metadata["client_index"]} \n{lambda_new}')
-        #     preds = self.model.predict(self.data['x'])
-        #     for key, test in self.metadata['test_self'].items():
-        #         print(f'    {key}: {test(preds, self.data["y"])}')
+        delta_lambda_i = np_utils.subtract_params(parameters_new,
+                                                  parameters_old)
 
-        delta_lambda_i = np_utils.subtract_params(lambda_new,
-                                                  lambda_old)
+        logger.debug(f"Old Params: {parameters_old}\n"
+                    f"New Params: {parameters_new}\n")
 
-        # logger.info(f"Old Params: {lambda_old}\n"
-        #             f"New Params: {lambda_new}\n")
+        self.times_updated += 1
 
-        # apply the privacy function, specified by the server
-        # delta_lambda_i_tilde, privacy_stats = self.privacy_function(delta_lambda_i)
-
-        delta_lambda_i = np_nest.apply_to_structure(lambda x: np.multiply(x, self.damping_factor), delta_lambda_i)
-
-        # compute the new
-        lambda_new = np_utils.add_parameters(lambda_old, delta_lambda_i)
-
-        t_i_new = np_utils.add_parameters(
-            np_utils.subtract_params(lambda_new,
-                                     lambda_old),
-            t_i_old
-        )
-
-        t_i_new = self.t_i_postprocess_funtion(t_i_new)
-        delta_lambda_i_tilde = np_utils.subtract_params(t_i_new, t_i_old)
-
-        if update_ti:
-            self.t_i = t_i_new
-            logger.debug(f"New t_i {self.t_i}")
-            self.times_updated += 1
-
-        return delta_lambda_i_tilde
+        return delta_lambda_i
 
     def update_ti(self, delta_ti):
-        t_i_new = np_utils.add_parameters(delta_ti, self.t_i)
-        t_i_new = self.t_i_postprocess_funtion(t_i_new)
-        self.t_i = t_i_new
-        logger.debug(f"New t_i {self.t_i}")
-        self.times_updated += 1
+        pass
 
     def log_update(self):
         super().log_update()
@@ -438,8 +391,6 @@ class VIClient(Client):
 
         if self.metadata['log_params']:
             self.log['params'].append(np_nest.structured_ndarrays_to_lists(self.model.get_parameters()))
-        if self.metadata['log_t_i']:
-            self.log['t_i'].append(np_nest.structured_ndarrays_to_lists(self.t_i))
         if self.metadata['log_model_info']:
             self.log['model'].append(np_nest.structured_ndarrays_to_lists(self.model.get_incremental_log_record()))
 
@@ -452,3 +403,66 @@ class VIClient(Client):
     @property
     def parameters(self):
         return self.model.get_parameters()
+
+
+class DPGradientVIClient(GradientVIClient):
+    def __init__(self, model_class, dp_query_class, accounting_dict, data, model_parameters=None,
+                 model_hyperparameters=None, hyperparameters=None,
+                 metadata=None):
+
+        query = dp_query_class(**hyperparameters['dp_query_parameters'])
+        self.dp_query = QueryWithLedger(query, data['x'].shape[0], float(
+            model_hyperparameters['batch_size'] / float(data['x'].shape[0])))
+        model_hyperparameters['wrapped_optimizer_parameters']['dp_sum_query'] = self.dp_query
+
+        self.accountants = {}
+        for k, v in accounting_dict.items():
+            self.accountants[k] = OnlineAccountant(**v)
+
+        super().__init__(model_class, data, model_parameters, model_hyperparameters, hyperparameters, metadata)
+
+    @classmethod
+    def create_factory(cls, model_class, dp_query_class, data, accounting_dict, model_parameters, model_hyperparameters,
+                       hyperparameters, metadata=None):
+
+        return lambda: cls(model_class, dp_query_class, accounting_dict, data, model_parameters, model_hyperparameters,
+                           hyperparameters, metadata)
+
+    def compute_update(self, model_parameters=None, model_hyperparameters=None, update_ti=True):
+        logger.debug("Computing Update")
+        delta_lambda_i_tilde = super().compute_update(model_parameters, model_hyperparameters, update_ti)
+
+        logger.debug("Computing Privacy Cost")
+        formatted_ledger = self.dp_query.ledger.get_formatted_ledger()
+        for _, accountant in self.accountants.items():
+            accountant.update_privacy(formatted_ledger)
+
+        return delta_lambda_i_tilde
+
+    @classmethod
+    def get_default_hyperparameters(cls):
+        return {
+            **super().get_default_hyperparameters(),
+            'dp_query_parameters': {}
+        }
+
+    def log_update(self):
+        super().log_update()
+
+        for k, v in self.accountants.items():
+            self.log[k].append(v.privacy_bound)
+
+        # self.log['ledger'].append(self.dp_query.ledger.get_formatted_ledger())
+
+    def log_sacred(self):
+        log, times_updated = super().log_sacred()
+
+        for k, v in self.accountants.items():
+            log[k + '.epsilon'] = v.privacy_bound[0]
+            log[k + '.delta'] = v.privacy_bound[1]
+
+        return log, times_updated
+
+    def get_compiled_log(self):
+        # self.log['ledger'] = self.dp_query.ledger.get_formatted_ledger()
+        return self.log

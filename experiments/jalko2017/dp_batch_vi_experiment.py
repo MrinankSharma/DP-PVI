@@ -32,27 +32,21 @@ from experiments.jalko2017.ingredients.data_distribution import dataset_dist_ing
 from experiments.jalko2017.ingredients.dataset_ingredient import dataset_ingredient, load_data
 from experiments.jalko2017.measure_performance import compute_prediction_accuracy, compute_log_likelihood
 from experiments.utils import save_log, save_pickle
-from src.client.client import DPClient, ensure_positive_t_i_factory
+from src.client.client import DPGradientVIClient
 from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression
 from src.privacy.dp_query import GaussianDPQuery
 from src.privacy.optimizer import DPOptimizer
 from src.server import AsynchronousParameterServer
 from src.utils.yaml_string_dumper import YAMLStringDumper
 
-ex = Experiment('datapoint_dp_pvi', [dataset_ingredient, dataset_dist_ingred])
+ex = Experiment("dp_batch_vi", [dataset_ingredient, dataset_dist_ingred])
 logger = logging.getLogger(__name__)
 pretty_dump = YAMLStringDumper()
 
 
 @ex.config
 def default_config(dataset, dataset_dist):
-    experiment_tag = 'datapoint_dp_pvi'
-
-    PVI_settings = {
-        'damping_factor': 0.1,
-        'damping_decay': 0,
-        'async': True
-    }
+    experiment_tag = 'dp_batch_vi'
 
     privacy_settings = {
         'sigma_relative': 1e-5,
@@ -79,7 +73,7 @@ def default_config(dataset, dataset_dist):
 
     optimisation_settings = {
         'lr': 0.2,
-        'N_steps': 200,
+        'N_steps': 1,
         'lr_decay': 0,
         'L_min': 10,
     }
@@ -91,44 +85,58 @@ def default_config(dataset, dataset_dist):
     }
 
     prediction = {
-        'interval': 1,
+        'interval': 25,
         'type': 'prohibit',
     }
 
-    N_iterations = 50
+    N_iterations = 500
     prior_pres = 1.0
     N_samples = 50
 
     log_level = 'info'
-    save_t_is = False
+    save_q = False
     logging_base_directory = 'logs'
     slack_json_file = 'slack.json'
 
 
 @ex.automain
-def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings, PVI_settings, N_samples, N_iterations,
+def run_experiment(ray_cfg,
+                   prior_pres,
+                   optimisation_settings,
+                   privacy_settings,
+                   N_samples,
+                   N_iterations,
                    prediction,
-                   experiment_tag, logging_base_directory, log_level, save_t_is,
-                   _run, _config, seed):
+                   experiment_tag,
+                   logging_base_directory,
+                   save_q,
+                   log_level,
+                   _run,
+                   _config,
+                   seed):
     torch.set_num_threads(int(ray_cfg["num_cpus"]))
     np.random.seed(seed)
     torch.manual_seed(seed)
 
+    if log_level == 'info':
+        logging.getLogger().setLevel(logging.INFO)
+    elif log_level == 'debug':
+        logging.getLogger().setLevel(logging.DEBUG)
+    else:
+        logging.getLogger().setLevel(logging.INFO)
+
     try:
+
         training_set, test_set, d_in = load_data()
         clients_data, nis, prop_positive, M = generate_dataset_distribution_func()(training_set["x"], training_set["y"])
 
-        _run.info = {
-            **_run.info,
-            "prop_positive": prop_positive,
-            "n_is": nis,
-        }
+        logger.info(f'N_i\'s {nis}')
+        logger.info(f'Class ratios\'s {prop_positive}')
 
-        logger.info(f"Proportions Positive Are: {prop_positive}")
-        logger.info(f"Num datapoints are: {nis}")
+        # time.sleep(np.random.uniform(0, 10))
 
-        if ray_cfg["redis_address"] is None:
-            logger.info("Creating new ray server")
+        if ray_cfg["redis_address"] == None:
+            logger.info("Running Locally")
             ray.init(num_cpus=ray_cfg["num_cpus"], num_gpus=ray_cfg["num_gpus"], logging_level=logging.INFO,
                      local_mode=True)
         else:
@@ -142,6 +150,10 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
 
         logger.debug(f"Prior Parameters:\n\n{pretty_dump.dump(prior_params)}\n")
 
+        # create the model to optimise in batch VI fashion
+
+        N_full = np.sum(nis)
+
         if privacy_settings['target_delta'] == 'adaptive':
             deltas = []
             for data in clients_data:
@@ -153,8 +165,7 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
         if privacy_settings['q'] == None:
             privacy_settings['q'] = 0
 
-        # client factories for each client - this avoids pickling of the client object for ray internals
-        client_factories = [DPClient.create_factory(
+        client_factories = [DPGradientVIClient.create_factory(
             model_class=MeanFieldMultiDimensionalLogisticRegression,
             dp_query_class=GaussianDPQuery,
             data=clients_data[i],
@@ -170,32 +181,31 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
             model_hyperparameters={
                 "base_optimizer_class": torch.optim.Adagrad,
                 "wrapped_optimizer_class": DPOptimizer,
-                "base_optimizer_parameters": {'lr': optimisation_settings["lr"],
-                                              'lr_decay': optimisation_settings["lr_decay"]},
+                "base_optimizer_parameters": {"lr": optimisation_settings["lr"],
+                                              "lr_decay": optimisation_settings["lr_decay"]},
                 "wrapped_optimizer_parameters": {},
                 "N_steps": optimisation_settings["N_steps"],
                 "N_samples": N_samples,
                 "n_in": d_in,
                 "batch_size": int(np.max( [optimisation_settings['L_min'], np.ceil(privacy_settings['q'] * clients_data[i]['x'].shape[0])] )),
+                "N_full": N_full
             },
             hyperparameters={
                 'dp_query_parameters': {
                     'l2_norm_clip': privacy_settings["C"],
                     'noise_stddev': privacy_settings["C"] * privacy_settings["sigma_relative"]
                 },
-                't_i_init_function': lambda x: np.zeros(x.shape),
-                't_i_postprocess_function': ensure_positive_t_i_factory("w_pres"),
+                'prior': prior_params
             },
-            metadata = {
-            'client_index': i,
-            'test_self': {
-                'accuracy': compute_prediction_accuracy,
-                'log_lik': compute_log_likelihood
+            metadata={
+                'client_index': i,
+                'test_self': {
+                    'accuracy': compute_prediction_accuracy,
+                    'log_lik': compute_log_likelihood
+                }
             }
-        }
         ) for i in range(M)]
 
-        # custom decorator based on passed in resources!
         remote_decorator = ray.remote(num_cpus=int(ray_cfg["num_cpus"]), num_gpus=int(ray_cfg["num_gpus"]))
         server = remote_decorator(AsynchronousParameterServer).remote(
             model_class=MeanFieldMultiDimensionalLogisticRegression,
@@ -203,19 +213,20 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
             model_hyperparameters={
                 "prediction": prediction["type"],
             },
-            prior=prior_params,
-            client_factories=client_factories,
-            max_iterations=N_iterations,
             hyperparameters={
-                "damping_factor": PVI_settings['damping_factor'],
-                "damping_decay": PVI_settings['damping_decay']
-            }
+                "lambda_postprocess_func": lambda x: x,
+                "damping_factor": 1.0,
+                "damping_decay": 0.0
+            },
+            max_iterations=N_iterations,
+            client_factories=client_factories,
+            prior=prior_params,
         )
 
-        while not ray.get(server.should_stop.remote()):
+        for epoch in range(N_iterations):
             # dispatch work to ray and grab the log
             st_tick = time.time()
-            ray.get(server.tick.remote())
+            server.tick.remote()
             num_iterations = ray.get(server.get_num_iterations.remote())
 
             st_log = time.time()
@@ -249,9 +260,11 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
                         f"  Server Tick: {st_log - st_tick:.2f}s\n"
                         f"  Predictions: {end_pred - st_pred:.2f}s\n"
                         f"  Logging:     {end - end_pred + st_pred - st_log:.2f}s\n\n"
+                        f"Parameters:\n"
+                        f" {pretty_dump.dump(params)}\n"
                         f"Iteration Number:{num_iterations}\n")
             logger.debug(f"Parameters:\n"
-                         f" {pretty_dump.dump(params)}\n")
+                         f" {params}\n")
 
         final_log = ray.get(server.get_compiled_log.remote())
         final_log["N_i"] = nis
@@ -262,10 +275,10 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
             save_log(final_log, "full_log", ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
                      _run.info["test"], t), 'full_log.json')
 
-        if save_t_is:
-            t_is = [client.t_i for client in ray.get(server.get_clients.remote())]
+        if save_q:
             ex.add_artifact(save_pickle(
-                t_is, 't_is', ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
+                ray.get(server.parameters.remote()), 't_is', ex.get_experiment_info()["name"], experiment_tag,
+                logging_base_directory,
                 _run.info["test"], t
             ), 't_is.pkl')
 

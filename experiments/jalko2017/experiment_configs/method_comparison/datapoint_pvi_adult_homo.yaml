@@ -1,6 +1,17 @@
-experiment_file: experiments/jalko2017/batch_vi_experiment.py
-experiment_tag: batch_vi
-database: break_batch_vi
+experiment_file: experiments/jalko2017/datapoint_experiment.py
+experiment_tag: datapoint_dp_pvi
+database: method_comparison_0409
+
+PVI_settings:
+  damping_factor: 0.1
+  damping_decay: 0
+  async: True
+
+privacy_settings:
+  sigma_relative: 5
+  C: 75
+  target_delta: adaptive
+  q: 0.02
 
 dataset:
   name:
@@ -20,41 +31,21 @@ dataset_dist:
   rho:
     - 3800
   sample_rho_noise_scale:
-#    - 0
-#    - 5
-#    - 10
-#    - 20
-#    - 40
-    - 4500
     - 0
-    - 1500
-    - 3000
   inhomo_scale:
-#    - 0.0
-#    - 0.5
-#    - 1.0
-#    - 1.5
-#    - 2.0
-    - 20.0
     - 0
-    - 5.0
-    - 10.0
   dataset_seed:
     - 1
-    - 2
-    - 3
-    - 4
-    - 5
 
 optimisation_settings:
   lr:
     - 0.2
   N_steps:
-    - 1
+    - 50
   lr_decay:
     - 0
-  L:
-    - 100
+  L_min:
+    - 20
 
 ray_cfg:
   redis_address:
@@ -66,18 +57,18 @@ ray_cfg:
 
 prediction:
   interval:
-    - 50
+    - 1
   type:
     - prohibit
 
 
-N_iterations: 1000
+N_iterations: 100
 prior_pres: 1.0
 N_samples: 50
-save_q: True
 
 log_level: info
-
+save_t_is: True
 num_seeds: 1
-slack_json_file: slack.json
 logging_base_directory: logs
+slack_json_file: slack.json
+

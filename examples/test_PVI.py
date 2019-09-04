@@ -11,7 +11,7 @@ from sacred.observers import MongoObserver, SlackObserver
 import src.utils.numpy_nest_utils as nest_utils
 from src.client.client import DPClient
 from src.model.linear_regression_models import LinearRegression1DAnalyticNumpy
-from src.server.server import SyncronousPVIParameterServer
+from src.server.server import SynchronousParameterServer
 
 ex = Experiment('PVI Test Experiment')
 
@@ -122,7 +122,7 @@ def main(
 
     for client in clients: client.set_metadata.remote({'log_params': True})
 
-    server = SyncronousPVIParameterServer(
+    server = SynchronousParameterServer(
         model_class=LinearRegression1DAnalyticNumpy,
         prior=prior,
         clients=clients,

@@ -1,6 +1,6 @@
 experiment_file: experiments/jalko2017/batch_vi_experiment.py
 experiment_tag: batch_vi
-database: break_batch_vi
+database: method_comparison_0409
 
 dataset:
   name:
@@ -20,30 +20,11 @@ dataset_dist:
   rho:
     - 3800
   sample_rho_noise_scale:
-#    - 0
-#    - 5
-#    - 10
-#    - 20
-#    - 40
     - 4500
-    - 0
-    - 1500
-    - 3000
   inhomo_scale:
-#    - 0.0
-#    - 0.5
-#    - 1.0
-#    - 1.5
-#    - 2.0
-    - 20.0
-    - 0
     - 5.0
-    - 10.0
   dataset_seed:
-    - 1
-    - 2
     - 3
-    - 4
     - 5
 
 optimisation_settings:
@@ -66,18 +47,17 @@ ray_cfg:
 
 prediction:
   interval:
-    - 50
+    - 5
   type:
     - prohibit
 
 
-N_iterations: 1000
+N_iterations: 500
 prior_pres: 1.0
 N_samples: 50
-save_q: True
 
 log_level: info
-
-num_seeds: 1
-slack_json_file: slack.json
+save_q: False
+num_seeds: 3
 logging_base_directory: logs
+slack_json_file: slack.json

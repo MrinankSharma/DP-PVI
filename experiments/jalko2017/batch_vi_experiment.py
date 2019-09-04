@@ -34,11 +34,11 @@ from experiments.jalko2017.ingredients.data_distribution import dataset_dist_ing
 from experiments.jalko2017.ingredients.dataset_ingredient import dataset_ingredient, load_data
 from experiments.jalko2017.measure_performance import compute_prediction_accuracy, compute_log_likelihood
 from experiments.utils import save_log, save_pickle
-from src.client.client import StandardClient, ensure_positive_t_i_factory
+from src.client.client import GradientVIClient
 from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression
 from src.privacy.dp_query import NumpyGaussianDPQuery, NumpyNoDPSumQuery
 from src.privacy.optimizer import StandardOptimizer
-from src.server import SyncronousPVIParameterServer
+from src.server import SynchronousParameterServer, AsynchronousParameterServer
 from src.utils.yaml_string_dumper import YAMLStringDumper
 import src.utils.numpy_utils as B
 import src.utils.numpy_nest_utils as np_nest
@@ -50,43 +50,50 @@ pretty_dump = YAMLStringDumper()
 
 @ex.config
 def default_config(dataset, dataset_dist):
-    # adapt settings based on the dataset ingredient
-    dataset.name = "adult"
+    experiment_tag = 'batch_vi'
 
-    dataset_dist.rho = 380
-
-    optimisation_settings = {
-        "lr": 0.1,
-        "N_steps": 1,
-        "lr_decay": 0,
-        "L": 380
+    dataset = {
+        'name': 'adult',
+        'scaled': True,
+        'ordinal_cat_encoding': False,
+        'train_proportion': 0.8,
+        'data_base_dir': 'data',
     }
 
-    N_iterations = 1000
+    dataset_dist = {
+        'M': 10,
+        'rho': 3800,
+        'sample_rho_noise_scale': 0,
+        'inhomo_scale': 0,
+        'dataset_seed': 0,
+    }
 
-    logging_base_directory = "logs"
-
-    prior_pres = 1.0
-    N_samples = 50
-
-    experiment_tag = "client_bad_q_protection"
-
-    slack_json_file = "slack.json"
-
-    save_q = False
-
-    log_level = 'info'
+    optimisation_settings = {
+        'lr': 0.2,
+        'N_steps': 1,
+        'lr_decay': 0,
+        'L': 100,
+    }
 
     ray_cfg = {
-        "redis_address": None,
-        "num_cpus": 1,
-        "num_gpus": 0,
+        'redis_address': None,
+        'num_cpus': 1,
+        'num_gpus': 0,
     }
 
     prediction = {
-        "interval": 10,
-        "type": "prohibit"
+        'interval': 25,
+        'type': 'prohibit',
     }
+
+    N_iterations = 500
+    prior_pres = 1.0
+    N_samples = 50
+
+    log_level = 'info'
+    save_q = False
+    logging_base_directory = 'logs'
+    slack_json_file = 'slack.json'
 
 
 @ex.automain
@@ -143,9 +150,11 @@ def run_experiment(ray_cfg,
 
         N_full = np.sum(nis)
 
-        model = MeanFieldMultiDimensionalLogisticRegression(
-            parameters=np_nest.map_structure(np.add, prior_params, prior_params),
-            hyperparameters={
+        client_factories = [GradientVIClient.create_factory(
+            model_class=MeanFieldMultiDimensionalLogisticRegression,
+            data=clients_data[i],
+            model_parameters=prior_params,
+            model_hyperparameters={
                 "base_optimizer_class": torch.optim.Adagrad,
                 "wrapped_optimizer_class": StandardOptimizer,
                 "base_optimizer_parameters": {"lr": optimisation_settings["lr"],
@@ -156,37 +165,54 @@ def run_experiment(ray_cfg,
                 "n_in": d_in,
                 "batch_size": optimisation_settings["L"],
                 "N_full": N_full
+            },
+            hyperparameters={
+                'prior': prior_params
+            },
+            metadata={
+                'client_index': i,
+                'test_self': {
+                    'accuracy': compute_prediction_accuracy,
+                    'log_lik': compute_log_likelihood
+                }
             }
+        ) for i in range(M)]
+
+        remote_decorator = ray.remote(num_cpus=int(ray_cfg["num_cpus"]), num_gpus=int(ray_cfg["num_gpus"]))
+        server = remote_decorator(AsynchronousParameterServer).remote(
+            model_class=MeanFieldMultiDimensionalLogisticRegression,
+            model_parameters=prior_params,
+            hyperparameters={
+                "lambda_postprocess_func": lambda x: x,
+                "damping_factor": 1.0,
+                "damping_decay": 0.0
+            },
+            max_iterations=N_iterations,
+            client_factories=client_factories,
+            prior=prior_params,
         )
-
-        parameters = prior_params
-
-        client_probs = 1 / np.array([data['x'].shape[0] for data in clients_data])
-        client_probs = client_probs / client_probs.sum()
-
 
         for epoch in range(N_iterations):
             # dispatch work to ray and grab the log
             st_tick = time.time()
 
             # fit the model to each batch of data
-            for i in range(len(clients_data)):
-
-                client_index = int(np.random.choice(len(clients_data), 1, replace=False, p=client_probs))
-
-                parameters = model.fit(clients_data[client_index], parameters)
-                parameters = np_nest.map_structure(np.subtract, parameters, prior_params)
+            server.tick.remote()
 
             st_log = time.time()
             sacred_log = {}
-
-            sacred_log = numpy_nest.flatten(sacred_log, sep=".")
+            sacred_log['server'], _ = ray.get(server.log_sacred.remote())
+            params = ray.get(server.get_parameters.remote())
+            client_sacred_logs = ray.get(server.get_client_sacred_logs.remote())
+            for i, log in enumerate(client_sacred_logs):
+                sacred_log['client_' + str(i)] = log[0]
+            sacred_log = numpy_nest.flatten(sacred_log, sep='.')
 
             st_pred = time.time()
             # predict every interval, and also for the last "interval" runs.
             if (epoch % prediction["interval"] == 0):
-                y_pred_train = model.predict(training_set['x'])
-                y_pred_test = model.predict(test_set['x'])
+                y_pred_train = ray.get(server.get_model_predictions.remote(training_set))
+                y_pred_test = ray.get(server.get_model_predictions.remote(test_set))
                 sacred_log["train_all"] = compute_log_likelihood(y_pred_train, training_set["y"])
                 sacred_log["train_accuracy"] = compute_prediction_accuracy(y_pred_train, training_set["y"])
                 sacred_log["test_all"] = compute_log_likelihood(y_pred_test, test_set["y"])
@@ -205,12 +231,20 @@ def run_experiment(ray_cfg,
                         f"  Logging:     {end - end_pred + st_pred - st_log:.2f}s\n\n"
                         f"Iteration Number:{epoch}\n")
             logger.debug(f"Parameters:\n"
-                         f" {pretty_dump.dump(parameters)}\n")
+                         f" {params}\n")
+
+        final_log = ray.get(server.get_compiled_log.remote())
+        final_log["N_i"] = nis
+        final_log["Proportion_positive"] = prop_positive
         t = datetime.datetime.now()
+
+        ex.add_artifact(
+            save_log(final_log, "full_log", ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
+                     _run.info["test"], t), 'full_log.json')
 
         if save_q:
             ex.add_artifact(save_pickle(
-                parameters, 't_is', ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
+                ray.get(server.parameters.remote()), 't_is', ex.get_experiment_info()["name"], experiment_tag, logging_base_directory,
                 _run.info["test"], t
             ), 't_is.pkl')
 

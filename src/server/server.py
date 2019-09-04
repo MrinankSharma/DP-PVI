@@ -124,7 +124,7 @@ class ParameterServer(ABC):
         return self.parameters
 
 
-class SyncronousPVIParameterServer(ParameterServer):
+class SynchronousParameterServer(ParameterServer):
 
     def __init__(self, model_class, prior, max_iterations=100, client_factories=None, hyperparameters=None,
                  metadata=None,
@@ -148,10 +148,10 @@ class SyncronousPVIParameterServer(ParameterServer):
         self.current_damping_factor = self.hyperparameters["damping_factor"] * np.exp(
             -self.iterations * self.hyperparameters["damping_decay"])
         for i, client in enumerate(self.clients):
-            logger.info(f'On client {i + 1} of {len(self.clients)}')
+            logger.debug(f'On client {i + 1} of {len(self.clients)}')
             client.set_hyperparameters({"damping_factor": self.current_damping_factor})
             delta_is.append(client.get_update(model_parameters=lambda_old, model_hyperparameters=None, update_ti=True))
-            logger.info(f'Finished Client {i + 1} of {len(self.clients)}\n\n')
+            logger.debug(f'Finished Client {i + 1} of {len(self.clients)}\n\n')
 
         logger.debug("Received client updates")
         lambda_new = lambda_old
@@ -192,7 +192,7 @@ class SyncronousPVIParameterServer(ParameterServer):
         return {'applied_damping_factor': self.current_damping_factor}, self.iterations
 
 
-class AsyncronousPVIParameterServer(ParameterServer):
+class AsynchronousParameterServer(ParameterServer):
 
     def __init__(self, model_class, prior, max_iterations=100, client_factories=None, hyperparameters=None,
                  metadata=None,
@@ -224,11 +224,11 @@ class AsyncronousPVIParameterServer(ParameterServer):
             client_index = int(np.random.choice(len(self.clients), 1, replace=False, p=self.client_probs))
             client = self.clients[client_index]
 
-            logger.info(f'On client {i + 1} of {len(self.clients)}, client index {client_index}')
+            logger.debug(f'On client {i + 1} of {len(self.clients)}, client index {client_index}')
             client.set_hyperparameters({"damping_factor": self.current_damping_factor})
             delta_i = client.get_update(model_parameters=lambda_new, model_hyperparameters=None, update_ti=True)
             lambda_new = np_nest.map_structure(np.add, lambda_new, delta_i)
-            logger.info(f'Finished Client {i + 1} of {len(self.clients)}\n\n')
+            logger.debug(f'Finished Client {i + 1} of {len(self.clients)}\n\n')
 
         self.parameters = lambda_new
 
