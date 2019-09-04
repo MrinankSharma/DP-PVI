@@ -80,7 +80,7 @@ prediction:
 N_iterations: 50
 prior_pres: 1.0
 N_samples: 50
-save_q: True
+save_t_is: True
 
 log_level: info
 
