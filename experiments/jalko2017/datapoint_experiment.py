@@ -58,7 +58,8 @@ def default_config(dataset, dataset_dist):
         'sigma_relative': 1e-5,
         'C': 1000,
         'target_delta': 'adaptive',
-        'q': 0
+        'q': 0,
+        'max_epsilon': None
     }
 
     dataset = {
@@ -185,6 +186,7 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
                 },
                 't_i_init_function': lambda x: np.zeros(x.shape),
                 't_i_postprocess_function': ensure_positive_t_i_factory("w_pres"),
+                'max_epsilon': privacy_settings['max_epsilon'],
             },
             metadata = {
             'client_index': i,

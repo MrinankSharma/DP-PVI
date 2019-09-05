@@ -52,7 +52,8 @@ def default_config(dataset, dataset_dist):
         'sigma_relative': 1e-5,
         'C': 1000,
         'target_delta': 'adaptive',
-        'q': 0
+        'q': 0,
+        'max_epsilon': None
     }
 
     dataset = {
@@ -195,7 +196,8 @@ def run_experiment(ray_cfg,
                     'l2_norm_clip': privacy_settings["C"],
                     'noise_stddev': privacy_settings["C"] * privacy_settings["sigma_relative"]
                 },
-                'prior': prior_params
+                'prior': prior_params,
+                'max_epsilon': privacy_settings['max_epsilon'],
             },
             metadata={
                 'client_index': i,
