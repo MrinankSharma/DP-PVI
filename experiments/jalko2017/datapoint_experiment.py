@@ -148,11 +148,10 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
         if privacy_settings['target_delta'] == 'adaptive':
             deltas = []
             for data in clients_data:
-                delta = 10 ** (float(np.floor(np.log10(1/data['x'].shape[0]))))
+                delta = 10 ** (float(np.floor(np.log10(1 / data['x'].shape[0]))))
                 deltas.append(delta)
         else:
             deltas = [privacy_settings['target_delta']] * len(clients_data)
-
 
         model = MeanFieldMultiDimensionalLogisticRegression
 
@@ -179,7 +178,8 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
                 "N_steps": optimisation_settings["N_steps"],
                 "N_samples": N_samples,
                 "n_in": d_in,
-                "batch_size": int(np.max( [optimisation_settings['L_min'], np.ceil(privacy_settings['q'] * clients_data[i]['x'].shape[0])] )),
+                "batch_size": int(np.max(
+                    [optimisation_settings['L_min'], np.ceil(privacy_settings['q'] * clients_data[i]['x'].shape[0])])),
             },
             hyperparameters={
                 'dp_query_parameters': {
@@ -190,13 +190,13 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
                 't_i_postprocess_function': postprocess_MF_logistic_ti,
                 'max_epsilon': privacy_settings['max_epsilon'],
             },
-            metadata = {
-            'client_index': i,
-            'test_self': {
-                'accuracy': compute_prediction_accuracy,
-                'log_lik': compute_log_likelihood
+            metadata={
+                'client_index': i,
+                'test_self': {
+                    'accuracy': compute_prediction_accuracy,
+                    'log_lik': compute_log_likelihood
+                }
             }
-        }
         ) for i in range(M)]
 
         # custom decorator based on passed in resources!
