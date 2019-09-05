@@ -24,3 +24,6 @@ class StandardOptimizer(WrapperOptimizer):
 
     def get_logged_statistics(self):
         return {}
+
+    def get_step_summary(self):
+        return {}

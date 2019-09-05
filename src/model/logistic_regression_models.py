@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 
 import numpy as np
 import torch
@@ -269,6 +270,7 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
 
         self._training_curves = []
         self._derived_statistics_histories = []
+        self._overall_summary_dict = {}
 
     def set_parameters(self, nat_parameters):
         if nat_parameters is not None:
@@ -381,6 +383,7 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         derived_statistics_history = []
 
         self._derived_statistics_history = []
+        step_summaries = []
         # lets just do this for the time being
         for i in range(self.hyperparameters['N_steps']):
             # sample minibatch at each step ...
@@ -396,8 +399,14 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
             derived_statistics = self.wrapped_optimizer.get_logged_statistics()
             derived_statistics_history.append(derived_statistics)
             training_curve[i] = current_loss
+            step_summaries.append(self.wrapped_optimizer.get_step_summary())
             if i % print_interval == 0:
                 logger.debug("Loss: {:.3f} after {} steps".format(current_loss, i))
+
+        self._overall_summary_dict = defaultdict(list)
+        for summary_dict in step_summaries:
+            for k, v in summary_dict.items():
+                self._overall_summary_dict[k].append(v)
 
         # logger.debug(f"updated parameters {self.get_parameters()}")
         # logger.debug("Learnt Moments")
@@ -407,8 +416,6 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         # if several fit batches are called, this puts all of their training curves into a list
         self._training_curves.append(training_curve)
         self._derived_statistics_histories.append(derived_statistics_history)
-
-        logger.debug(np.exp(self.torch_module.w_log_var.detach().numpy()))
 
         return self.get_parameters()
 
@@ -422,5 +429,9 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         return ret
 
     def get_incremental_sacred_record(self):
-        # we don't want anything from the model to be displayed directly to sacred
-        return {}
+        ret = {}
+        for k , v in self._overall_summary_dict.items():
+            ret[f"median_{k}"] = np.percentile(np.array(v), 50).tolist()
+            # ret[f"std_{k}"] = np.std(np.array(v)).tolist()
+
+        return ret

@@ -28,6 +28,7 @@ class DPOptimizer(WrapperOptimizer):
         self.loss_per_example = loss_per_example
         self.dp_sum_query = dp_sum_query
         self.num_microbatches = num_microbatches
+        self._summary_value = 0
 
         self._global_parameters = self.dp_sum_query.initial_global_state()
         self._derived_records_data = defaultdict(list)
@@ -71,6 +72,10 @@ class DPOptimizer(WrapperOptimizer):
         for k, v in self._derived_records_data.items():
             # summarise statistics instead
             self._derived_records_data[k] = np.percentile(np.array(v), [10.0, 30.0, 50.0, 70.0, 90.0])
+            if k == "l2_norm:":
+                p_clip = np.mean(
+                    np.array(v) > self._global_parameters.l2_norm_clip.detach().numpy())
+                self._summary_value = {"percentage_clipped": p_clip}
 
         final_grads, _ = self.dp_sum_query.get_noised_result(sample_state, self._global_parameters)
 
@@ -103,6 +108,9 @@ class DPOptimizer(WrapperOptimizer):
 
     def get_logged_statistics(self):
         return self._derived_records_data
+
+    def get_step_summary(self):
+        return self._summary_value
 
 
 class DPGaussianOptimizer(DPOptimizer):
