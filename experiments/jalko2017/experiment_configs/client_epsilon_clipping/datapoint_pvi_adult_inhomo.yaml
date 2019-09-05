@@ -1,0 +1,82 @@
+experiment_file: experiments/jalko2017/datapoint_experiment.py
+experiment_tag: datapoint_dp_pvi
+database: method_comparison_0409
+
+PVI_settings:
+  damping_factor: 0.1
+  damping_decay: 0
+  async: True
+
+privacy_settings:
+  sigma_relative: 5
+  C: 75
+  target_delta: adaptive
+  q: 0.02
+  max_epsilon:
+    - None
+    - 0.4
+    - 0.5
+    - 1.0
+    - 2.0
+    - 3.0
+
+dataset:
+  name:
+    - adult
+  scaled:
+    - True
+  ordinal_cat_encoding:
+    - False
+  train_proportion:
+    - 0.8
+  data_base_dir:
+    - data
+
+dataset_dist:
+  M:
+    - 10
+  rho:
+    - 3800
+  sample_rho_noise_scale:
+    - 4500
+  inhomo_scale:
+    - 5.0
+  dataset_seed:
+    - 3
+    - 5
+
+optimisation_settings:
+  lr:
+    - 0.2
+  N_steps:
+    - 50
+  lr_decay:
+    - 0
+  L_min:
+    - 20
+
+ray_cfg:
+  redis_address:
+    - None
+  num_cpus:
+    - 1
+  num_gpus:
+    - 0
+
+prediction:
+  interval:
+    - 1
+  type:
+    - prohibit
+
+
+N_iterations: 200
+prior_pres: 1.0
+N_samples: 50
+
+log_level: info
+save_t_is: True
+num_seeds: 1
+logging_base_directory: logs
+slack_json_file: slack.json
+
