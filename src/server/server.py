@@ -206,6 +206,7 @@ class AsynchronousParameterServer(ParameterServer):
         client_probs = 1 / np.array([client.data['x'].shape[0] for client in clients])
         client_probs = client_probs / client_probs.sum()
         self.client_probs = client_probs
+        self.all_clients_stopped = False
 
     def tick(self):
         if self.should_stop():
@@ -221,6 +222,19 @@ class AsynchronousParameterServer(ParameterServer):
         self.current_damping_factor = self.hyperparameters["damping_factor"] * np.exp(
             -self.iterations * self.hyperparameters["damping_decay"])
         for i in range(len(self.clients)):
+
+            available_clients = [client.can_update() for client in self.clients]
+            for i, available in enumerate(available_clients):
+                if not available:
+                    self.client_probs[i] = 0
+
+            if not np.any(available_clients):
+                self.all_clients_stopped = True
+                logger.info('All clients report to be finished. Stopping.')
+                break
+
+            self.client_probs = self.client_probs / self.client_probs.sum()
+
             client_index = int(np.random.choice(len(self.clients), 1, replace=False, p=self.client_probs))
             client = self.clients[client_index]
 
@@ -242,7 +256,7 @@ class AsynchronousParameterServer(ParameterServer):
         self.iterations += 1
 
     def should_stop(self):
-        if self.iterations > self.max_iterations - 1:
+        if self.iterations > self.max_iterations - 1 or self.all_clients_stopped:
             return True
         else:
             return False

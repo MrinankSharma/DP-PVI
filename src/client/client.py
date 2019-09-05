@@ -115,6 +115,9 @@ class Client(ABC):
     def get_compiled_log(self):
         return self.get_log()
 
+    def can_update(self):
+        return True
+
 
 # @ray.remote
 class StandardClient(Client):
@@ -293,7 +296,8 @@ class DPClient(StandardClient):
     def get_default_hyperparameters(cls):
         return {
             **super().get_default_hyperparameters(),
-            'dp_query_parameters': {}
+            'dp_query_parameters': {},
+            'max_epsilon': None
         }
 
     def log_update(self):
@@ -316,6 +320,15 @@ class DPClient(StandardClient):
     def get_compiled_log(self):
         # self.log['ledger'] = self.dp_query.ledger.get_formatted_ledger()
         return self.log
+
+    def can_update(self):
+        if self.hyperparameters['max_epsilon'] is not None:
+            for k, v in self.accountants.items():
+                if v.privacy_bound[0] > self.hyperparameters['max_epsilon']:
+                    logger.debug(f'client capped out on epsilon')
+                    return False
+
+        return True
 
 
 class GradientVIClient(Client):
@@ -443,7 +456,8 @@ class DPGradientVIClient(GradientVIClient):
     def get_default_hyperparameters(cls):
         return {
             **super().get_default_hyperparameters(),
-            'dp_query_parameters': {}
+            'dp_query_parameters': {},
+            'max_epsilon': None
         }
 
     def log_update(self):
@@ -466,3 +480,12 @@ class DPGradientVIClient(GradientVIClient):
     def get_compiled_log(self):
         # self.log['ledger'] = self.dp_query.ledger.get_formatted_ledger()
         return self.log
+
+    def can_update(self):
+        if self.hyperparameters['max_epsilon'] is not None:
+            for k, v in self.accountants.items():
+                if v.privacy_bound[0] > self.hyperparameters['max_epsilon']:
+                    logger.debug(f'client capped out on epsilon')
+                    return False
+
+        return True

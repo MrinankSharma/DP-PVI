@@ -1,6 +1,6 @@
 experiment_file: experiments/jalko2017/datapoint_experiment.py
 experiment_tag: datapoint_dp_pvi
-database: method_comparison_0409
+database: epsilon_clipping
 
 PVI_settings:
   damping_factor: 0.1
@@ -42,6 +42,7 @@ dataset_dist:
   inhomo_scale:
     - 5.0
   dataset_seed:
+    - 3
     - 5
 
 optimisation_settings:
