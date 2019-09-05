@@ -8,8 +8,10 @@ PVI_settings:
   async: True
 
 privacy_settings:
-  sigma_relative: 5
-  C: 75
+  sigma_relative: 1e-5
+  C:
+    - 75
+    - 1000
   target_delta: adaptive
   q: 0.02
 
