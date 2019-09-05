@@ -1,6 +1,6 @@
 experiment_file: experiments/jalko2017/dp_batch_vi_experiment.py
 experiment_tag: dp_batch_vi
-database: method_comparison_0409
+database: epsilon_clipping_adult_0509
 
 privacy_settings:
   sigma_relative:
