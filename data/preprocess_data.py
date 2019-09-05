@@ -19,6 +19,8 @@ args = argparser.parse_args()
 
 def process_dataset(data_folder, filename, config, one_hot=True, should_scale=False):
     data = np.loadtxt(data_folder + "/" + filename, dtype=str, delimiter=',')
+    np.random.seed(0)
+    data = data[np.random.permutation(data.shape[0]), :]
     post_string = ""
 
     # grab the numerical part of the array and convert to a float
@@ -99,13 +101,27 @@ if __name__ == "__main__":
         "drop_cols": [10],
     }
 
+
+    superconductor_labeller = lambda z: Binarizer(threshold=20.0).fit_transform(as_float_array(z))
+
+    superconductor_config = {
+        "label_generator": superconductor_labeller,
+        "numerical_features": [i for i in range(81)],
+        "folder": "/superconductor",
+        "target": 81,
+        "categorical_features": [],
+        "drop_cols": [],
+    }
+
     should_scale = [True, False]
     one_hot = [True, False]
 
     for ss, oh in itertools.product(should_scale, one_hot):
-        logger.info("Processing Bank Dataset with Should Scale: {} One Hot: {}".format(ss, oh))
-        process_dataset(f"{args.data_dir}/bank", "bank.data", bank_config, oh, ss)
+        # logger.info("Processing Bank Dataset with Should Scale: {} One Hot: {}".format(ss, oh))
+        # process_dataset(f"{args.data_dir}/bank", "bank.data", bank_config, oh, ss)
         logger.info("Processing Adult Dataset with Should Scale: {} One Hot: {}".format(ss, oh))
         process_dataset(f"{args.data_dir}/adult", "adult.data", adult_config, oh, ss)
         logger.info("Processing Abalone Dataset with Should Scale: {} One Hot: {}".format(ss, oh))
         process_dataset(f"{args.data_dir}/abalone", "abalone.data", abalone_config, oh, ss)
+        logger.info("Processing Superconductor Dataset with Should Scale: {} One Hot: {}".format(ss, oh))
+        process_dataset(f"{args.data_dir}/superconductor", "train.csv", superconductor_config, oh, ss)
