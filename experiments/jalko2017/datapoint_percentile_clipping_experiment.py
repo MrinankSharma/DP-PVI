@@ -33,7 +33,7 @@ from experiments.jalko2017.ingredients.dataset_ingredient import dataset_ingredi
 from experiments.jalko2017.measure_performance import compute_prediction_accuracy, compute_log_likelihood
 from experiments.utils import save_log, save_pickle
 from src.client.client import DPClient, ensure_positive_t_i_factory
-from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression
+from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression, postprocess_MF_logistic_ti
 from src.privacy.dp_query import GaussianDPQuery
 from src.privacy.optimizer import DPPercentileClippingGaussianOptimizer
 from src.server import SynchronousParameterServer
@@ -163,7 +163,7 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
                     'noise_stddev': 1
                 },
                 't_i_init_function': lambda x: np.zeros(x.shape),
-                't_i_postprocess_function': ensure_positive_t_i_factory("w_pres"),
+                't_i_postprocess_function': postprocess_MF_logistic_ti,
                 "damping_factor": PVI_settings['damping_factor'],
             },
             metadata={

@@ -12,33 +12,22 @@ from src.model.model import Model
 logger = logging.getLogger(__name__)
 # logger.setLevel(logging.DEBUG)
 
-def postprocess_MF_logistic_ti(params):
-    ret = dict(params)
-    pres = ret['w_pres']
-    num_invalid = np.sum(pres<0)
-    if num_invalid > 0:
-        logger.warning(f"Having to do precision clipping {num_invalid}")
-        indices = pres < 0
-        ret['w_nat_mean'][indices] = 0
-        ret['w_pres'][indices] = 0
-
-    return ret
-
 # note that these functions are all using NUMPY variables
 def prediction_function(a, mean, var):
     return ((1 + np.exp(-a)) ** -1) * ((2 * np.pi * var) ** -0.5) * np.exp(-0.5 * (a - mean) ** 2 / var)
 
 
-def params_to_nat_params(mean, log_var):
-    pres = 1 / np.exp(log_var)
+def params_to_nat_params(mean, stored_log_var):
+    pres = 1 / np.exp(stored_log_var * 10)
     nat_mean = mean * pres
     return nat_mean, pres
 
 
 def nat_params_to_params(nat_mean, pres):
-    log_var = np.log(1 / pres)
+    true_log_var = np.log(1 / pres)
+    stored_log_var = true_log_var / 10
     mean = nat_mean / pres
-    return mean, log_var
+    return mean, stored_log_var
 
 
 def nat_params_to_params_dict(natural_params_dict):
@@ -48,7 +37,6 @@ def nat_params_to_params_dict(natural_params_dict):
         "w_log_var": log_var
     }
 
-
 def params_to_nat_params_dict(params_dict):
     nat_mean, pres = params_to_nat_params(params_dict["w_mu"], params_dict["w_log_var"])
     return {
@@ -56,11 +44,10 @@ def params_to_nat_params_dict(params_dict):
         "w_pres": pres,
     }
 
-
-class LogisticRegressionTorchModule(nn.Module):
+class ReparamLogisticRegressionTorchModule(nn.Module):
 
     def __init__(self, parameters, hyperparameters):
-        super(LogisticRegressionTorchModule, self).__init__()
+        super(ReparamLogisticRegressionTorchModule, self).__init__()
 
         self.set_hyperparameters(hyperparameters)
 
@@ -137,7 +124,7 @@ class LogisticRegressionTorchModule(nn.Module):
 
         # all per point
         mean_1d = torch.mv(x, self.w_mu)
-        cov_mat = torch.diag(torch.exp(self.w_log_var))
+        cov_mat = torch.diag(torch.exp(10 * self.w_log_var))
         cov_list = torch.diag(torch.mm(x, torch.mm(cov_mat, x.t())))
         mean_vars = list(zip(mean_1d, cov_list))
         p_vals = torch.empty(len(mean_vars))
@@ -171,7 +158,7 @@ class LogisticRegressionTorchModule(nn.Module):
         # we will apply the local re-parameterisation trick - we need samples of w^T x which has mean mu_w^T x and
         # covariance x^T sigma_w x
         mean_i = torch.mv(x, self.w_mu)
-        cov_mat = torch.diag(torch.exp(self.w_log_var))
+        cov_mat = torch.diag(torch.exp(10 * self.w_log_var))
         std_i = torch.pow(torch.diag(torch.mm(x, torch.mm(cov_mat, x.t()))), 0.5)
 
         # z = w^T x
@@ -217,7 +204,7 @@ class LogisticRegressionTorchModule(nn.Module):
 
         # compute the KL term
         # scale by the TOTAL number of data points!
-        KL_term = -1 / L * compute_KL_qp(self.w_mu, self.w_log_var, self.prior_mu, self.prior_log_var)
+        KL_term = -1 / L * compute_KL_qp(self.w_mu, 10 * self.w_log_var, self.prior_mu, 10 * self.prior_log_var)
 
         likelihood = self.act(activation_mat * mask)
 
@@ -246,14 +233,13 @@ class LogisticRegressionTorchModule(nn.Module):
         y = output_dist.sample()
         return y
 
-
-class MeanFieldMultiDimensionalLogisticRegression(Model):
+class ReparamMeanFieldMultiDimensionalLogisticRegression(Model):
 
     def __init__(self, parameters, hyperparameters):
-        super(MeanFieldMultiDimensionalLogisticRegression, self).__init__(parameters, hyperparameters)
+        super(ReparamMeanFieldMultiDimensionalLogisticRegression, self).__init__(parameters, hyperparameters)
 
         # logger.debug("New logistic regression module")
-        self.torch_module = LogisticRegressionTorchModule(nat_params_to_params_dict(parameters), self.hyperparameters)
+        self.torch_module = ReparamLogisticRegressionTorchModule(nat_params_to_params_dict(parameters), self.hyperparameters)
 
         if self.hyperparameters['wrapped_optimizer_class'] is not None:
             base_optimizer = self.hyperparameters['base_optimizer_class'](self.torch_module.parameters(),
@@ -375,6 +361,17 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         self.torch_module.set_prior_parameters_from_numpy(cav_nat_params)
         self.torch_module.set_N_full(N_full)
 
+        base_optimizer = self.hyperparameters['base_optimizer_class'](self.torch_module.parameters(),
+                                                                      **self.hyperparameters[
+                                                                          'base_optimizer_parameters'])
+
+        self.wrapped_optimizer = self.hyperparameters['wrapped_optimizer_class'](optimizer=base_optimizer,
+                                                                                 model=self.torch_module,
+                                                                                 loss_per_example=self.torch_module.compute_ELBO_loss_per_point,
+                                                                                 **self.hyperparameters[
+                                                                                     'wrapped_optimizer_parameters']
+                                                                                 )
+
         print_interval = np.ceil(self.hyperparameters['N_steps'] / 20)
 
         training_curve = np.empty(self.hyperparameters['N_steps'])
@@ -407,8 +404,6 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         # if several fit batches are called, this puts all of their training curves into a list
         self._training_curves.append(training_curve)
         self._derived_statistics_histories.append(derived_statistics_history)
-
-        logger.debug(np.exp(self.torch_module.w_log_var.detach().numpy()))
 
         return self.get_parameters()
 

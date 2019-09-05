@@ -1,6 +1,8 @@
 import os
 import sys
 
+from src.model.reparam_logistic_regression_models import ReparamMeanFieldMultiDimensionalLogisticRegression
+
 module_path = os.path.abspath(os.path.join('.'))
 if module_path not in sys.path:
     sys.path.append(module_path)
@@ -33,7 +35,7 @@ from experiments.jalko2017.ingredients.dataset_ingredient import dataset_ingredi
 from experiments.jalko2017.measure_performance import compute_prediction_accuracy, compute_log_likelihood
 from experiments.utils import save_log, save_pickle
 from src.client.client import DPClient, ensure_positive_t_i_factory
-from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression
+from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression, postprocess_MF_logistic_ti
 from src.privacy.dp_query import GaussianDPQuery
 from src.privacy.optimizer import DPOptimizer
 from src.server import AsynchronousParameterServer
@@ -150,12 +152,12 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
         else:
             deltas = [privacy_settings['target_delta']] * len(clients_data)
 
-        if privacy_settings['q'] == None:
-            privacy_settings['q'] = 0
+
+        model = MeanFieldMultiDimensionalLogisticRegression
 
         # client factories for each client - this avoids pickling of the client object for ray internals
         client_factories = [DPClient.create_factory(
-            model_class=MeanFieldMultiDimensionalLogisticRegression,
+            model_class=model,
             dp_query_class=GaussianDPQuery,
             data=clients_data[i],
             accounting_dict={
@@ -184,7 +186,7 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
                     'noise_stddev': privacy_settings["C"] * privacy_settings["sigma_relative"]
                 },
                 't_i_init_function': lambda x: np.zeros(x.shape),
-                't_i_postprocess_function': ensure_positive_t_i_factory("w_pres"),
+                't_i_postprocess_function': postprocess_MF_logistic_ti,
             },
             metadata = {
             'client_index': i,
@@ -198,7 +200,7 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
         # custom decorator based on passed in resources!
         remote_decorator = ray.remote(num_cpus=int(ray_cfg["num_cpus"]), num_gpus=int(ray_cfg["num_gpus"]))
         server = remote_decorator(AsynchronousParameterServer).remote(
-            model_class=MeanFieldMultiDimensionalLogisticRegression,
+            model_class=model,
             model_parameters=prior_params,
             model_hyperparameters={
                 "prediction": prediction["type"],

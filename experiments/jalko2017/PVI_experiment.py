@@ -32,7 +32,7 @@ from experiments.jalko2017.ingredients.dataset_ingredient import dataset_ingredi
 from experiments.jalko2017.measure_performance import compute_prediction_accuracy, compute_log_likelihood
 from experiments.utils import save_log, save_pickle
 from src.client.client import StandardClient, ensure_positive_t_i_factory
-from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression
+from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression, postprocess_MF_logistic_ti
 from src.privacy.optimizer import StandardOptimizer
 from src.server import SynchronousParameterServer, AsynchronousParameterServer
 from src.utils.yaml_string_dumper import YAMLStringDumper
@@ -179,7 +179,7 @@ def run_experiment(ray_cfg,
             },
             hyperparameters={
                 "t_i_init_function": lambda x: np.zeros(x.shape),
-                "t_i_postprocess_function": ensure_positive_t_i_factory("w_pres"),
+                "t_i_postprocess_function": postprocess_MF_logistic_ti,
             },
             metadata={
                 'client_index': i,

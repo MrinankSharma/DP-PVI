@@ -74,6 +74,9 @@ class DPOptimizer(WrapperOptimizer):
 
         final_grads, _ = self.dp_sum_query.get_noised_result(sample_state, self._global_parameters)
 
+        # for k, v in self.model.named_parameters():
+        #     logger.debug(f"{k} mean_grad {torch.sqrt(torch.mean(v.grad.data ** 2))}")
+
         self.apply_grads(param_groups, grads=final_grads)
 
         self.optimizer.step()
@@ -101,6 +104,7 @@ class DPOptimizer(WrapperOptimizer):
     def get_logged_statistics(self):
         return self._derived_records_data
 
+
 class DPGaussianOptimizer(DPOptimizer):
     """ Specific Gaussian mechanism optimizer for L2 clipping and noise privacy """
 
@@ -124,6 +128,7 @@ class DPGaussianOptimizer(DPOptimizer):
     @property
     def ledger(self):
         return self.dp_sum_query.ledger
+
 
 class DPPercentileClippingGaussianOptimizer(DPOptimizer):
 
@@ -186,7 +191,8 @@ class DPPercentileClippingGaussianOptimizer(DPOptimizer):
             norm_clip = np.percentile(norms, self.percentile)
 
         # logger.debug(f"Using clipping bound as {norm_clip:.2f}")
-        self._global_parameters = self.dp_sum_query.query.make_global_state(norm_clip, norm_clip * self.noise_multiplier)
+        self._global_parameters = self.dp_sum_query.query.make_global_state(norm_clip,
+                                                                            norm_clip * self.noise_multiplier)
         sample_params = self.dp_sum_query.derive_sample_params(self._global_parameters)
 
         for record, norm in zip(gradients, norms):

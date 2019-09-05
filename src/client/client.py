@@ -181,7 +181,7 @@ class StandardClient(Client):
                                     t_i_old,
                                     model_parameters,
                                     model_hyperparameters)
-        logger.debug("Client New Lamdba")
+        # logger.debug("Client New Lamdba")
 
         # print(self.metadata['test_self'])
         # if self.metadata['test_self'] is not None:
@@ -193,8 +193,8 @@ class StandardClient(Client):
         delta_lambda_i = np_utils.subtract_params(lambda_new,
                                                   lambda_old)
 
-        logger.debug(f"Old Params: {lambda_old}\n"
-                    f"New Params: {lambda_new}\n")
+        # logger.debug(f"Old Params: {lambda_old}\n"
+        #             f"New Params: {lambda_new}\n")
 
         # apply the privacy function, specified by the server
         # delta_lambda_i_tilde, privacy_stats = self.privacy_function(delta_lambda_i)
@@ -215,7 +215,7 @@ class StandardClient(Client):
 
         if update_ti:
             self.t_i = t_i_new
-            logger.debug(f"New t_i {self.t_i}")
+            # logger.debug(f"New t_i {self.t_i}")
             self.times_updated += 1
 
         return delta_lambda_i_tilde
@@ -224,7 +224,7 @@ class StandardClient(Client):
         t_i_new = np_utils.add_parameters(delta_ti, self.t_i)
         t_i_new = self.t_i_postprocess_funtion(t_i_new)
         self.t_i = t_i_new
-        logger.debug(f"New t_i {self.t_i}")
+        # logger.debug(f"New t_i {self.t_i}")
         self.times_updated += 1
 
     def log_update(self):
