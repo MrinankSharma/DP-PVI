@@ -210,10 +210,10 @@ def run_experiment(ray_cfg,
             st_pred = time.time()
             # predict every interval, and also for the last "interval" runs.
             if (epoch % prediction["interval"] == 0):
-                y_pred_train = ray.get(server.get_model_predictions.remote(training_set))
+                # y_pred_train = ray.get(server.get_model_predictions.remote(training_set))
                 y_pred_test = ray.get(server.get_model_predictions.remote(test_set))
-                sacred_log["train_all"] = compute_log_likelihood(y_pred_train, training_set["y"])
-                sacred_log["train_accuracy"] = compute_prediction_accuracy(y_pred_train, training_set["y"])
+                # sacred_log["train_all"] = compute_log_likelihood(y_pred_train, training_set["y"])
+                # sacred_log["train_accuracy"] = compute_prediction_accuracy(y_pred_train, training_set["y"])
                 sacred_log["test_all"] = compute_log_likelihood(y_pred_test, test_set["y"])
                 test_acc = compute_prediction_accuracy(y_pred_test, test_set["y"])
                 sacred_log["test_accuracy"] = test_acc

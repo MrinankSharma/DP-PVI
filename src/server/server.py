@@ -236,6 +236,7 @@ class AsynchronousParameterServer(ParameterServer):
             self.client_probs = self.client_probs / self.client_probs.sum()
 
             client_index = int(np.random.choice(len(self.clients), 1, replace=False, p=self.client_probs))
+            logger.info(f"Selected Client {client_index}")
             client = self.clients[client_index]
 
             logger.debug(f'On client {i + 1} of {len(self.clients)}, client index {client_index}')
