@@ -207,6 +207,7 @@ class AsynchronousParameterServer(ParameterServer):
         client_probs = client_probs / client_probs.sum()
         self.client_probs = client_probs
         self.all_clients_stopped = False
+        self.client_ti_norms = []
 
     def tick(self):
         if self.should_stop():
@@ -221,6 +222,7 @@ class AsynchronousParameterServer(ParameterServer):
 
         self.current_damping_factor = self.hyperparameters["damping_factor"] * np.exp(
             -self.iterations * self.hyperparameters["damping_decay"])
+
         for i in range(len(self.clients)):
 
             available_clients = [client.can_update() for client in self.clients]
@@ -244,6 +246,11 @@ class AsynchronousParameterServer(ParameterServer):
             delta_i = client.get_update(model_parameters=lambda_new, model_hyperparameters=None, update_ti=True)
             lambda_new = np_nest.map_structure(np.add, lambda_new, delta_i)
             logger.debug(f'Finished Client {i + 1} of {len(self.clients)}\n\n')
+
+        self.client_ti_norms = []
+        for i in range(len(self.clients)):
+            self.client_ti_norms.append(np.sqrt(np_nest.reduce_structure(lambda p: np.linalg.norm(p) ** 2, np.add, self.clients[i].t_i)))
+
 
         self.parameters = lambda_new
 
@@ -276,7 +283,10 @@ class AsynchronousParameterServer(ParameterServer):
         return super().get_default_metadata()
 
     def log_sacred(self):
-        return {'applied_damping_factor': self.current_damping_factor}, self.iterations
+        ret = {'applied_damping_factor': self.current_damping_factor}
+        for i in range(len(self.clients)):
+            ret[f"client_{i}"] = self.client_ti_norms[i]
+        return ret, self.iterations
 
 
 

@@ -241,7 +241,7 @@ class StandardClient(Client):
         if self.metadata['log_params']:
             self.log['params'].append(np_nest.structured_ndarrays_to_lists(self.model.get_parameters()))
         if self.metadata['log_t_i']:
-            self.log['t_i'].append(np_nest.structured_ndarrays_to_lists(self.t_i))
+            self.log['t_i'].append(np_nest.structured_ndarrays_to_lists(np_nest.map_structure(np.mean, self.t_i)))
         if self.metadata['log_model_info']:
             self.log['model'].append(np_nest.structured_ndarrays_to_lists(self.model.get_incremental_log_record()))
 

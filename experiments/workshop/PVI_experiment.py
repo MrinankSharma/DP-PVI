@@ -31,7 +31,7 @@ from experiments.workshop.ingredients.data_distribution import dataset_dist_ingr
 from experiments.workshop.ingredients.dataset_ingredient import dataset_ingredient, load_data
 from experiments.workshop.measure_performance import compute_prediction_accuracy, compute_log_likelihood
 from experiments.utils import save_log, save_pickle
-from src.client.client import StandardClient, ensure_positive_t_i_factory
+from src.client.client import StandardClient
 from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression, postprocess_MF_logistic_ti
 from src.privacy.optimizer import StandardOptimizer
 from src.server import SynchronousParameterServer, AsynchronousParameterServer
