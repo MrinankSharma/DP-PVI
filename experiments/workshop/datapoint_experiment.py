@@ -29,10 +29,10 @@ from sacred import Experiment
 import src.privacy.analysis.moment_accountant as moment_accountant
 import src.utils.numpy_nest_utils as numpy_nest
 # noinspection PyUnresolvedReferences
-from experiments.jalko2017.MongoDBOption import TestOption, ExperimentOption, DatabaseOption
-from experiments.jalko2017.ingredients.data_distribution import dataset_dist_ingred, generate_dataset_distribution_func
-from experiments.jalko2017.ingredients.dataset_ingredient import dataset_ingredient, load_data
-from experiments.jalko2017.measure_performance import compute_prediction_accuracy, compute_log_likelihood
+from experiments.workshop.ingredients.data_distribution import dataset_dist_ingred, generate_dataset_distribution_func
+from experiments.workshop.MongoDBOption import TestOption, ExperimentOption, DatabaseOption
+from experiments.workshop.ingredients.dataset_ingredient import dataset_ingredient, load_data
+from experiments.workshop.measure_performance import compute_prediction_accuracy, compute_log_likelihood
 from experiments.utils import save_log, save_pickle
 from src.client.client import DPClient, ensure_positive_t_i_factory
 from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression, postprocess_MF_logistic_ti
@@ -74,10 +74,9 @@ def default_config(dataset, dataset_dist):
 
     dataset_dist = {
         'M': 10,
-        'rho': 3800,
-        'sample_rho_noise_scale': 0,
-        'inhomo_scale': 0,
-        'dataset_seed': 0,
+        'client_size_factor': 0,
+        'class_balance_factor': 0,
+        'dataset_seed': None,
     }
 
     optimisation_settings = {

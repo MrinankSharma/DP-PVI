@@ -36,7 +36,6 @@ def generate_dataset_distribution_func(_run, M, rho, sample_rho_noise_scale, inh
         np_random_state = np.random.get_state()
 
         if dataset_seed is not None:
-            print(dataset_seed, type(dataset_seed))
             np.random.seed(dataset_seed)
             # torch.manual_seed(dataset_seed)
 
