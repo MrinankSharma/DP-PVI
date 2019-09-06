@@ -263,4 +263,5 @@ logs/*
 /data/abalone
 /data/adult
 /data/bank
+/data/superconductor
 accountant_tables

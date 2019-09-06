@@ -1,8 +1,6 @@
 import os
 import sys
 
-from src.model.reparam_logistic_regression_models import ReparamMeanFieldMultiDimensionalLogisticRegression
-
 module_path = os.path.abspath(os.path.join('.'))
 if module_path not in sys.path:
     sys.path.append(module_path)

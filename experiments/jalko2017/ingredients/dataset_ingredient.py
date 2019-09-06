@@ -53,8 +53,8 @@ def load_data(name, scaled, ordinal_cat_encoding, train_proportion, data_base_di
     y_train = y[0:N_train]
     x_test = x[N_train:]
     y_test = y[N_train:]
-    logger.info(f"Training Set: {x_train.shape[0]} examples with dimensionality {x_train.shape[1]}")
-    logger.info(f"Test Set: {x_test.shape[0]} examples")
+    logger.info(f"Training Set: {x_train.shape[0]} examples with dimensionality {x_train.shape[1]}. {(y_train > 0).mean()} percent positive")
+    logger.info(f"Test Set: {x_test.shape[0]} examples. {(y_test > 0).mean()} percent positive")
 
     training_set = {
         "x": x_train,
