@@ -1,6 +1,6 @@
 experiment_file: experiments/jalko2017/dp_batch_vi_experiment.py
 experiment_tag: dp_batch_vi
-database: epsilon_clipping_adult_0509
+database: epsilon_clipping_adult_0709
 
 privacy_settings:
   sigma_relative:
@@ -15,6 +15,7 @@ privacy_settings:
     - 0.7
     - 1
     - 2
+    - 3
     - None
 
 dataset:
@@ -32,18 +33,17 @@ dataset:
 dataset_dist:
   M:
     - 10
-  rho:
-    - 3800
-  sample_rho_noise_scale:
+  client_size_factor:
     - 0
-  inhomo_scale:
+  class_balance_factor:
     - 0
   dataset_seed:
-    - 1
+    - 0
+
 
 optimisation_settings:
   lr:
-    - 0.2
+    - 0.05
   N_steps:
     - 1
   lr_decay:
@@ -66,12 +66,12 @@ prediction:
     - prohibit
 
 
-N_iterations: 500
+N_iterations: 2000
 prior_pres: 1.0
 N_samples: 50
 
 log_level: info
 save_q: False
-num_seeds: 3
+num_seeds: 5
 logging_base_directory: logs
 slack_json_file: slack.json
