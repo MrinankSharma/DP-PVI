@@ -379,6 +379,8 @@ class GradientVIClient(Client):
         parameters_old = self.model.get_parameters()
         t_i = np_nest.map_structure(np.subtract, parameters_old, self.hyperparameters['prior'])
 
+        self.t_i = t_i
+
         parameters_new = self.model.fit(self.data, t_i)
 
         delta_lambda_i = np_utils.subtract_params(parameters_new,
