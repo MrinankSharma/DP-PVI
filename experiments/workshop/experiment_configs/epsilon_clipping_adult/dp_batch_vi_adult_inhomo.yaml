@@ -1,4 +1,4 @@
-experiment_file: experiments/jalko2017/dp_batch_vi_experiment.py
+experiment_file: experiments/workshop/dp_batch_vi_experiment.py
 experiment_tag: dp_batch_vi
 database: epsilon_clipping_adult_0709
 

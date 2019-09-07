@@ -1,4 +1,4 @@
-experiment_file: experiments/jalko2017/datapoint_experiment.py
+experiment_file: experiments/workshop/datapoint_experiment.py
 experiment_tag: datapoint_dp_pvi
 database: epsilon_clipping_adult_0709
 
