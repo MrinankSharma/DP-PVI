@@ -238,7 +238,7 @@ class AsynchronousParameterServer(ParameterServer):
             self.client_probs = self.client_probs / self.client_probs.sum()
 
             client_index = int(np.random.choice(len(self.clients), 1, replace=False, p=self.client_probs))
-            logger.info(f"Selected Client {client_index}")
+            logger.debug(f"Selected Client {client_index}")
             client = self.clients[client_index]
 
             logger.debug(f'On client {i + 1} of {len(self.clients)}, client index {client_index}')
@@ -248,12 +248,8 @@ class AsynchronousParameterServer(ParameterServer):
             logger.debug(f'Finished Client {i + 1} of {len(self.clients)}\n\n')
 
         self.client_ti_norms = []
-        logger.info(f'getting tis for {len(self.clients)} clients')
         for i in range(len(self.clients)):
-            logger.info(f'{i}: {self.clients[i]}')
             self.client_ti_norms.append(np.sqrt(np_nest.reduce_structure(lambda p: np.linalg.norm(p) ** 2, np.add, self.clients[i].t_i)))
-        logger.info(f'Those tis are len {len(self.client_ti_norms)} {self.client_ti_norms}')
-
 
         self.parameters = lambda_new
 
@@ -287,8 +283,6 @@ class AsynchronousParameterServer(ParameterServer):
 
     def log_sacred(self):
         ret = {'applied_damping_factor': self.current_damping_factor}
-        logger.info('logging tis')
-        logger.info(f'Those tis are len {len(self.client_ti_norms)} {self.client_ti_norms}')
         for i in range(len(self.clients)):
             ret[f"client_{i}"] = self.client_ti_norms[i]
         return ret, self.iterations

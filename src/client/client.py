@@ -338,6 +338,7 @@ class GradientVIClient(Client):
 
         super().__init__(model_class, data, model_parameters, model_hyperparameters, hyperparameters, metadata)
 
+        self.t_i = self.model.get_parameters()
         self.lambda_i = self.model.get_parameters()
 
     @classmethod
