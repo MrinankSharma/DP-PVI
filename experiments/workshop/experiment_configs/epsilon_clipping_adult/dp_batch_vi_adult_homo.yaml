@@ -4,9 +4,9 @@ database: epsilon_clipping_adult_0709
 
 privacy_settings:
   sigma_relative:
-    - 1
+#    - 1
     - 5
-    - 10
+#    - 10
   C: 75
   target_delta: adaptive
   q: 0.02
@@ -15,7 +15,6 @@ privacy_settings:
     - 0.7
     - 1
     - 2
-    - 3
     - None
 
 dataset:

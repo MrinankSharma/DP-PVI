@@ -9,9 +9,9 @@ PVI_settings:
 
 privacy_settings:
   sigma_relative:
-    - 1
+#    - 1
     - 5
-    - 10
+#    - 10
   C: 75
   target_delta: adaptive
   q: 0.02
@@ -20,7 +20,6 @@ privacy_settings:
     - 0.7
     - 1
     - 2
-    - 3
     - None
 
 dataset:
@@ -39,17 +38,17 @@ dataset_dist:
   M:
     - 10
   client_size_factor:
-    - 0.9
+    - 0
   class_balance_factor:
-    - 0.95
+    - 0
   dataset_seed:
     - 0
 
 optimisation_settings:
   lr:
-    - 2.0
+    - 0.5
   N_steps:
-    - 20
+    - 25
   lr_decay:
     - 0
   L_min:
@@ -70,7 +69,7 @@ prediction:
     - prohibit
 
 
-N_iterations: 500
+N_iterations: 200
 prior_pres: 1.0
 N_samples: 50
 
