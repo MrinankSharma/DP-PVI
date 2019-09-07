@@ -1,6 +1,6 @@
 experiment_file: experiments/workshop/batch_vi_experiment.py
 experiment_tag: batch_vi
-database: workshop_fixed_inhomo_test
+database: workshop_fixed_inhomo_test_0709
 
 dataset:
   name:
@@ -35,7 +35,7 @@ dataset_dist:
 
 optimisation_settings:
   lr:
-    - 0.2
+    - 0.05
   N_steps:
     - 1
   lr_decay:
