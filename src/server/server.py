@@ -250,7 +250,7 @@ class AsynchronousParameterServer(ParameterServer):
         self.client_ti_norms = []
         logger.info(f'getting tis for {len(self.clients)} clients')
         for i in range(len(self.clients)):
-            logger.info(f'{i}: {self.clients[i].t_i}')
+            logger.info(f'{i}: {self.clients[i]}')
             self.client_ti_norms.append(np.sqrt(np_nest.reduce_structure(lambda p: np.linalg.norm(p) ** 2, np.add, self.clients[i].t_i)))
         logger.info(f'Those tis are len {len(self.client_ti_norms)} {self.client_ti_norms}')
 
