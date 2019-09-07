@@ -251,6 +251,7 @@ class AsynchronousParameterServer(ParameterServer):
         for i in range(len(self.clients)):
             logger.info('getting tis')
             self.client_ti_norms.append(np.sqrt(np_nest.reduce_structure(lambda p: np.linalg.norm(p) ** 2, np.add, self.clients[i].t_i)))
+        logger.info(f'Those tis are len {len(self.client_ti_norms)} {self.client_ti_norms}')
 
 
         self.parameters = lambda_new
@@ -286,6 +287,7 @@ class AsynchronousParameterServer(ParameterServer):
     def log_sacred(self):
         ret = {'applied_damping_factor': self.current_damping_factor}
         logger.info('logging tis')
+        logger.info(f'Those tis are len {len(self.client_ti_norms)} {self.client_ti_norms}')
         for i in range(len(self.clients)):
             ret[f"client_{i}"] = self.client_ti_norms[i]
         return ret, self.iterations
