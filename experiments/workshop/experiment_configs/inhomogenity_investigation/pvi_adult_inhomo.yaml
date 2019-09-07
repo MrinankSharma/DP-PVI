@@ -1,6 +1,6 @@
 experiment_file: experiments/workshop/PVI_experiment.py
 experiment_tag: pvi
-database: workshop_fixed_inhomo_test
+database: workshop_fixed_inhomo_test_0709
 
 PVI_settings:
   damping_factor: 0.1
@@ -40,9 +40,9 @@ dataset_dist:
 
 optimisation_settings:
   lr:
-    - 0.2
+    - 2
   N_steps:
-    - 50
+    - 20
   lr_decay:
     - 0
   L:
