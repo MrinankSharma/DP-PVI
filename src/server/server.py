@@ -226,20 +226,23 @@ class AsynchronousParameterServer(ParameterServer):
         for i in range(len(self.clients)):
 
             available_clients = [client.can_update() for client in self.clients]
-            for i, available in enumerate(available_clients):
-                if not available:
-                    self.client_probs[i] = 0
+            # for i, available in enumerate(available_clients):
+            #     if not available:
+            #         self.client_probs[i] = 0
 
             if not np.any(available_clients):
                 self.all_clients_stopped = True
                 logger.info('All clients report to be finished. Stopping.')
                 break
 
-            self.client_probs = self.client_probs / self.client_probs.sum()
+            # self.client_probs = self.client_probs / self.client_probs.sum()
 
             client_index = int(np.random.choice(len(self.clients), 1, replace=False, p=self.client_probs))
             logger.debug(f"Selected Client {client_index}")
             client = self.clients[client_index]
+
+            if not client.can_update():
+                logger.debug(f"Skipping client {client_index}, client not avalible to update.")
 
             logger.debug(f'On client {i + 1} of {len(self.clients)}, client index {client_index}')
             client.set_hyperparameters({"damping_factor": self.current_damping_factor})

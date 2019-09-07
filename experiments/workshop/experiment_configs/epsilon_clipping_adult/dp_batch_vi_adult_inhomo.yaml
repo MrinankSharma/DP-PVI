@@ -1,6 +1,6 @@
 experiment_file: experiments/workshop/dp_batch_vi_experiment.py
 experiment_tag: dp_batch_vi
-database: epsilon_clipping_adult_0709
+database: epsilon_clipping_adult_timeseries_0709
 
 privacy_settings:
   sigma_relative:
@@ -64,7 +64,7 @@ prediction:
     - prohibit
 
 
-N_iterations: 2000
+N_iterations: 5000
 prior_pres: 1.0
 N_samples: 50
 
