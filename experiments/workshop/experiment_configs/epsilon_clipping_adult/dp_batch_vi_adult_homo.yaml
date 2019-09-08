@@ -1,12 +1,10 @@
 experiment_file: experiments/workshop/dp_batch_vi_experiment.py
 experiment_tag: dp_batch_vi
-database: epsilon_clipping_adult_timeseries_0709
+database: epsilon_clipping_adult_0809
 
 privacy_settings:
   sigma_relative:
-#    - 1
     - 5
-#    - 10
   C: 75
   target_delta: adaptive
   q: 0.02

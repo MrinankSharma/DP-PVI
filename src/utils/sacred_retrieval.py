@@ -30,7 +30,7 @@ class SacredExperimentAccess(object):
         if name:
             filter['experiment.name'] = name
         if complete:
-            filter['status'] = 'COMPLETED'
+            filter['status'] = {'$in': ['COMPLETED']}
         if config:
             # config will be a dictionary
             filter = {**filter, **SacredExperimentAccess.filter_from_nested_dict(config, "config.")}

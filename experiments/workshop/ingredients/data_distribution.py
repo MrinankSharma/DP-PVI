@@ -45,6 +45,7 @@ def generate_dataset_distribution_func(_run, M, client_size_factor, class_balanc
         class_balance = np.mean(y < 0)
 
         small_client_class_balance = class_balance + (1 - class_balance) * class_balance_factor
+        logger.info(class_balance)
         small_client_negative_class_size = int(np.floor(small_client_size * small_client_class_balance))
         small_client_positive_class_size = int(small_client_size - small_client_negative_class_size)
 

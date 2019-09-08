@@ -1,6 +1,6 @@
 experiment_file: experiments/workshop/PVI_experiment.py
 experiment_tag: pvi
-database: epsilon_clipping_adult_timeseries_0709
+database: epsilon_clipping_adult_0809
 
 PVI_settings:
   damping_factor: 0.1

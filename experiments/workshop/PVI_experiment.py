@@ -220,10 +220,13 @@ def run_experiment(ray_cfg,
                 prior=prior_params,
             )
 
+        total_communications = 0
+
         while not ray.get(server.should_stop.remote()):
             # dispatch work to ray and grab the log
             st_tick = time.time()
-            ray.get(server.tick.remote())
+            communications_this_round = ray.get(server.tick.remote())
+            total_communications += communications_this_round
             num_iterations = ray.get(server.get_num_iterations.remote())
 
             st_log = time.time()
@@ -249,7 +252,8 @@ def run_experiment(ray_cfg,
             end_pred = time.time()
 
             for k, v in sacred_log.items():
-                _run.log_scalar(k, v, num_iterations)
+                _run.log_scalar(k + '_time', v, num_iterations)
+                _run.log_scalar(k + '_communications', v, total_communications)
             end = time.time()
 
             logger.info(f"Server Ticket Complete\n"

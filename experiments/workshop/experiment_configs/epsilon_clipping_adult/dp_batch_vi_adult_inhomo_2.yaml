@@ -1,6 +1,19 @@
-experiment_file: experiments/workshop/batch_vi_experiment.py
-experiment_tag: batch_vi
-database: epsilon_clipping_adult_timeseries_0709
+experiment_file: experiments/workshop/dp_batch_vi_experiment.py
+experiment_tag: dp_batch_vi
+database: epsilon_clipping_adult_0809
+
+privacy_settings:
+  sigma_relative:
+    - 5
+  C: 75
+  target_delta: adaptive
+  q: 0.02
+  max_epsilon:
+    - 0.5
+    - 0.7
+    - 1
+    - 2
+    - None
 
 dataset:
   name:
@@ -18,9 +31,9 @@ dataset_dist:
   M:
     - 10
   client_size_factor:
-    - 0.9
+    - 0.7
   class_balance_factor:
-    - 0.95
+    - -3
   dataset_seed:
     - 0
 
@@ -31,8 +44,8 @@ optimisation_settings:
     - 1
   lr_decay:
     - 0
-  L:
-    - 100
+  L_min:
+    - 20
 
 ray_cfg:
   redis_address:
@@ -49,7 +62,7 @@ prediction:
     - prohibit
 
 
-N_iterations: 1000
+N_iterations: 5000
 prior_pres: 1.0
 N_samples: 50
 
