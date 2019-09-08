@@ -58,7 +58,7 @@ ray_cfg:
 
 prediction:
   interval:
-    - 5
+    - 25
   type:
     - prohibit
 

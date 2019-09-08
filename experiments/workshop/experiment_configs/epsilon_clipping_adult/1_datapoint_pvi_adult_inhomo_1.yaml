@@ -62,12 +62,12 @@ ray_cfg:
 
 prediction:
   interval:
-    - 1
+    - 5
   type:
     - prohibit
 
 
-N_iterations: 600
+N_iterations: 1000
 prior_pres: 1.0
 N_samples: 50
 
