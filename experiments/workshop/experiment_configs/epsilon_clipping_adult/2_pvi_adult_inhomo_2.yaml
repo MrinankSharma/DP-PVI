@@ -1,26 +1,11 @@
-experiment_file: experiments/workshop/datapoint_experiment.py
-experiment_tag: datapoint_dp_pvi
-database: epsilon_clipping_adult_timeseries_0709
+experiment_file: experiments/workshop/PVI_experiment.py
+experiment_tag: pvi
+database: epsilon_clipping_adult_0809
 
 PVI_settings:
   damping_factor: 0.1
   damping_decay: 0
   async: True
-
-privacy_settings:
-  sigma_relative:
-#    - 1
-    - 5
-#    - 10
-  C: 75
-  target_delta: adaptive
-  q: 0.02
-  max_epsilon:
-    - 0.5
-    - 0.7
-    - 1
-    - 2
-    - None
 
 dataset:
   name:
@@ -38,21 +23,21 @@ dataset_dist:
   M:
     - 10
   client_size_factor:
-    - 0.9
+    - 0.7
   class_balance_factor:
-    - 0.95
+    - -3
   dataset_seed:
     - 0
 
 optimisation_settings:
   lr:
-    - 0.5
+    - 2.0
   N_steps:
-    - 25
+    - 20
   lr_decay:
     - 0
-  L_min:
-    - 20
+  L:
+    - 100
 
 ray_cfg:
   redis_address:
@@ -69,7 +54,7 @@ prediction:
     - prohibit
 
 
-N_iterations: 600
+N_iterations: 100
 prior_pres: 1.0
 N_samples: 50
 
@@ -78,4 +63,3 @@ save_t_is: True
 num_seeds: 5
 logging_base_directory: logs
 slack_json_file: slack.json
-

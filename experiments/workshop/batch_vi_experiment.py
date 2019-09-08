@@ -191,25 +191,28 @@ def run_experiment(ray_cfg,
             prior=prior_params,
         )
 
-        for epoch in range(N_iterations):
+        total_communications = 0
+
+        while not ray.get(server.should_stop.remote()):
             # dispatch work to ray and grab the log
             st_tick = time.time()
-
-            # fit the model to each batch of data
-            server.tick.remote()
+            communications_this_round = ray.get(server.tick.remote())
+            total_communications += communications_this_round
+            num_iterations = ray.get(server.get_num_iterations.remote())
 
             st_log = time.time()
             sacred_log = {}
-            sacred_log['server'], _ = ray.get(server.log_sacred.remote())
+            sacred_log["server"], _ = ray.get(server.log_sacred.remote())
             params = ray.get(server.get_parameters.remote())
             client_sacred_logs = ray.get(server.get_client_sacred_logs.remote())
             for i, log in enumerate(client_sacred_logs):
-                sacred_log['client_' + str(i)] = log[0]
-            sacred_log = numpy_nest.flatten(sacred_log, sep='.')
+                sacred_log["client_" + str(i)] = log[0]
+            sacred_log = numpy_nest.flatten(sacred_log, sep=".")
 
             st_pred = time.time()
             # predict every interval, and also for the last "interval" runs.
-            if (epoch % prediction["interval"] == 0):
+            if ((num_iterations - 1) % prediction["interval"] == 0) or (
+                    N_iterations - num_iterations < prediction["interval"]):
                 # y_pred_train = ray.get(server.get_model_predictions.remote(training_set))
                 y_pred_test = ray.get(server.get_model_predictions.remote(test_set))
                 # sacred_log["train_all"] = compute_log_likelihood(y_pred_train, training_set["y"])
@@ -220,7 +223,8 @@ def run_experiment(ray_cfg,
             end_pred = time.time()
 
             for k, v in sacred_log.items():
-                _run.log_scalar(k, v, epoch)
+                _run.log_scalar(k + '_time', v, num_iterations)
+                _run.log_scalar(k + '_communications', v, total_communications)
             end = time.time()
 
             logger.info(f"Server Ticket Complete\n"
@@ -228,9 +232,9 @@ def run_experiment(ray_cfg,
                         f"  Server Tick: {st_log - st_tick:.2f}s\n"
                         f"  Predictions: {end_pred - st_pred:.2f}s\n"
                         f"  Logging:     {end - end_pred + st_pred - st_log:.2f}s\n\n"
-                        f"Iteration Number:{epoch}\n")
+                        f"Iteration Number:{num_iterations}\n")
             logger.debug(f"Parameters:\n"
-                         f" {params}\n")
+                         f" {pretty_dump.dump(params)}\n")
 
         final_log = ray.get(server.get_compiled_log.remote())
         final_log["N_i"] = nis

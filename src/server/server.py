@@ -223,6 +223,8 @@ class AsynchronousParameterServer(ParameterServer):
         self.current_damping_factor = self.hyperparameters["damping_factor"] * np.exp(
             -self.iterations * self.hyperparameters["damping_decay"])
 
+        communications_this_round = 0
+
         for i in range(len(self.clients)):
 
             available_clients = [client.can_update() for client in self.clients]
@@ -250,6 +252,8 @@ class AsynchronousParameterServer(ParameterServer):
             lambda_new = np_nest.map_structure(np.add, lambda_new, delta_i)
             logger.debug(f'Finished Client {i + 1} of {len(self.clients)}\n\n')
 
+            communications_this_round += 1
+
         self.client_ti_norms = []
         for i in range(len(self.clients)):
             self.client_ti_norms.append(np.sqrt(np_nest.reduce_structure(lambda p: np.linalg.norm(p) ** 2, np.add, self.clients[i].t_i)))
@@ -264,6 +268,8 @@ class AsynchronousParameterServer(ParameterServer):
         self.log_update()
 
         self.iterations += 1
+
+        return communications_this_round
 
     def should_stop(self):
         if self.iterations > self.max_iterations - 1 or self.all_clients_stopped:
