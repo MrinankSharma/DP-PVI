@@ -1,6 +1,6 @@
 experiment_file: experiments/workshop/dp_batch_vi_experiment.py
 experiment_tag: dp_batch_vi
-database: epsilon_clipping_adult_0809
+database: epsilon_clipping_adult_0909
 
 privacy_settings:
   sigma_relative:
@@ -10,10 +10,10 @@ privacy_settings:
   q: 0.02
   max_epsilon:
     - 0.5
-    - 0.7
+    - 0.75
     - 1
-    - 2
-    - None
+#    - 2
+#    - None
 
 dataset:
   name:

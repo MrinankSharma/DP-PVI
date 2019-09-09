@@ -245,6 +245,7 @@ class AsynchronousParameterServer(ParameterServer):
 
             if not client.can_update():
                 logger.debug(f"Skipping client {client_index}, client not avalible to update.")
+                continue
 
             logger.debug(f'On client {i + 1} of {len(self.clients)}, client index {client_index}')
             client.set_hyperparameters({"damping_factor": self.current_damping_factor})

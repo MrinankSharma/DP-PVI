@@ -283,6 +283,9 @@ class DPClient(StandardClient):
 
     def compute_update(self, model_parameters=None, model_hyperparameters=None, update_ti=True):
         logger.debug("Computing Update")
+        if not self.can_update():
+            logger.warning('Incorrectly tired to update a client tha cant be updated!')
+            return np_nest.map_structure(np.zeros_like, self.model.get_parameters())
         delta_lambda_i_tilde = super().compute_update(model_parameters, model_hyperparameters, update_ti)
 
         logger.debug("Computing Privacy Cost")
@@ -446,6 +449,9 @@ class DPGradientVIClient(GradientVIClient):
 
     def compute_update(self, model_parameters=None, model_hyperparameters=None, update_ti=True):
         logger.debug("Computing Update")
+        if not self.can_update():
+            logger.warning('Incorrectly tired to update a client tha cant be updated!')
+            return np_nest.map_structure(np.zeros_like, self.model.get_parameters())
         delta_lambda_i_tilde = super().compute_update(model_parameters, model_hyperparameters, update_ti)
 
         logger.debug("Computing Privacy Cost")

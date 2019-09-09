@@ -1,6 +1,6 @@
 experiment_file: experiments/workshop/batch_vi_experiment.py
 experiment_tag: batch_vi
-database: epsilon_clipping_adult_0809
+database: epsilon_clipping_adult_0909
 
 dataset:
   name:

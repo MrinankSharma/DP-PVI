@@ -1,6 +1,6 @@
 experiment_file: experiments/workshop/datapoint_experiment.py
 experiment_tag: datapoint_dp_pvi
-database: epsilon_clipping_adult_0809
+database: epsilon_clipping_adult_0909
 
 PVI_settings:
   damping_factor: 0.1
@@ -15,10 +15,10 @@ privacy_settings:
   q: 0.02
   max_epsilon:
     - 0.5
-    - 0.7
+    - 0.75
     - 1
-    - 2
-    - None
+#    - 2
+#    - None
 
 dataset:
   name:
