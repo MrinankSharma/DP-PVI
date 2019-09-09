@@ -1,6 +1,6 @@
 experiment_file: experiments/workshop/PVI_experiment.py
 experiment_tag: pvi
-database: workshop_fixed_inhomo_test_0709
+database: workshop_fixed_inhomo_test_0909
 
 PVI_settings:
   damping_factor: 0.1
@@ -30,7 +30,6 @@ dataset_dist:
     - 0.9
     - 0.95
   class_balance_factor:
-    - -3.2
     - -3.0
     - -2.5
     - -2.0

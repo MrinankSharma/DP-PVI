@@ -49,8 +49,16 @@ def generate_dataset_distribution_func(_run, M, client_size_factor, class_balanc
         small_client_negative_class_size = int(np.floor(small_client_size * small_client_class_balance))
         small_client_positive_class_size = int(small_client_size - small_client_negative_class_size)
 
+        if small_client_negative_class_size < 0: raise ValueError('small_client_negative_class_size is negative, invalid settings.')
+        if small_client_positive_class_size < 0: raise ValueError('small_client_positive_class_size is negative, invalid settings.')
+
+
         if small_client_negative_class_size * M/2 > class_balance * N:
+            raise ValueError(f'Not enough negative class instances to fill the small clients. Client size factor:{client_size_factor}, class balance factor:{class_balance_factor}')
+
+        if small_client_positive_class_size * M/2 > (1-class_balance) * N:
             raise ValueError(f'Not enough positive class instances to fill the small clients. Client size factor:{client_size_factor}, class balance factor:{class_balance_factor}')
+
 
         pos_inds = np.where(y > 0)
         neg_inds = np.where(y < 0)
