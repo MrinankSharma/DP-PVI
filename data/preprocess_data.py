@@ -117,8 +117,8 @@ if __name__ == "__main__":
     one_hot = [True, False]
 
     for ss, oh in itertools.product(should_scale, one_hot):
-        # logger.info("Processing Bank Dataset with Should Scale: {} One Hot: {}".format(ss, oh))
-        # process_dataset(f"{args.data_dir}/bank", "bank.data", bank_config, oh, ss)
+        logger.info("Processing Bank Dataset with Should Scale: {} One Hot: {}".format(ss, oh))
+        process_dataset(f"{args.data_dir}/bank", "bank.data", bank_config, oh, ss)
         logger.info("Processing Adult Dataset with Should Scale: {} One Hot: {}".format(ss, oh))
         process_dataset(f"{args.data_dir}/adult", "adult.data", adult_config, oh, ss)
         logger.info("Processing Abalone Dataset with Should Scale: {} One Hot: {}".format(ss, oh))

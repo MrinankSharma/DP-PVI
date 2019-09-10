@@ -4,7 +4,7 @@
 Requirements:
 
 * Python 3.7
-* We use [Pipenv](https://pipenv.readthedocs.io/en/latest/) to handle Python package installations. Note: we use `torch=1.1.0` for compatability with Pipenv.
+* We use [Pipenv](https://pipenv.readthedocs.io/en/latest/) to handle Python package installations. Note: we use `torch=1.1.0` for compatability with Pipenv. The `Pipfile.lock` can be used to ensure that you are running with the exact same dependencies as we have used. 
 * OSX users may need to install `libomp` e.g. with Homebrew `brew install libomp`
 * A [MongoDB](https://www.mongodb.com/) is used to store results, and Sacred ([Github](https://github.com/IDSIA/sacred)) is used to place useful information in this database. 
 
