@@ -5,6 +5,13 @@ import numpy as np
 
 
 def flatten(d, parent_key='', sep='.'):
+    """
+    Flatten a given nested dictionary set up, concatenating keys with sep.
+    :param d: The nested dictionary structure
+    :param parent_key: The initial key to prepend to all entries
+    :param sep: the separator to place between nested keys
+    :return: The flattened dictionary
+    """
     items = []
     for k, v in d.items():
         new_key = parent_key + sep + k if parent_key else k
@@ -51,6 +58,8 @@ def structured_ndarrays_to_lists(d):
 
 
 def map_structure(op, *param_dicts):
+    """ For a series of identically structured dicts, apply op to every same set of entries and return a single dict
+     of the same shape """
     ret = {}
     for k in param_dicts[0].keys():
         ret[k] = op(*[param_dicts[i][k] for i in range(len(param_dicts))])
@@ -59,6 +68,7 @@ def map_structure(op, *param_dicts):
 
 
 def apply_to_structure(op, param_dict):
+    """ Apply the op operation to every entry in the dict """
     ret = {}
     for k in param_dict.keys():
         ret[k] = op(param_dict[k])
@@ -67,6 +77,8 @@ def apply_to_structure(op, param_dict):
 
 
 def reduce_structure(reduce, accumulate, *param_dicts):
+    """ For every element in the structure, apply the reduce operation and accumulate it to the rest with the
+    accumulate operation """
     result = None
 
     for d in param_dicts:
