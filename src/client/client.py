@@ -72,11 +72,6 @@ class Client(ABC):
         :return:
         """
 
-        # if model_parameters is not None:
-        #     self.model.set_parameters(model_parameters)
-        # if model_hyperparameters is not None:
-        #     self.model.set_hyperparameters(model_hyperparameters)
-
         update = self.compute_update(model_parameters=model_parameters, model_hyperparameters=model_hyperparameters,
                                      update_ti=update_ti)
 
@@ -113,13 +108,22 @@ class Client(ABC):
         pass
 
     def get_compiled_log(self):
+        """
+        At the end of an experiment, return all the data about this client we would like to save in a nested
+        dictionary format.
+        :return:
+        """
         return self.get_log()
 
     def can_update(self):
+        """
+        A check to see if this client can indeed update. Examples of reasons one may not be is simulated unavailability
+        or a client had expended all of its privacy.
+        :return:
+        """
         return True
 
 
-# @ray.remote
 class StandardClient(Client):
     def __init__(self, model_class, data, model_parameters=None, model_hyperparameters=None,
                  hyperparameters=None,
@@ -184,23 +188,9 @@ class StandardClient(Client):
                                     t_i_old,
                                     model_parameters,
                                     model_hyperparameters)
-        # logger.debug("Client New Lamdba")
-
-        # print(self.metadata['test_self'])
-        # if self.metadata['test_self'] is not None:
-        #     print(f'client  {self.metadata["client_index"]} \n{lambda_new}')
-        #     preds = self.model.predict(self.data['x'])
-        #     for key, test in self.metadata['test_self'].items():
-        #         print(f'    {key}: {test(preds, self.data["y"])}')
 
         delta_lambda_i = np_utils.subtract_params(lambda_new,
                                                   lambda_old)
-
-        # logger.debug(f"Old Params: {lambda_old}\n"
-        #             f"New Params: {lambda_new}\n")
-
-        # apply the privacy function, specified by the server
-        # delta_lambda_i_tilde, privacy_stats = self.privacy_function(delta_lambda_i)
 
         delta_lambda_i = np_nest.apply_to_structure(lambda x: np.multiply(x, self.damping_factor), delta_lambda_i)
 
@@ -218,7 +208,6 @@ class StandardClient(Client):
 
         if update_ti:
             self.t_i = t_i_new
-            # logger.debug(f"New t_i {self.t_i}")
             self.times_updated += 1
 
         return delta_lambda_i_tilde
@@ -309,8 +298,6 @@ class DPClient(StandardClient):
         for k, v in self.accountants.items():
             self.log[k].append(v.privacy_bound)
 
-        # self.log['ledger'].append(self.dp_query.ledger.get_formatted_ledger())
-
     def log_sacred(self):
         log, times_updated = super().log_sacred()
 
@@ -321,7 +308,6 @@ class DPClient(StandardClient):
         return log, times_updated
 
     def get_compiled_log(self):
-        # self.log['ledger'] = self.dp_query.ledger.get_formatted_ledger()
         return self.log
 
     def can_update(self):
@@ -335,6 +321,10 @@ class DPClient(StandardClient):
 
 
 class GradientVIClient(Client):
+    """
+    An alternative client to allow us to perform gradient based communication rather than local likelihood.
+    Useful if you wish to do distributed batch VI opposed to PVI.
+    """
     def __init__(self, model_class, data, model_parameters=None, model_hyperparameters=None,
                  hyperparameters=None,
                  metadata=None):
@@ -425,6 +415,7 @@ class GradientVIClient(Client):
 
 
 class DPGradientVIClient(GradientVIClient):
+    """ Wrapper class to add privacy to gradient clients """
     def __init__(self, model_class, dp_query_class, accounting_dict, data, model_parameters=None,
                  model_hyperparameters=None, hyperparameters=None,
                  metadata=None):
@@ -475,8 +466,6 @@ class DPGradientVIClient(GradientVIClient):
         for k, v in self.accountants.items():
             self.log[k].append(v.privacy_bound)
 
-        # self.log['ledger'].append(self.dp_query.ledger.get_formatted_ledger())
-
     def log_sacred(self):
         log, times_updated = super().log_sacred()
 
@@ -487,7 +476,6 @@ class DPGradientVIClient(GradientVIClient):
         return log, times_updated
 
     def get_compiled_log(self):
-        # self.log['ledger'] = self.dp_query.ledger.get_formatted_ledger()
         return self.log
 
     def can_update(self):

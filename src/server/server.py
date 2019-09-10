@@ -17,6 +17,10 @@ logger = logging.getLogger(__name__)
 
 
 class ParameterServer(ABC):
+    """ Basic class defining how a server should operate. In general a parameter server communicates with
+     clients in order to learn some model based on clients data, without ever explicitly looking at clients data.
+     Example techniques include PVI ot distributed batch VI, but this implementaton could be used for any type of model,
+     not just Bayesian ones. """
     def __init__(self, model_class, prior, clients=None, hyperparameters=None, metadata=None, model_parameters=None,
                  model_hyperparameters=None, ):
 
@@ -125,7 +129,7 @@ class ParameterServer(ABC):
 
 
 class SynchronousParameterServer(ParameterServer):
-
+    """ Defines a server that will at each step, synchronously update each of its clients and incorperate the updates """
     def __init__(self, model_class, prior, max_iterations=100, client_factories=None, hyperparameters=None,
                  metadata=None,
                  model_parameters=None, model_hyperparameters=None):
@@ -141,17 +145,25 @@ class SynchronousParameterServer(ParameterServer):
 
         lambda_old = self.parameters
 
-        # delta_is = [client.compute_update.remote(lambda_old) for client in self.clients]
         logger.debug("Getting Client Updates")
         delta_is = []
 
         self.current_damping_factor = self.hyperparameters["damping_factor"] * np.exp(
             -self.iterations * self.hyperparameters["damping_decay"])
+
+        clients_can_update = [client.can_update() for client in self.clients]
+
+        if not np.any(clients_can_update): return 0
+
+        clients_updated = 0
+
         for i, client in enumerate(self.clients):
-            logger.debug(f'On client {i + 1} of {len(self.clients)}')
-            client.set_hyperparameters({"damping_factor": self.current_damping_factor})
-            delta_is.append(client.get_update(model_parameters=lambda_old, model_hyperparameters=None, update_ti=True))
-            logger.debug(f'Finished Client {i + 1} of {len(self.clients)}\n\n')
+            if client.can_update():
+                logger.debug(f'On client {i + 1} of {len(self.clients)}')
+                client.set_hyperparameters({"damping_factor": self.current_damping_factor})
+                delta_is.append(client.get_update(model_parameters=lambda_old, model_hyperparameters=None, update_ti=True))
+                logger.debug(f'Finished Client {i + 1} of {len(self.clients)}\n\n')
+                clients_updated += 1
 
         logger.debug("Received client updates")
         lambda_new = lambda_old
@@ -169,11 +181,15 @@ class SynchronousParameterServer(ParameterServer):
 
         self.iterations += 1
 
+        return clients_updated
+
     def should_stop(self):
         if self.iterations > self.max_iterations - 1:
             return True
-        else:
-            return False
+        if not np.any([client.can_update() for client in self.clients]):
+            return True
+
+        return False
 
     def get_default_hyperparameters(self):
         return {
@@ -193,6 +209,8 @@ class SynchronousParameterServer(ParameterServer):
 
 
 class AsynchronousParameterServer(ParameterServer):
+    """ IN every round, this server samples M (total number of clients) clients, inversely proportional to the amount
+    of data on each client, and updates them one after another (i.e. incorporating the previous clients updates) """
 
     def __init__(self, model_class, prior, max_iterations=100, client_factories=None, hyperparameters=None,
                  metadata=None,
@@ -216,9 +234,7 @@ class AsynchronousParameterServer(ParameterServer):
         lambda_old = self.parameters
         lambda_new = copy.deepcopy(lambda_old)
 
-        # delta_is = [client.compute_update.remote(lambda_old) for client in self.clients]
         logger.debug("Getting Client Updates")
-        delta_is = []
 
         self.current_damping_factor = self.hyperparameters["damping_factor"] * np.exp(
             -self.iterations * self.hyperparameters["damping_decay"])
@@ -228,16 +244,11 @@ class AsynchronousParameterServer(ParameterServer):
         for i in range(len(self.clients)):
 
             available_clients = [client.can_update() for client in self.clients]
-            # for i, available in enumerate(available_clients):
-            #     if not available:
-            #         self.client_probs[i] = 0
 
             if not np.any(available_clients):
                 self.all_clients_stopped = True
                 logger.info('All clients report to be finished. Stopping.')
                 break
-
-            # self.client_probs = self.client_probs / self.client_probs.sum()
 
             client_index = int(np.random.choice(len(self.clients), 1, replace=False, p=self.client_probs))
             logger.debug(f"Selected Client {client_index}")
