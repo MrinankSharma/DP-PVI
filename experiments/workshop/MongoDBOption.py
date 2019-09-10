@@ -1,6 +1,8 @@
 import logging
 import sys
 
+import pymongo.errors
+
 from sacred.commandline_options import CommandLineOption
 from sacred.observers import MongoObserver, SlackObserver
 
@@ -56,17 +58,24 @@ class ExperimentOption(CommandLineOption):
         else:
             logging.getLogger().setLevel(logging.INFO)
 
-        if len(a.get_experiments(config=run.config, complete=True)) > 0:
-            logger.info("Experiment has already been run - don't bother!")
-            logger.info("Note that this will **not** show up in sacred")
-            sys.exit()
+        try:
+            if len(a.get_experiments(config=run.config, complete=True)) > 0:
+                logger.info("Experiment has already been run - don't bother!")
+                logger.info("Note that this will **not** show up in sacred")
+                sys.exit()
 
-        # run.config contains the configuration. You can read from there.
-        mongo = MongoObserver.create(url="localhost:9001", db_name='sacred')
-        run.observers.append(mongo)
-        run.observers.append(
-            SlackObserver.from_config(run.config["slack_json_file"])
-        )
+                mongo = MongoObserver.create(url="localhost:9001", db_name='sacred')
+                run.observers.append(mongo)
+        except pymongo.errors.ServerSelectionTimeoutError:
+            logger.warning(
+                "Could not connect to MongoDB database. Experiment will still run, but you won't be able to plot results!")
+
+        try:
+            run.observers.append(
+                SlackObserver.from_config(run.config["slack_json_file"])
+            )
+        except FileNotFoundError:
+            logger.warning("Slack json file not found - not sending slack notifications")
         logger.info("Saving to database sacred")
 
         run.info = {
@@ -93,18 +102,23 @@ class DatabaseOption(CommandLineOption):
         else:
             logging.getLogger().setLevel(logging.INFO)
 
-        if len(a.get_experiments(config=run.config, complete=True)) > 0:
-            logger.info("Experiment has already been run - don't bother!")
-            logger.info("Note that this will **not** show up in sacred")
-            sys.exit()
+        try:
+            if len(a.get_experiments(config=run.config, complete=True)) > 0:
+                logger.info("Experiment has already been run - don't bother!")
+                logger.info("Note that this will **not** show up in sacred")
+                sys.exit()
 
-        # run.config contains the configuration. You can read from there.
-        mongo = MongoObserver.create(url="localhost:9001", db_name=args)
-        run.observers.append(mongo)
-        run.observers.append(
-            SlackObserver.from_config(run.config["slack_json_file"])
-        )
-        logger.info(f"Saving to database {args}")
+            mongo = MongoObserver.create(url="localhost:9001", db_name=args)
+            run.observers.append(mongo)
+        except pymongo.errors.ServerSelectionTimeoutError:
+            logger.warning("Could not connect to MongoDB database. Experiment will still run, but you won't be able to plot results!")
+
+        try:
+            run.observers.append(
+                SlackObserver.from_config(run.config["slack_json_file"])
+            )
+        except FileNotFoundError:
+            logger.warning("Slack json file not found - not sending slack notifications")
 
         run.info = {
             **run.info,
