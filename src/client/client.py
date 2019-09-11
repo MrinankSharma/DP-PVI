@@ -191,6 +191,7 @@ class StandardClient(Client):
 
         delta_lambda_i = np_utils.subtract_params(lambda_new,
                                                   lambda_old)
+        logger.debug(f"lambda_new {lambda_new}")
 
         delta_lambda_i = np_nest.apply_to_structure(lambda x: np.multiply(x, self.damping_factor), delta_lambda_i)
 
@@ -273,7 +274,7 @@ class DPClient(StandardClient):
     def compute_update(self, model_parameters=None, model_hyperparameters=None, update_ti=True):
         logger.debug("Computing Update")
         if not self.can_update():
-            logger.warning('Incorrectly tired to update a client tha cant be updated!')
+            logger.warning('Incorrectly tired to update a client that cant be updated!')
             return np_nest.map_structure(np.zeros_like, self.model.get_parameters())
         delta_lambda_i_tilde = super().compute_update(model_parameters, model_hyperparameters, update_ti)
 

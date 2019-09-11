@@ -21,7 +21,9 @@ class ParameterServer(ABC):
      clients in order to learn some model based on clients data, without ever explicitly looking at clients data.
      Example techniques include PVI ot distributed batch VI, but this implementaton could be used for any type of model,
      not just Bayesian ones. """
-    def __init__(self, model_class, prior, clients=None, hyperparameters=None, metadata=None, model_parameters=None,
+
+    def __init__(self, model_class, prior, max_iterations=100, clients=None, hyperparameters=None, metadata=None,
+                 model_parameters=None,
                  model_hyperparameters=None, ):
 
         if hyperparameters is None:
@@ -43,6 +45,7 @@ class ParameterServer(ABC):
 
         self.log = defaultdict(list)
         self.iterations = 0
+        self.max_iterations = max_iterations
 
     def set_hyperparameters(self, hyperparameters):
         self.hyperparameters = {**self.hyperparameters, **hyperparameters}
@@ -127,16 +130,25 @@ class ParameterServer(ABC):
     def get_parameters(self):
         return self.parameters
 
+    def should_stop(self):
+        if self.iterations > self.max_iterations - 1:
+            return True
+        if not np.any([client.can_update() for client in self.clients]):
+            return True
+
+        return False
+
 
 class SynchronousParameterServer(ParameterServer):
     """ Defines a server that will at each step, synchronously update each of its clients and incorperate the updates """
+
     def __init__(self, model_class, prior, max_iterations=100, client_factories=None, hyperparameters=None,
                  metadata=None,
                  model_parameters=None, model_hyperparameters=None):
         clients = [factory() for factory in client_factories]
-        super().__init__(model_class, prior, clients=clients, hyperparameters=hyperparameters, metadata=metadata,
+        super().__init__(model_class, prior, max_iterations, clients=clients, hyperparameters=hyperparameters,
+                         metadata=metadata,
                          model_parameters=model_parameters, model_hyperparameters=model_hyperparameters)
-        self.max_iterations = max_iterations
         self.current_damping_factor = 0
 
     def tick(self):
@@ -161,7 +173,8 @@ class SynchronousParameterServer(ParameterServer):
             if client.can_update():
                 logger.debug(f'On client {i + 1} of {len(self.clients)}')
                 client.set_hyperparameters({"damping_factor": self.current_damping_factor})
-                delta_is.append(client.get_update(model_parameters=lambda_old, model_hyperparameters=None, update_ti=True))
+                delta_is.append(
+                    client.get_update(model_parameters=lambda_old, model_hyperparameters=None, update_ti=True))
                 logger.debug(f'Finished Client {i + 1} of {len(self.clients)}\n\n')
                 clients_updated += 1
 
@@ -216,9 +229,9 @@ class AsynchronousParameterServer(ParameterServer):
                  metadata=None,
                  model_parameters=None, model_hyperparameters=None):
         clients = [factory() for factory in client_factories]
-        super().__init__(model_class, prior, clients=clients, hyperparameters=hyperparameters, metadata=metadata,
+        super().__init__(model_class, prior, max_iterations, clients=clients, hyperparameters=hyperparameters,
+                         metadata=metadata,
                          model_parameters=model_parameters, model_hyperparameters=model_hyperparameters)
-        self.max_iterations = max_iterations
         self.current_damping_factor = 0
 
         client_probs = 1 / np.array([client.data['x'].shape[0] for client in clients])
@@ -268,13 +281,20 @@ class AsynchronousParameterServer(ParameterServer):
 
         self.client_ti_norms = []
         for i in range(len(self.clients)):
-            self.client_ti_norms.append(np.sqrt(np_nest.reduce_structure(lambda p: np.linalg.norm(p) ** 2, np.add, self.clients[i].t_i)))
+            self.client_ti_norms.append(
+                np.sqrt(np_nest.reduce_structure(lambda p: np.linalg.norm(p) ** 2, np.add, self.clients[i].t_i)))
 
         self.parameters = lambda_new
 
         # update the model parameters
         self.model.set_parameters(self.parameters)
         logger.debug(f"Iteration {self.iterations} complete.\nNew Parameters:\n {pretty_dump.dump(lambda_new)}\n")
+
+        str = f"Iteration {self.iterations}\n\n"
+        for k, v in lambda_new.items():
+            str = str + f"mean_{k}: {np.mean(v)}\n"
+
+        logger.info(str)
         [client.set_metadata({"global_iteration": self.iterations}) for client in self.clients]
 
         self.log_update()
@@ -305,19 +325,21 @@ class AsynchronousParameterServer(ParameterServer):
     def log_sacred(self):
         ret = {'applied_damping_factor': self.current_damping_factor}
         for i in range(len(self.clients)):
-            ret[f"client_{i}"] = self.client_ti_norms[i]
-        return ret, self.iterations
+            ret[f"client_t_i_norm{i}"] = self.client_ti_norms[i]
 
+        for k, v in self.parameters.items():
+            ret[f"mean_{k}"] = np.mean(v)
+
+        return ret, self.iterations
 
 
 class DPSyncronousPVIParameterServer(ParameterServer):
 
     def __init__(self, model_class, dp_query_class, accounting_dict, prior, max_iterations=100, clients=None,
                  hyperparameters=None, metadata=None, model_parameters=None, model_hyperparameters=None, ):
-        super().__init__(model_class, prior, clients=clients, hyperparameters=hyperparameters, metadata=metadata,
+        super().__init__(model_class, prior, max_iterations, clients=clients, hyperparameters=hyperparameters,
+                         metadata=metadata,
                          model_parameters=model_parameters, model_hyperparameters=model_hyperparameters, )
-        self.iterations = 0
-        self.max_iterations = max_iterations
 
         num_clients = 0 if clients is None else len(clients)
         dp_query = dp_query_class(**hyperparameters['dp_query_parameters'])
@@ -388,10 +410,9 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
                  hyperparameters=None, metadata=None, model_parameters=None, model_hyperparameters=None):
 
         clients = [factory() for factory in client_factories]
-        super().__init__(model_class, prior, clients=clients, hyperparameters=hyperparameters, metadata=metadata,
+        super().__init__(model_class, prior, max_iterations, clients=clients, hyperparameters=hyperparameters,
+                         metadata=metadata,
                          model_parameters=model_parameters, model_hyperparameters=model_hyperparameters, )
-        self.iterations = 0
-        self.max_iterations = max_iterations
 
         num_clients = len(clients)
         dp_query = dp_query_class(**hyperparameters['dp_query_parameters'])
@@ -430,7 +451,7 @@ class DPSequentialIndividualPVIParameterServer(ParameterServer):
 
         # we want the da,ping factor to decay by one step when
         self.current_damping_factor = self.hyperparameters["damping_factor"] * np.exp(
-            -self.iterations * L/M * self.hyperparameters["damping_decay"])
+            -self.iterations * L / M * self.hyperparameters["damping_decay"])
         for indx, client in enumerate(self.clients):
             logger.info(f'On client {indx + 1} of {len(self.clients)}')
             client.set_hyperparameters({"damping_factor": self.current_damping_factor})
