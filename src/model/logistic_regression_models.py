@@ -318,7 +318,8 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
             "N_steps": 1,
             "N_samples": 50,
             "n_in": 2,
-            "prediction": "prohibit"
+            "prediction": "prohibit",
+            "reset_optimiser": True,
         }
 
     def sample(self, x, parameters=None, hyperparameters=None):
@@ -368,6 +369,13 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
             N_full = self.hyperparameters['N_full']
         else:
             N_full = x_full.shape[0]
+
+
+        if self.hyperparameters['wrapped_optimizer_class'] is not None and self.hyperparameters["reset_optimiser"]:
+            logger.info("Resetting Optimiser")
+            self.wrapped_optimizer.optimizer = self.hyperparameters['base_optimizer_class'](self.torch_module.parameters(),
+                                                                          **self.hyperparameters[
+                                                                              'base_optimizer_parameters'])
 
         cav_nat_params = B.subtract_params(self.get_parameters(), t_i)
         # numpy dict for the effective prior

@@ -28,12 +28,12 @@ import src.privacy.analysis.moment_accountant as moment_accountant
 import src.utils.numpy_nest_utils as numpy_nest
 # noinspection PyUnresolvedReferences
 from experiments.workshop.ingredients.data_distribution import dataset_dist_ingred, generate_dataset_distribution_func
-from experiments.workshop.MongoDBOption import TestOption, ExperimentOption, DatabaseOption
 from experiments.workshop.ingredients.dataset_ingredient import dataset_ingredient, load_data
 from experiments.workshop.measure_performance import compute_prediction_accuracy, compute_log_likelihood
 from experiments.utils import save_log, save_pickle
-from src.client.client import DPClient, ensure_positive_t_i_factory
-from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression, postprocess_MF_logistic_ti
+from src.client.client import DPClient
+from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression, \
+    postprocess_MF_logistic_ti, nat_params_to_params_dict
 from src.privacy.dp_query import GaussianDPQuery
 from src.privacy.optimizer import DPOptimizer
 from src.server import AsynchronousParameterServer
@@ -108,7 +108,7 @@ def default_config(dataset, dataset_dist):
 @ex.automain
 def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings, PVI_settings, N_samples, N_iterations,
                    prediction,
-                   experiment_tag, logging_base_directory, log_level, save_t_is,
+                   experiment_tag, logging_base_directory,  save_t_is,
                    _run, _config, seed):
     torch.set_num_threads(int(ray_cfg["num_cpus"]))
     np.random.seed(seed)
@@ -169,14 +169,14 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
             model_hyperparameters={
                 "base_optimizer_class": torch.optim.Adagrad,
                 "wrapped_optimizer_class": DPOptimizer,
-                "base_optimizer_parameters": {'lr': optimisation_settings["lr"],
-                                              'lr_decay': optimisation_settings["lr_decay"]},
+                "base_optimizer_parameters": {'lr': optimisation_settings["lr"]},
                 "wrapped_optimizer_parameters": {},
                 "N_steps": optimisation_settings["N_steps"],
                 "N_samples": N_samples,
                 "n_in": d_in,
                 "batch_size": int(np.max(
                     [optimisation_settings['L_min'], np.ceil(privacy_settings['q'] * clients_data[i]['x'].shape[0])])),
+                "reset_optimiser": True,
             },
             hyperparameters={
                 'dp_query_parameters': {
@@ -226,6 +226,10 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
             sacred_log = {}
             sacred_log["server"], _ = ray.get(server.log_sacred.remote())
             params = ray.get(server.get_parameters.remote())
+            moment_params = nat_params_to_params_dict(params)
+            sacred_log[f"mean_mu"] = np.mean(np.abs(moment_params["w_mu"]))
+            sacred_log[f"mean_log_var"] = -np.mean(np.abs(moment_params["w_log_var"]))
+
             client_sacred_logs = ray.get(server.get_client_sacred_logs.remote())
             for i, log in enumerate(client_sacred_logs):
                 sacred_log["client_" + str(i)] = log[0]

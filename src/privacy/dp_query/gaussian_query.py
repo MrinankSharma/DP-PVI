@@ -79,6 +79,16 @@ class GaussianDPQuery(dp_query.SumAggregationDPQuery):
         if self._ledger:
             self._ledger.record_sum_query(global_state.l2_norm_clip, global_state.noise_stddev)
 
+
+        # logger.warning("Doing silly only noise on first thing!")
+        # new_structure = [[nest.map_structure(add_noise, sample_state[0]), sample_state][0][1]]
+        # x = nest.map_structure(add_noise, sample_state)
+        # y = sample_state[0][0]
+        # z = sample_state[0][1]
+        # a = add_noise(y)
+        # new_struct = [[a, z]]
+        # return new_struct, global_state
+
         return nest.map_structure(add_noise, sample_state), global_state
 
 

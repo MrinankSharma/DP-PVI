@@ -1,0 +1,73 @@
+experiment_file: experiments/client_level/client_level.py
+experiment_tag: client_level
+database: client_level
+
+PVI_settings:
+  damping_factor: 0.5
+  damping_decay: 0.02
+
+dataset:
+  name:
+    - adult
+  scaled:
+    - True
+  ordinal_cat_encoding:
+    - False
+  train_proportion:
+    - 0.8
+  data_base_dir:
+    - data
+
+privacy_settings:
+  L:
+    - 10
+    - 25
+    - 50
+dataset_dist:
+  M:
+    - 100
+  client_size_factor:
+    - 0
+  class_balance_factor:
+    - -3.0
+    - 0
+    - 0.9
+  dataset_seed:
+    - 0
+
+optimisation_settings:
+  lr:
+    - 2
+  N_steps:
+    - 20
+  lr_decay:
+    - 0
+  L:
+    - 100
+
+ray_cfg:
+  redis_address:
+    - None
+  num_cpus:
+    - 1
+  num_gpus:
+    - 0
+
+prediction:
+  interval:
+    - 1
+  type:
+    - prohibit
+
+
+N_iterations:
+#  - 25
+  - 100
+prior_pres: 1.0
+N_samples: 50
+
+log_level: info
+save_t_is: True
+num_seeds: 3
+logging_base_directory: logs
+slack_json_file: slack.json

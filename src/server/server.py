@@ -282,7 +282,8 @@ class AsynchronousParameterServer(ParameterServer):
         self.client_ti_norms = []
         for i in range(len(self.clients)):
             self.client_ti_norms.append(
-                np.sqrt(np_nest.reduce_structure(lambda p: np.linalg.norm(p) ** 2, np.add, self.clients[i].t_i)))
+                np.sqrt(
+                    np_nest.reduce_structure(lambda p: np.linalg.norm(p) ** 2, np.add, self.clients[i].t_i)))
 
         self.parameters = lambda_new
 
@@ -292,7 +293,7 @@ class AsynchronousParameterServer(ParameterServer):
 
         str = f"Iteration {self.iterations}\n\n"
         for k, v in lambda_new.items():
-            str = str + f"mean_{k}: {np.mean(v)}\n"
+            str = str + f"mean_{k}: {np.sqrt(np.mean(v**2))}\n"
 
         logger.info(str)
         [client.set_metadata({"global_iteration": self.iterations}) for client in self.clients]
@@ -328,7 +329,7 @@ class AsynchronousParameterServer(ParameterServer):
             ret[f"client_t_i_norm{i}"] = self.client_ti_norms[i]
 
         for k, v in self.parameters.items():
-            ret[f"mean_{k}"] = np.mean(v)
+            ret[f"mean_{k}"] = np.sqrt(np.sum(v**2))
 
         return ret, self.iterations
 
