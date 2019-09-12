@@ -27,7 +27,7 @@ dataset_dist:
   M:
     - 100
   client_size_factor:
-    - 0
+    - 0.75
   class_balance_factor:
     - -3.0
     - 0

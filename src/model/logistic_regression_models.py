@@ -11,19 +11,46 @@ import src.utils.numpy_utils as B
 from src.model.model import Model
 
 logger = logging.getLogger(__name__)
+
+
 # logger.setLevel(logging.DEBUG)
 
-def postprocess_MF_logistic_ti(params):
+def postprocess_MF_logistic_ti_simple(params, old_params):
     ret = dict(params)
     pres = ret['w_pres']
-    num_invalid = np.sum(pres<0)
+
+    num_invalid = np.sum(pres < 0)
     if num_invalid > 0:
         logger.warning(f"Having to do precision clipping {num_invalid}")
-        indices = pres < 0
-        ret['w_nat_mean'][indices] = 0
-        ret['w_pres'][indices] = 0
+        ts_indices = pres < 0
+        ret['w_nat_mean'][ts_indices] = 0
+        ret['w_pres'][ts_indices] = 0
+        logger.warning(
+            f"Having to do precision clipping {num_invalid}\nInvalid Values {pres[ts_indices]} and indices {[ts_indices]}")
+    return ret
+
+
+def postprocess_MF_logistic_ti(params, old_params):
+    ret = dict(params)
+    max_pres = 2 * old_params["w_pres"]
+    max_pres[max_pres < 500] = 500
+
+    pres = ret['w_pres']
+    num_invalid = np.sum(pres < 0) + np.sum(pres > max_pres)
+    if num_invalid > 0:
+        ts_indices = pres < 0
+        ret['w_nat_mean'][ts_indices] = 0
+        ret['w_pres'][ts_indices] = 1e-5
+
+        tb_indices = pres > max_pres
+        means = ret['w_nat_mean'] / ret['w_pres']
+        ret['w_pres'][tb_indices] = max_pres[tb_indices]
+        ret['w_nat_mean'] = means * ret['w_pres']
+        logger.warning(f"Having to do precision clipping {num_invalid}\nInvalid Values {pres[ts_indices]} indices {ts_indices}"
+                       f"\nand Invalid Values {pres[tb_indices]} indices {tb_indices}")
 
     return ret
+
 
 # note that these functions are all using NUMPY variables
 def prediction_function(a, mean, var):
@@ -201,7 +228,7 @@ class LogisticRegressionTorchModule(nn.Module):
             q_var = torch.diag(torch.exp(q_log_var_diag))
             k = q_mean.shape[0]
             p_inv = torch.exp(p_log_var_diag)
-            p_inv = 1/ p_inv
+            p_inv = 1 / p_inv
             p_inv = torch.diag(p_inv)
             m1_m2 = p_mean - q_mean
             # note that we a-priori know that q_var is a diagonal matrix
@@ -370,12 +397,12 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
         else:
             N_full = x_full.shape[0]
 
-
         if self.hyperparameters['wrapped_optimizer_class'] is not None and self.hyperparameters["reset_optimiser"]:
             logger.info("Resetting Optimiser")
-            self.wrapped_optimizer.optimizer = self.hyperparameters['base_optimizer_class'](self.torch_module.parameters(),
-                                                                          **self.hyperparameters[
-                                                                              'base_optimizer_parameters'])
+            self.wrapped_optimizer.optimizer = self.hyperparameters['base_optimizer_class'](
+                self.torch_module.parameters(),
+                **self.hyperparameters[
+                    'base_optimizer_parameters'])
 
         cav_nat_params = B.subtract_params(self.get_parameters(), t_i)
         # numpy dict for the effective prior
@@ -438,7 +465,7 @@ class MeanFieldMultiDimensionalLogisticRegression(Model):
 
     def get_incremental_sacred_record(self):
         ret = {}
-        for k , v in self._overall_summary_dict.items():
+        for k, v in self._overall_summary_dict.items():
             ret[f"median_{k}"] = np.percentile(np.array(v), 50).tolist()
             # ret[f"std_{k}"] = np.std(np.array(v)).tolist()
 

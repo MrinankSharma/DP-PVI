@@ -27,13 +27,14 @@ from sacred import Experiment
 import src.privacy.analysis.moment_accountant as moment_accountant
 import src.utils.numpy_nest_utils as numpy_nest
 # noinspection PyUnresolvedReferences
+from experiments.workshop.MongoDBOption import TestOption, ExperimentOption, DatabaseOption
 from experiments.workshop.ingredients.data_distribution import dataset_dist_ingred, generate_dataset_distribution_func
 from experiments.workshop.ingredients.dataset_ingredient import dataset_ingredient, load_data
 from experiments.workshop.measure_performance import compute_prediction_accuracy, compute_log_likelihood
 from experiments.utils import save_log, save_pickle
 from src.client.client import DPClient
 from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression, \
-    postprocess_MF_logistic_ti, nat_params_to_params_dict
+    postprocess_MF_logistic_ti, nat_params_to_params_dict,  postprocess_MF_logistic_ti_simple
 from src.privacy.dp_query import GaussianDPQuery
 from src.privacy.optimizer import DPOptimizer
 from src.server import AsynchronousParameterServer

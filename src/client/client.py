@@ -191,7 +191,7 @@ class StandardClient(Client):
 
         delta_lambda_i = np_utils.subtract_params(lambda_new,
                                                   lambda_old)
-        logger.debug(f"lambda_new {lambda_new}")
+        logger.info(f"lambda_new {lambda_new}")
 
         delta_lambda_i = np_nest.apply_to_structure(lambda x: np.multiply(x, self.damping_factor), delta_lambda_i)
 
@@ -204,7 +204,7 @@ class StandardClient(Client):
             t_i_old
         )
 
-        t_i_new = self.t_i_postprocess_funtion(t_i_new)
+        t_i_new = self.t_i_postprocess_funtion(t_i_new, t_i_old)
         delta_lambda_i_tilde = np_utils.subtract_params(t_i_new, t_i_old)
 
         if update_ti:
