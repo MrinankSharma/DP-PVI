@@ -9,7 +9,6 @@ if module_path not in sys.path:
 print(module_path)
 print(sys.path)
 
-import itertools
 import argparse
 import logging
 from subprocess import call
@@ -49,7 +48,11 @@ if __name__ == "__main__":
 
     exp_files = []
     for exp_path in args.exp_file:
-        exp_files.extend(glob.glob(exp_path))
+        f = glob.glob(exp_path)
+        if f is not None:
+            exp_files.extend(f)
+        else:
+            raise FileNotFoundError("Could not find exp file")
 
     print(exp_files)
 
