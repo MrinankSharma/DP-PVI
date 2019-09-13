@@ -33,7 +33,7 @@ def postprocess_MF_logistic_ti_simple(params, old_params):
 def postprocess_MF_logistic_ti(params, old_params):
     ret = dict(params)
     max_pres = 2 * old_params["w_pres"]
-    max_pres[max_pres < 500] = 500
+    max_pres[max_pres < 50] = 50
 
     pres = ret['w_pres']
     num_invalid = np.sum(pres < 0) + np.sum(pres > max_pres)

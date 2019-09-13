@@ -141,6 +141,11 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
             "w_pres": prior_pres * np.ones(d_in, dtype=np.float32)
         }
 
+        init_params = {
+             "w_nat_mean": np.zeros(d_in, dtype=np.float32),
+             "w_pres": (prior_pres + 8000) * np.ones(d_in, dtype=np.float32)
+        }
+
         logger.debug(f"Prior Parameters:\n\n{pretty_dump.dump(prior_params)}\n")
 
         if privacy_settings['target_delta'] == 'adaptive':
@@ -166,7 +171,7 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
                     }
                 }
             },
-            model_parameters=prior_params,
+            model_parameters=init_params,
             model_hyperparameters={
                 "base_optimizer_class": torch.optim.Adagrad,
                 "wrapped_optimizer_class": DPOptimizer,
@@ -184,8 +189,9 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
                     'l2_norm_clip': privacy_settings["C"],
                     'noise_stddev': privacy_settings["C"] * privacy_settings["sigma_relative"]
                 },
-                't_i_init_function': lambda x: np.zeros(x.shape),
-                't_i_postprocess_function': postprocess_MF_logistic_ti,
+                't_i_init_function': lambda: {"w_nat_mean": np.zeros(d_in),
+                                      "w_pres": 4000*np.ones(d_in)},
+                't_i_postprocess_function': postprocess_MF_logistic_ti_simple,
                 'max_epsilon': privacy_settings['max_epsilon'],
             },
             metadata={
@@ -201,7 +207,7 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
         remote_decorator = ray.remote(num_cpus=int(ray_cfg["num_cpus"]), num_gpus=int(ray_cfg["num_gpus"]))
         server = remote_decorator(AsynchronousParameterServer).remote(
             model_class=model,
-            model_parameters=prior_params,
+            model_parameters=init_params,
             model_hyperparameters={
                 "prediction": prediction["type"],
             },

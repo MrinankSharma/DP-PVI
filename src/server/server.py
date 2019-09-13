@@ -41,7 +41,8 @@ class ParameterServer(ABC):
         self.set_clients(clients)
         self.model = model_class(parameters=model_parameters, hyperparameters=model_hyperparameters)
         self.prior = prior
-        self.parameters = prior
+
+        self.parameters = model_parameters
 
         self.log = defaultdict(list)
         self.iterations = 0

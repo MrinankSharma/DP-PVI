@@ -132,10 +132,12 @@ class StandardClient(Client):
         super().__init__(model_class, data, model_parameters, model_hyperparameters, hyperparameters, metadata)
 
         self.t_i = {}
-        for key in model_parameters.keys():
-            self.t_i[key] = self.t_i_init_func(model_parameters[key])
 
-        self.lambda_i = self.model.get_parameters()
+        self.t_i = self.t_i_init_func()
+        # for key in model_parameters.keys():
+        #     self.t_i[key] = self.t_i_init_func(model_parameters[key])
+
+        self.model.set_parameters(model_parameters)
 
     @classmethod
     def create_factory(cls, model_class, data, model_parameters=None, model_hyperparameters=None, hyperparameters=None,
@@ -191,6 +193,8 @@ class StandardClient(Client):
 
         delta_lambda_i = np_utils.subtract_params(lambda_new,
                                                   lambda_old)
+        logger.info(f"t_i_old {t_i_old}")
+        logger.info(f"lambda_old {lambda_old}")
         logger.info(f"lambda_new {lambda_new}")
 
         delta_lambda_i = np_nest.apply_to_structure(lambda x: np.multiply(x, self.damping_factor), delta_lambda_i)
@@ -205,6 +209,7 @@ class StandardClient(Client):
         )
 
         t_i_new = self.t_i_postprocess_funtion(t_i_new, t_i_old)
+        logger.info(f"t_i_new {t_i_new}")
         delta_lambda_i_tilde = np_utils.subtract_params(t_i_new, t_i_old)
 
         if update_ti:
@@ -215,7 +220,7 @@ class StandardClient(Client):
 
     def update_ti(self, delta_ti):
         t_i_new = np_utils.add_parameters(delta_ti, self.t_i)
-        t_i_new = self.t_i_postprocess_funtion(t_i_new)
+        t_i_new = self.t_i_postprocess_funtion(t_i_new, self.t_i)
         self.t_i = t_i_new
         # logger.debug(f"New t_i {self.t_i}")
         self.times_updated += 1
