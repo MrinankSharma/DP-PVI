@@ -70,7 +70,7 @@ prediction:
 N_iterations: 1000
 prior_pres: 1.0
 N_samples: 50
-t_i_init_pres: 175
+t_i_pres_init: 175
 
 log_level: debug
 save_t_is: True
