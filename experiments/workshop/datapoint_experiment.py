@@ -100,6 +100,8 @@ def default_config(dataset, dataset_dist):
     prior_pres = 1.0
     N_samples = 50
 
+    t_i_pres_init = 4000
+
     log_level = 'info'
     save_t_is = False
     logging_base_directory = 'logs'
@@ -110,7 +112,7 @@ def default_config(dataset, dataset_dist):
 def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings, PVI_settings, N_samples, N_iterations,
                    prediction,
                    experiment_tag, logging_base_directory,  save_t_is,
-                   _run, _config, seed):
+                   _run, _config, seed, t_i_pres_init):
     torch.set_num_threads(int(ray_cfg["num_cpus"]))
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -143,7 +145,7 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
 
         init_params = {
              "w_nat_mean": np.zeros(d_in, dtype=np.float32),
-             "w_pres": (prior_pres + 8000) * np.ones(d_in, dtype=np.float32)
+             "w_pres": (prior_pres + M*t_i_pres_init) * np.ones(d_in, dtype=np.float32)
         }
 
         logger.debug(f"Prior Parameters:\n\n{pretty_dump.dump(prior_params)}\n")
@@ -190,7 +192,7 @@ def run_experiment(ray_cfg, prior_pres, privacy_settings, optimisation_settings,
                     'noise_stddev': privacy_settings["C"] * privacy_settings["sigma_relative"]
                 },
                 't_i_init_function': lambda: {"w_nat_mean": np.zeros(d_in),
-                                      "w_pres": 4000*np.ones(d_in)},
+                                      "w_pres": t_i_pres_init*np.ones(d_in)},
                 't_i_postprocess_function': postprocess_MF_logistic_ti_simple,
                 'max_epsilon': privacy_settings['max_epsilon'],
             },

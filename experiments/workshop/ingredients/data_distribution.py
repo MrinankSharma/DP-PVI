@@ -36,6 +36,13 @@ def generate_dataset_distribution_func(_run, M, client_size_factor, class_balanc
         if dataset_seed is not None:
             np.random.seed(dataset_seed)
 
+        if M == 1:
+            client_data = [{"x": x, "y": y}]
+            N_is = [x.shape[0]]
+            props_positive = [np.mean(y > 0)]
+
+            return client_data, N_is, props_positive, M
+
         if M % 2 != 0: raise ValueError('Num clients should be even for nice maths')
 
         N = x.shape[0]

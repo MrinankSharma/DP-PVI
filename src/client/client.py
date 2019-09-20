@@ -9,6 +9,8 @@ import src.utils.numpy_nest_utils as np_nest
 import src.utils.numpy_utils as np_utils
 from src.privacy.analysis import QueryWithLedger, OnlineAccountant
 
+from src.model.logistic_regression_models import nat_params_to_params_dict
+
 logger = logging.getLogger(__name__)
 
 
@@ -193,9 +195,9 @@ class StandardClient(Client):
 
         delta_lambda_i = np_utils.subtract_params(lambda_new,
                                                   lambda_old)
-        logger.info(f"t_i_old {t_i_old}")
-        logger.info(f"lambda_old {lambda_old}")
-        logger.info(f"lambda_new {lambda_new}")
+        # logger.info(f"t_i_old {t_i_old}")
+        # logger.info(f"lambda_old {lambda_old}")
+        # logger.info(f"lambda_new {lambda_new}")
 
         delta_lambda_i = np_nest.apply_to_structure(lambda x: np.multiply(x, self.damping_factor), delta_lambda_i)
 
@@ -209,7 +211,7 @@ class StandardClient(Client):
         )
 
         t_i_new = self.t_i_postprocess_funtion(t_i_new, t_i_old)
-        logger.info(f"t_i_new {t_i_new}")
+        # logger.info(f"t_i_new {t_i_new}")
         delta_lambda_i_tilde = np_utils.subtract_params(t_i_new, t_i_old)
 
         if update_ti:
