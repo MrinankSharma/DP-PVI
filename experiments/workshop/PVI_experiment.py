@@ -95,6 +95,7 @@ def default_config(dataset, dataset_dist):
     save_t_is = False
     logging_base_directory = 'logs'
     slack_json_file = 'slack.json'
+    t_i_pres_init = 0.0
 
 
 @ex.automain
@@ -111,7 +112,8 @@ def run_experiment(ray_cfg,
                    log_level,
                    _run,
                    _config,
-                   seed):
+                   seed,
+                   t_i_pres_init):
     if log_level == 'info':
         logging.getLogger().setLevel(logging.INFO)
     elif log_level == 'debug':
@@ -143,6 +145,11 @@ def run_experiment(ray_cfg,
             "w_pres": prior_pres * np.ones(d_in, dtype=np.float32)
         }
 
+        init_params = {
+            "w_nat_mean": np.zeros(d_in, dtype=np.float32),
+            "w_pres": (prior_pres + M * t_i_pres_init) * np.ones(d_in, dtype=np.float32)
+        }
+
         logger.debug(f"Prior Parameters:\n\n{pretty_dump.dump(prior_params)}\n")
 
         def param_postprocess_function(delta_param, all_params, c):
@@ -155,7 +162,6 @@ def run_experiment(ray_cfg,
                 precisions[precisions < 0] = 1e-5
                 new_client_params['w_pres'] = precisions
                 ti_updates.append(np_nest.map_structure(np.subtract, new_client_params, all_params[client_index]))
-                logger.debug()
 
             return ti_updates
 
@@ -165,7 +171,7 @@ def run_experiment(ray_cfg,
         client_factories = [StandardClient.create_factory(
             model_class=MeanFieldMultiDimensionalLogisticRegression,
             data=clients_data[i],
-            model_parameters=prior_params,
+            model_parameters=init_params,
             model_hyperparameters={
                 "base_optimizer_class": torch.optim.Adagrad,
                 "wrapped_optimizer_class": StandardOptimizer,
@@ -179,7 +185,8 @@ def run_experiment(ray_cfg,
                 "reset_optimiser": True,
             },
             hyperparameters={
-                "t_i_init_function": lambda x: np.zeros(x.shape),
+                "t_i_init_function": lambda: {"w_nat_mean": np.zeros(d_in),
+                                      "w_pres": t_i_pres_init*np.ones(d_in)},
                 "t_i_postprocess_function": postprocess_MF_logistic_ti_simple,
             },
             metadata={
@@ -198,7 +205,7 @@ def run_experiment(ray_cfg,
         if PVI_settings['async']:
             server = remote_decorator(AsynchronousParameterServer).remote(
                 model_class=MeanFieldMultiDimensionalLogisticRegression,
-                model_parameters=prior_params,
+                model_parameters=init_params,
                 hyperparameters={
                     "lambda_postprocess_func": param_postprocess_handle,
                     "damping_factor": PVI_settings['damping_factor'],
@@ -211,7 +218,7 @@ def run_experiment(ray_cfg,
         else:
             server = remote_decorator(SynchronousParameterServer).remote(
                 model_class=MeanFieldMultiDimensionalLogisticRegression,
-                model_parameters=prior_params,
+                model_parameters=init_params,
                 hyperparameters={
                     "lambda_postprocess_func": param_postprocess_handle,
                     "damping_factor": PVI_settings['damping_factor'],
