@@ -33,7 +33,7 @@ from experiments.workshop.measure_performance import compute_prediction_accuracy
 from experiments.utils import save_log, save_pickle
 from src.client.client import StandardClient
 from src.model.logistic_regression_models import MeanFieldMultiDimensionalLogisticRegression, \
-    postprocess_MF_logistic_ti, nat_params_to_params_dict
+    postprocess_MF_logistic_ti, nat_params_to_params_dict, postprocess_MF_logistic_ti_simple
 from src.privacy.optimizer import StandardOptimizer
 from src.server import SynchronousParameterServer, AsynchronousParameterServer
 from src.utils.yaml_string_dumper import YAMLStringDumper
@@ -180,7 +180,7 @@ def run_experiment(ray_cfg,
             },
             hyperparameters={
                 "t_i_init_function": lambda x: np.zeros(x.shape),
-                "t_i_postprocess_function": postprocess_MF_logistic_ti,
+                "t_i_postprocess_function": postprocess_MF_logistic_ti_simple,
             },
             metadata={
                 'client_index': i,
