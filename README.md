@@ -1,5 +1,8 @@
 # Differentially Private Paritioned Variational Inference
 
+## Paper
+Please find [the paper here](https://arxiv.org/pdf/1911.10563.pdf). 
+
 ## Reproducibility
 Requirements:
 
